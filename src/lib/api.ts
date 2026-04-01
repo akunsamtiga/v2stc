@@ -39,39 +39,39 @@ export const api = {
   // Auth
   login: (email: string, password: string) =>
     req<{ accessToken: string; userId: string; email: string; deviceId: string }>(
-      'POST', '/api/v1/auth/login', { email, password }
+      'POST', '/auth/login', { email, password }
     ),
-  logout: () => req<void>('POST', '/api/v1/auth/logout'),
-  me: () => req<{ userId: string; email: string }>('GET', '/api/v1/auth/me'),
+  logout: () => req<void>('POST', '/auth/logout'),
+  me: () => req<{ userId: string; email: string }>('GET', '/auth/me'),
 
   // Profile
-  profile: () => req<Record<string, unknown>>('GET', '/api/v1/profile'),
-  balance: () => req<ProfileBalance>('GET', '/api/v1/profile/balance'),
+  profile: () => req<Record<string, unknown>>('GET', '/profile'),
+  balance: () => req<ProfileBalance>('GET', '/profile/balance'),
 
   // Assets — fetch langsung dari Stockity via backend
-  getAssets: () => req<StockityAsset[]>('GET', '/api/v1/schedule/assets'),
+  getAssets: () => req<StockityAsset[]>('GET', '/schedule/assets'),
 
   // Schedule Config
-  status:       () => req<ScheduleStatus>('GET', '/api/v1/schedule/status'),
-  getConfig:    () => req<ScheduleConfig>('GET', '/api/v1/schedule/config'),
-  updateConfig: (data: ScheduleConfig) => req<ScheduleConfig>('PUT', '/api/v1/schedule/config', data),
+  status:       () => req<ScheduleStatus>('GET', '/schedule/status'),
+  getConfig:    () => req<ScheduleConfig>('GET', '/schedule/config'),
+  updateConfig: (data: ScheduleConfig) => req<ScheduleConfig>('PUT', '/schedule/config', data),
 
   // Orders
-  getOrders:   () => req<Order[]>('GET', '/api/v1/schedule/orders'),
+  getOrders:   () => req<Order[]>('GET', '/schedule/orders'),
   addOrders:   (input: string) =>
-    req<{ added: number; errors: string[] }>('POST', '/api/v1/schedule/orders', { input }),
-  deleteOrder: (id: string) => req<void>('DELETE', `/api/v1/schedule/orders/${id}`),
-  clearOrders: () => req<void>('DELETE', '/api/v1/schedule/orders'),
+    req<{ added: number; errors: string[] }>('POST', '/schedule/orders', { input }),
+  deleteOrder: (id: string) => req<void>('DELETE', `/schedule/orders/${id}`),
+  clearOrders: () => req<void>('DELETE', '/schedule/orders'),
 
   // Control
-  start:  () => req<{ message: string }>('POST', '/api/v1/schedule/start'),
-  stop:   () => req<{ message: string }>('POST', '/api/v1/schedule/stop'),
-  pause:  () => req<{ message: string }>('POST', '/api/v1/schedule/pause'),
-  resume: () => req<{ message: string }>('POST', '/api/v1/schedule/resume'),
+  start:  () => req<{ message: string }>('POST', '/schedule/start'),
+  stop:   () => req<{ message: string }>('POST', '/schedule/stop'),
+  pause:  () => req<{ message: string }>('POST', '/schedule/pause'),
+  resume: () => req<{ message: string }>('POST', '/schedule/resume'),
 
   // Logs & Parse
   getLogs:     (limit = 100) =>
-    req<ExecutionLog[]>('GET', `/api/v1/schedule/logs?limit=${limit}`),
+    req<ExecutionLog[]>('GET', `/schedule/logs?limit=${limit}`),
   parseOrders: (input: string) =>
-    req<{ orders: Order[]; errors: string[] }>('POST', '/api/v1/schedule/parse', { input }),
+    req<{ orders: Order[]; errors: string[] }>('POST', '/schedule/parse', { input }),
 };
