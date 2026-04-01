@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true); setError('');
     try {
       const res = await api.login(email, password);
-      localStorage.setItem('stc_token', res.data.authtoken);
+      localStorage.setItem('stc_token', res.accessToken);
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login gagal');
