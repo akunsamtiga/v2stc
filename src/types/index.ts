@@ -42,6 +42,15 @@ export interface ExecutionLog {
   message?:    string;
 }
 
+export interface StockityAsset {
+  ric:        string;
+  name:       string;
+  type:       number;
+  typeName:   string;
+  profitRate: number;
+  iconUrl:    string | null;
+}
+
 export type ScheduleConfig = Record<string, unknown>;
 export type ProfileBalance = Record<string, unknown> & {
   balance?:      number;
