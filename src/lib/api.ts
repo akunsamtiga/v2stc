@@ -37,10 +37,10 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 
 export const api = {
   // Auth
-  login:  (email: string, password: string) =>
-    req<{ access_token: string }>('POST', '/auth/login', { email, password }),
+  login: (email: string, password: string) =>
+    req<{ data: { authtoken: string; user_id: string } }>('POST', '/auth/login', { email, password }),
   logout: () => req<void>('POST', '/auth/logout'),
-  me:     () => req<{ userId: string; email: string }>('GET', '/auth/me'),
+  me: () => req<{ userId: string; email: string }>('GET', '/auth/me'),
 
   // Profile
   profile: () => req<Record<string, unknown>>('GET', '/profile'),
