@@ -3,13 +3,65 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { ScheduleConfig, StockityAsset } from '@/types';
 
-// ── helpers ──────────────────────────────────────────────────────────
-function calcNextAmount(base: number, step: number, type: 'FIXED' | 'PERCENTAGE', value: number): number {
-  if (step === 0) return base;
-  if (type === 'FIXED') return base + value * step;
-  let amt = base;
-  for (let i = 0; i < step; i++) amt = amt * (1 + value / 100);
-  return amt;
+// ── Sistem Amount (identik Kotlin CurrencyModels) ─────────────────────
+// Stockity menyimpan/menerima amount dalam satuan "cents" (×100).
+// Contoh IDR: Rp14.000 → disimpan 1.400.000 | Rp50.000 → 5.000.000
+// Config page menerima input human-readable (÷100) lalu ×100 saat save.
+
+/** Minimum amount dalam cents per currency (dari CurrencyModels.kt) */
+const CURRENCY_MIN_CENTS: Record<string, number> = {
+  IDR: 1_400_000, JPY: 15_000, SGD: 135, MYR: 465, THB: 3_500,
+  PHP: 5_600, VND: 2_450_000, KRW: 133_000, CNY: 725, HKD: 780,
+  TWD: 3_150, INR: 8_300, PKR: 28_000, BDT: 11_000, LKR: 32_500,
+  USD: 100, EUR: 95, GBP: 80, CHF: 90, AUD: 150, NZD: 165,
+  CAD: 135, MXN: 1_700, BRL: 500, ARS: 35_000, CLP: 90_000,
+  COP: 400_000, AED: 367, SAR: 375, TRY: 2_800, EGP: 3_100,
+  ZAR: 1_850, NGN: 80_000, RUB: 9_200, PLN: 400, CZK: 2_300,
+  HUF: 36_000, SEK: 1_050, NOK: 1_080, DKK: 700, KZT: 45_000,
+};
+
+/** Currency dengan 0 desimal (tampilkan tanpa titik desimal) */
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'IDR', 'JPY', 'VND', 'KRW', 'THB', 'CLP', 'COP', 'HUF',
+]);
+
+/** Konversi cents → display (÷100) */
+function centsToDisplay(cents: number): number {
+  return cents / 100;
+}
+
+/** Konversi display → cents (×100) */
+function displayToCents(display: number): number {
+  return Math.round(display * 100);
+}
+
+/** Format display amount dengan currency */
+function formatDisplay(cents: number, iso: string): string {
+  const val = centsToDisplay(cents);
+  const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(iso.toUpperCase());
+  return isZeroDecimal
+    ? val.toLocaleString('id-ID', { maximumFractionDigits: 0 })
+    : val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Hitung amount martingale per step dalam CENTS.
+ * Identik dengan Kotlin MartingaleState.getMartingaleAmountForStep().
+ * step=0 → baseAmount (initial trade)
+ * step=1 → baseAmount * multiplier^1 (martingale step 1), dst.
+ */
+function calcStepAmountCents(
+  baseAmountCents: number,
+  step: number,
+  type: 'FIXED' | 'PERCENTAGE',
+  value: number,
+): number {
+  if (step === 0) return baseAmountCents;
+  if (type === 'FIXED') {
+    return Math.floor(baseAmountCents * Math.pow(value, step));
+  }
+  // PERCENTAGE: multiplier = 1 + value/100
+  return Math.floor(baseAmountCents * Math.pow(1 + value / 100, step));
 }
 
 // ── sub-components ───────────────────────────────────────────────────
@@ -145,12 +197,6 @@ export default function ConfigPage() {
     a.name.toLowerCase().includes(assetSearch.toLowerCase()) ||
     a.ric.toLowerCase().includes(assetSearch.toLowerCase())
   );
-
-  // martingale preview
-  const mgSteps = Array.from({ length: mg.maxSteps ?? 3 }, (_, i) => ({
-    step: i + 1,
-    amount: calcNextAmount(mg.baseAmount ?? 10000, i, mg.multiplierType ?? 'FIXED', mg.multiplierValue ?? 2),
-  }));
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -309,20 +355,47 @@ export default function ConfigPage() {
 
       {/* ── 3. Amount ── */}
       <Section title="Amount">
-        <Field label="Base Amount" hint="Jumlah taruhan awal (dalam mata uang akun)">
-          <div className="relative">
-            <input
-              type="number"
-              min={1}
-              value={mg.baseAmount ?? 10000}
-              onChange={e => setField(['martingale', 'baseAmount'], Number(e.target.value))}
-              className={inputCls + ' pr-14'}
-            />
-            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
-              {currencyIso || 'IDR'}
-            </span>
-          </div>
-        </Field>
+        {(() => {
+          const iso = (currencyIso || 'IDR').toUpperCase();
+          const minCents = CURRENCY_MIN_CENTS[iso] ?? 100;
+          const minDisplay = centsToDisplay(minCents);
+          const baseAmountCents: number = mg.baseAmount ?? minCents;
+          const displayVal = centsToDisplay(baseAmountCents);
+          const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(iso);
+          const isBelowMin = baseAmountCents < minCents;
+
+          return (
+            <Field
+              label="Base Amount"
+              hint={`Minimum: ${formatDisplay(minCents, iso)} ${iso}`}
+            >
+              <div className="relative">
+                <input
+                  type="number"
+                  min={minDisplay}
+                  step={isZeroDecimal ? 1000 : 0.01}
+                  value={displayVal}
+                  onChange={e => {
+                    const display = Number(e.target.value);
+                    setField(['martingale', 'baseAmount'], displayToCents(display));
+                  }}
+                  className={inputCls + ' pr-14' + (isBelowMin ? ' border-red-500/50 focus:border-red-500' : '')}
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
+                  {iso}
+                </span>
+              </div>
+              {isBelowMin && (
+                <p className="text-xs text-red-400 mt-1">
+                  ⚠ Di bawah minimum Stockity ({formatDisplay(minCents, iso)} {iso})
+                </p>
+              )}
+              <p className="text-[11px] text-gray-700 mt-1">
+                Nilai internal yang dikirim ke Stockity: <span className="font-mono text-gray-600">{baseAmountCents.toLocaleString()}</span>
+              </p>
+            </Field>
+          );
+        })()}
       </Section>
 
       {/* ── 4. Martingale ── */}
@@ -378,19 +451,21 @@ export default function ConfigPage() {
             {/* Multiplier Value */}
             <Field
               label="Nilai Multiplier"
-              hint={mg.multiplierType === 'PERCENTAGE' ? '(% dari amount sebelumnya)' : '(tambah nominal tetap)'}
+              hint={mg.multiplierType === 'PERCENTAGE'
+                ? '(tambahan % dari amount sebelumnya)'
+                : '(kelipatan dari base amount, min 1.1×)'}
             >
               <div className="relative">
                 <input
                   type="number"
-                  min={0}
-                  step={mg.multiplierType === 'PERCENTAGE' ? 1 : 1000}
-                  value={mg.multiplierValue ?? 2}
+                  min={mg.multiplierType === 'PERCENTAGE' ? 1 : 1.1}
+                  step={mg.multiplierType === 'PERCENTAGE' ? 1 : 0.1}
+                  value={mg.multiplierValue ?? 2.5}
                   onChange={e => setField(['martingale', 'multiplierValue'], Number(e.target.value))}
                   className={inputCls + ' pr-10'}
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
-                  {mg.multiplierType === 'PERCENTAGE' ? '%' : currencyIso || 'IDR'}
+                  {mg.multiplierType === 'PERCENTAGE' ? '%' : '×'}
                 </span>
               </div>
             </Field>
@@ -410,37 +485,56 @@ export default function ConfigPage() {
             </div>
 
             {/* Preview Table */}
-            <div>
-              <p className="text-[11px] text-gray-600 uppercase tracking-wide font-semibold mb-2">
-                Preview Martingale Steps
-              </p>
-              <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wide text-left">Step</th>
-                      <th className="px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wide text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-gray-700/50">
-                      <td className="px-3 py-2 text-gray-500 text-xs">Base</td>
-                      <td className="px-3 py-2 text-right font-mono text-gray-300 text-xs tabular-nums">
-                        {(mg.baseAmount ?? 10000).toLocaleString('id-ID')}
-                      </td>
-                    </tr>
-                    {mgSteps.map(({ step, amount }) => (
-                      <tr key={step} className="border-b border-gray-700/50 last:border-0">
-                        <td className="px-3 py-2 text-gray-500 text-xs">Step {step}</td>
-                        <td className="px-3 py-2 text-right font-mono text-green-400 text-xs font-semibold tabular-nums">
-                          {Math.round(amount).toLocaleString('id-ID')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            {(() => {
+              const iso = (currencyIso || 'IDR').toUpperCase();
+              const baseAmountCents: number = mg.baseAmount ?? (CURRENCY_MIN_CENTS[iso] ?? 1_400_000);
+              const type: 'FIXED' | 'PERCENTAGE' = mg.multiplierType ?? 'FIXED';
+              const value: number = mg.multiplierValue ?? 2.5;
+              const maxSteps: number = mg.maxSteps ?? 3;
+
+              // step=0 = initial trade, step=1..maxSteps = martingale steps
+              const rows = Array.from({ length: maxSteps + 1 }, (_, i) => ({
+                step: i,
+                cents: calcStepAmountCents(baseAmountCents, i, type, value),
+              }));
+
+              return (
+                <div>
+                  <p className="text-[11px] text-gray-600 uppercase tracking-wide font-semibold mb-2">
+                    Preview Martingale Steps
+                  </p>
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-700">
+                          <th className="px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wide text-left">Step</th>
+                          <th className="px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wide text-right">Amount ({iso})</th>
+                          <th className="px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wide text-right">Cents (sent)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(({ step, cents }) => (
+                          <tr key={step} className="border-b border-gray-700/50 last:border-0">
+                            <td className="px-3 py-2 text-xs text-gray-500">
+                              {step === 0 ? 'Initial' : `Martingale ${step}`}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono text-xs tabular-nums text-gray-200 font-semibold">
+                              {formatDisplay(cents, iso)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono text-xs tabular-nums text-gray-600">
+                              {cents.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[10px] text-gray-700 mt-1.5">
+                    Kolom "Cents (sent)" adalah nilai yang dikirim ke Stockity WebSocket
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         )}
       </Section>
