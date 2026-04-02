@@ -102,8 +102,19 @@ export default function ConfigPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.getConfig();
-      if (data && Object.keys(data).length > 0) setCfg(data);
+      const [cfgRes, meRes] = await Promise.allSettled([api.getConfig(), api.me()]);
+      const me = meRes.status === 'fulfilled' ? (meRes.value as any) : null;
+
+      setCfg(prev => {
+        const base: Record<string, unknown> =
+          cfgRes.status === 'fulfilled' && cfgRes.value && Object.keys(cfgRes.value).length > 0
+            ? { ...(cfgRes.value as object) }
+            : { ...(prev as object) };
+        // Currency selalu dari session — tidak bisa diubah manual
+        if (me?.currency)    base['currency']    = me.currency;
+        if (me?.currencyIso) base['currencyIso'] = me.currencyIso;
+        return base as ScheduleConfig;
+      });
     } catch { /* use default */ }
     finally { setLoading(false); }
   }, []);
@@ -285,23 +296,14 @@ export default function ConfigPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Currency">
-            <input
-              value={currency}
-              onChange={e => setField(['currency'], e.target.value)}
-              placeholder="IDR"
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Currency ISO">
-            <input
-              value={currencyIso}
-              onChange={e => setField(['currencyIso'], e.target.value)}
-              placeholder="IDR"
-              className={inputCls}
-            />
-          </Field>
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-gray-800/50 border border-gray-700 rounded-xl">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Mata Uang</p>
+            <p className="text-xs text-gray-600 mt-0.5">Otomatis dari akun Stockity</p>
+          </div>
+          <span className="text-sm font-bold text-white bg-gray-700 px-3 py-1 rounded-lg">
+            {currencyIso || '—'}
+          </span>
         </div>
       </Section>
 
