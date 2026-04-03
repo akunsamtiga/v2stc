@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { api } from '@/lib/api';
-import type { ExecutionLog } from '@/types';
+import { api, type ExecutionLog } from '@/lib/api';
 
 function fmtTime(ms?: number): string {
   if (!ms) return '—';
@@ -21,7 +20,7 @@ export default function LogsPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.getLogs(limit);
+      const data = await api.scheduleLogs(limit);
       setLogs(Array.isArray(data) ? data : []);
     } finally { setLoading(false); }
   }, [limit]);
@@ -118,11 +117,11 @@ export default function LogsPage() {
                     <td className="px-4 py-3">
                       {log.trend ? (
                         <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${
-                          log.trend === 'UP'
+                          log.trend === 'UP' || log.trend === 'call'
                             ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                             : 'bg-red-500/10 text-red-400 border border-red-500/20'
                         }`}>
-                          {log.trend === 'UP' ? '↑' : '↓'} {log.trend}
+                          {log.trend === 'UP' || log.trend === 'call' ? '↑' : '↓'} {log.trend.toUpperCase()}
                         </span>
                       ) : '—'}
                     </td>
@@ -142,7 +141,7 @@ export default function LogsPage() {
                         ? `${log.profit > 0 ? '+' : ''}${log.profit.toFixed(2)}`
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 max-w-xs truncate">{log.message ?? '—'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 max-w-xs truncate">{log.note ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
