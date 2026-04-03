@@ -59,6 +59,7 @@ export interface ScheduleStatus {
   skippedOrders?: number;
   activeOrders?: number;
   sessionPnL?: number;
+  nextExecutionTime?: string;   // ← add this line
   startedAt?: string;
   updatedAt?: string;
   [key: string]: unknown;
@@ -232,4 +233,4 @@ export const api = {
   fastradeStatus: () => req<FastradeStatus>('GET', '/fastrade/status'),
   fastradeLogs:   (limit = 100) =>
     req<FastradeLog[]>('GET', `/fastrade/logs?limit=${limit}`),
-};
+};  

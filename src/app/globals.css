@@ -2,9 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body { height: 100%; }
+html, body { height: 100%; background: #0f0f0f; }
 
-::-webkit-scrollbar        { width: 4px; height: 4px; }
-::-webkit-scrollbar-track  { background: #111827; }
-::-webkit-scrollbar-thumb  { background: #374151; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+::-webkit-scrollbar        { width: 3px; height: 3px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(52,211,153,0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(52,211,153,0.4); }
+
+.ds-card {
+  background: #1e5c3c;
+  border: 1px solid rgba(52,211,153,0.28);
+  border-radius: 10px;
+  position: relative;
+}
+
+.ds-input {
+  display: block; width: 100%;
+  background: rgba(0,0,0,0.40);
+  border: 1px solid rgba(52,211,153,0.22);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px; color: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit; resize: vertical;
+}
+.ds-input:focus { border-color: rgba(52,211,153,0.5); box-shadow: 0 0 0 2px rgba(52,211,153,0.08); }
+.ds-input::placeholder { color: rgba(255,255,255,0.3); }
+.ds-input:disabled { opacity: 0.45; cursor: not-allowed; }
+select.ds-input { cursor: pointer; }
+textarea.ds-input { min-height: 80px; }
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { opacity: 0; }
+
+.schedule-item:hover { background: rgba(52,211,153,0.04) !important; }
+
+@keyframes spin          { to { transform: rotate(360deg); } }
+@keyframes ping          { 75%,100% { transform: scale(2.2); opacity: 0; } }
+@keyframes pulse         { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes fade-in       { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-up      { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes shimmer-h     { 0%,100% { background-position: 200% 0; } 50% { background-position: -200% 0; } }
+@keyframes shimmer       { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes skeleton-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 0.85; } }
+@keyframes win-flash  { 0% { box-shadow:none; } 15% { box-shadow:0 0 0 4px rgba(52,211,153,0.35),inset 0 0 20px rgba(52,211,153,0.08); } 60% { box-shadow:0 0 0 8px rgba(52,211,153,0.12); } 100% { box-shadow:none; } }
+@keyframes lose-flash { 0% { box-shadow:none; } 15% { box-shadow:0 0 0 4px rgba(248,113,113,0.35),inset 0 0 20px rgba(248,113,113,0.08); } 60% { box-shadow:0 0 0 8px rgba(248,113,113,0.12); } 100% { box-shadow:none; } }
+@keyframes profit-slide-up   { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes profit-slide-down { from { transform: translateY(-12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
