@@ -1,14 +1,10 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import type { UpdateConfigPayload } from '@/lib/api';
 import type { ScheduleConfig, StockityAsset } from '@/types';
 
 // ── Sistem Amount (identik Kotlin CurrencyModels) ─────────────────────
-// Stockity menyimpan/menerima amount dalam satuan "cents" (×100).
-// Contoh IDR: Rp14.000 → disimpan 1.400.000 | Rp50.000 → 5.000.000
-// Config page menerima input human-readable (÷100) lalu ×100 saat save.
-
-/** Minimum amount dalam cents per currency (dari CurrencyModels.kt) */
 const CURRENCY_MIN_CENTS: Record<string, number> = {
   IDR: 1_400_000, JPY: 15_000, SGD: 135, MYR: 465, THB: 3_500,
   PHP: 5_600, VND: 2_450_000, KRW: 133_000, CNY: 725, HKD: 780,
@@ -20,22 +16,18 @@ const CURRENCY_MIN_CENTS: Record<string, number> = {
   HUF: 36_000, SEK: 1_050, NOK: 1_080, DKK: 700, KZT: 45_000,
 };
 
-/** Currency dengan 0 desimal (tampilkan tanpa titik desimal) */
 const ZERO_DECIMAL_CURRENCIES = new Set([
   'IDR', 'JPY', 'VND', 'KRW', 'THB', 'CLP', 'COP', 'HUF',
 ]);
 
-/** Konversi cents → display (÷100) */
 function centsToDisplay(cents: number): number {
   return cents / 100;
 }
 
-/** Konversi display → cents (×100) */
 function displayToCents(display: number): number {
   return Math.round(display * 100);
 }
 
-/** Format display amount dengan currency */
 function formatDisplay(cents: number, iso: string): string {
   const val = centsToDisplay(cents);
   const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(iso.toUpperCase());
@@ -44,12 +36,6 @@ function formatDisplay(cents: number, iso: string): string {
     : val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/**
- * Hitung amount martingale per step dalam CENTS.
- * Identik dengan Kotlin MartingaleState.getMartingaleAmountForStep().
- * step=0 → baseAmount (initial trade)
- * step=1 → baseAmount * multiplier^1 (martingale step 1), dst.
- */
 function calcStepAmountCents(
   baseAmountCents: number,
   step: number,
@@ -60,7 +46,6 @@ function calcStepAmountCents(
   if (type === 'FIXED') {
     return Math.floor(baseAmountCents * Math.pow(value, step));
   }
-  // PERCENTAGE: multiplier = 1 + value/100
   return Math.floor(baseAmountCents * Math.pow(1 + value / 100, step));
 }
 
@@ -119,6 +104,8 @@ const DEFAULT_CONFIG: ScheduleConfig = {
   isDemoAccount: true,
   currency: 'IDR',
   currencyIso: 'IDR',
+  stopLoss: 0,
+  stopProfit: 0,
 };
 
 // ── main component ────────────────────────────────────────────────────
@@ -138,6 +125,8 @@ export default function ConfigPage() {
   const isDemo     = (cfg as any).isDemoAccount ?? true;
   const currency   = (cfg as any).currency    ?? 'IDR';
   const currencyIso = (cfg as any).currencyIso ?? 'IDR';
+  const stopLoss   = (cfg as any).stopLoss ?? 0;
+  const stopProfit = (cfg as any).stopProfit ?? 0;
 
   const setField = (path: string[], value: unknown) => {
     setCfg(prev => {
@@ -162,9 +151,10 @@ export default function ConfigPage() {
           cfgRes.status === 'fulfilled' && cfgRes.value && Object.keys(cfgRes.value).length > 0
             ? { ...(cfgRes.value as object) }
             : { ...(prev as object) };
-        // Currency selalu dari session — tidak bisa diubah manual
         if (me?.currency)    base['currency']    = me.currency;
         if (me?.currencyIso) base['currencyIso'] = me.currencyIso;
+        if (base['stopLoss'] === undefined) base['stopLoss'] = 0;
+        if (base['stopProfit'] === undefined) base['stopProfit'] = 0;
         return base as ScheduleConfig;
       });
     } catch { /* use default */ }
@@ -186,7 +176,7 @@ export default function ConfigPage() {
     if (!asset.ric) { setMsg('✗ Pilih asset terlebih dahulu'); return; }
     setSaving(true); setMsg('');
     try {
-      await api.updateConfig(cfg);
+      await api.updateConfig(cfg as unknown as UpdateConfigPayload);
       setMsg('✓ Konfigurasi berhasil disimpan');
     } catch (e: unknown) {
       setMsg(`✗ ${e instanceof Error ? e.message : 'Gagal menyimpan'}`);
@@ -213,12 +203,11 @@ export default function ConfigPage() {
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold text-white">Konfigurasi Trading</h2>
-        <p className="text-sm text-gray-500 mt-0.5">Pengaturan asset, akun, amount, dan martingale</p>
+        <p className="text-sm text-gray-500 mt-0.5">Pengaturan asset, akun, amount, martingale, dan risk management</p>
       </div>
 
       {/* ── 1. Asset ── */}
       <Section title="Asset">
-        {/* Current selection */}
         <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all
                          ${asset.ric ? 'bg-green-500/5 border-green-500/20' : 'bg-gray-800/50 border-gray-700'}`}>
           {asset.ric ? (
@@ -254,7 +243,6 @@ export default function ConfigPage() {
           )}
         </div>
 
-        {/* Asset List Panel */}
         {showAssetList && (
           <div className="border border-gray-700 rounded-xl overflow-hidden">
             <div className="p-3 border-b border-gray-700 bg-gray-800/50">
@@ -304,19 +292,12 @@ export default function ConfigPage() {
                 </button>
               ))}
             </div>
-
-            {assets.length > 0 && !assetLoading && (
-              <div className="px-4 py-2 border-t border-gray-700 bg-gray-800/30">
-                <p className="text-xs text-gray-600">{filteredAssets.length} dari {assets.length} asset</p>
-              </div>
-            )}
           </div>
         )}
       </Section>
 
       {/* ── 2. Akun & Currency ── */}
       <Section title="Akun & Mata Uang">
-        {/* Demo / Real toggle */}
         <div className="flex items-center justify-between p-3 rounded-xl bg-gray-800/50 border border-gray-700">
           <div>
             <p className="text-sm font-medium text-gray-200">Tipe Akun</p>
@@ -391,16 +372,132 @@ export default function ConfigPage() {
                 </p>
               )}
               <p className="text-[11px] text-gray-700 mt-1">
-                Nilai internal yang dikirim ke Stockity: <span className="font-mono text-gray-600">{baseAmountCents.toLocaleString()}</span>
+                Nilai internal: <span className="font-mono text-gray-600">{baseAmountCents.toLocaleString()}</span>
               </p>
             </Field>
           );
         })()}
       </Section>
 
-      {/* ── 4. Martingale ── */}
+      {/* ── 4. Risk Management (NEW) ── */}
+      <Section title="Risk Management">
+        <div className="space-y-4">
+          {/* Stop Loss */}
+          {(() => {
+            const iso = (currencyIso || 'IDR').toUpperCase();
+            const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(iso);
+            const displayVal = centsToDisplay(stopLoss || 0);
+            const isEnabled = (stopLoss || 0) > 0;
+
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-200">Stop Loss</p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Bot otomatis berhenti jika total kerugian mencapai nilai ini
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={isEnabled}
+                    onChange={v => setField(['stopLoss'], v ? 50000000 : 0)}
+                    label="Stop Loss toggle"
+                  />
+                </div>
+                
+                {isEnabled && (
+                  <div className="pl-4 border-l-2 border-red-500/30 space-y-2">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        step={isZeroDecimal ? 1000 : 0.01}
+                        value={displayVal}
+                        onChange={e => {
+                          const display = Number(e.target.value);
+                          setField(['stopLoss'], displayToCents(display));
+                        }}
+                        className={inputCls + ' pr-14'}
+                        placeholder="0"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
+                        {iso}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-600">
+                      Bot berhenti saat PnL ≤ <span className="font-mono text-red-400">-{formatDisplay(stopLoss || 0, iso)}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="border-t border-gray-800" />
+
+          {/* Stop Profit */}
+          {(() => {
+            const iso = (currencyIso || 'IDR').toUpperCase();
+            const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(iso);
+            const displayVal = centsToDisplay(stopProfit || 0);
+            const isEnabled = (stopProfit || 0) > 0;
+
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-200">Stop Profit</p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Bot otomatis berhenti jika total keuntungan mencapai nilai ini
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={isEnabled}
+                    onChange={v => setField(['stopProfit'], v ? 50000000 : 0)}
+                    label="Stop Profit toggle"
+                  />
+                </div>
+                
+                {isEnabled && (
+                  <div className="pl-4 border-l-2 border-green-500/30 space-y-2">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        step={isZeroDecimal ? 1000 : 0.01}
+                        value={displayVal}
+                        onChange={e => {
+                          const display = Number(e.target.value);
+                          setField(['stopProfit'], displayToCents(display));
+                        }}
+                        className={inputCls + ' pr-14'}
+                        placeholder="0"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
+                        {iso}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-600">
+                      Bot berhenti saat PnL ≥ <span className="font-mono text-green-400">+{formatDisplay(stopProfit || 0, iso)}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Info */}
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-500/5 border border-blue-500/20">
+            <span className="text-blue-400 text-sm shrink-0">ℹ</span>
+            <p className="text-xs text-blue-400 leading-relaxed">
+              Risk management bekerja pada level sesi trading. Setiap kali bot di-start, counter PnL direset ke 0.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── 5. Martingale ── */}
       <Section title="Martingale">
-        {/* Enable toggle */}
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-200">Aktifkan Martingale</p>
@@ -414,8 +511,6 @@ export default function ConfigPage() {
 
         {mg.isEnabled && (
           <div className="space-y-4 pt-2 border-t border-gray-800">
-
-            {/* Max Steps */}
             <Field label="Max Steps" hint={`${mg.maxSteps ?? 3} langkah`}>
               <div className="flex items-center gap-3">
                 <input
@@ -429,7 +524,6 @@ export default function ConfigPage() {
               </div>
             </Field>
 
-            {/* Multiplier Type */}
             <Field label="Tipe Multiplier">
               <div className="grid grid-cols-2 gap-2">
                 {(['FIXED', 'PERCENTAGE'] as const).map(t => (
@@ -448,7 +542,6 @@ export default function ConfigPage() {
               </div>
             </Field>
 
-            {/* Multiplier Value */}
             <Field
               label="Nilai Multiplier"
               hint={mg.multiplierType === 'PERCENTAGE'
@@ -470,7 +563,6 @@ export default function ConfigPage() {
               </div>
             </Field>
 
-            {/* Always Signal */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-gray-800/50 border border-gray-700">
               <div>
                 <p className="text-sm font-medium text-gray-200">Always Signal</p>
@@ -483,58 +575,6 @@ export default function ConfigPage() {
                 onChange={v => setField(['martingale', 'isAlwaysSignal'], v)}
               />
             </div>
-
-            {/* Preview Table */}
-            {(() => {
-              const iso = (currencyIso || 'IDR').toUpperCase();
-              const baseAmountCents: number = mg.baseAmount ?? (CURRENCY_MIN_CENTS[iso] ?? 1_400_000);
-              const type: 'FIXED' | 'PERCENTAGE' = mg.multiplierType ?? 'FIXED';
-              const value: number = mg.multiplierValue ?? 2.5;
-              const maxSteps: number = mg.maxSteps ?? 3;
-
-              // step=0 = initial trade, step=1..maxSteps = martingale steps
-              const rows = Array.from({ length: maxSteps + 1 }, (_, i) => ({
-                step: i,
-                cents: calcStepAmountCents(baseAmountCents, i, type, value),
-              }));
-
-              return (
-                <div>
-                  <p className="text-[11px] text-gray-600 uppercase tracking-wide font-semibold mb-2">
-                    Preview Martingale Steps
-                  </p>
-                  <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-700">
-                          <th className="px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wide text-left">Step</th>
-                          <th className="px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wide text-right">Amount ({iso})</th>
-                          <th className="px-3 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-wide text-right">Cents (sent)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map(({ step, cents }) => (
-                          <tr key={step} className="border-b border-gray-700/50 last:border-0">
-                            <td className="px-3 py-2 text-xs text-gray-500">
-                              {step === 0 ? 'Initial' : `Martingale ${step}`}
-                            </td>
-                            <td className="px-3 py-2 text-right font-mono text-xs tabular-nums text-gray-200 font-semibold">
-                              {formatDisplay(cents, iso)}
-                            </td>
-                            <td className="px-3 py-2 text-right font-mono text-xs tabular-nums text-gray-600">
-                              {cents.toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="text-[10px] text-gray-700 mt-1.5">
-                    Kolom "Cents (sent)" adalah nilai yang dikirim ke Stockity WebSocket
-                  </p>
-                </div>
-              );
-            })()}
           </div>
         )}
       </Section>
