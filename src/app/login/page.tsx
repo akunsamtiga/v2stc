@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
 export default function LoginPage() {
-  const router   = useRouter();
+  const router = useRouter();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
@@ -16,82 +16,109 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
       const res = await api.login(email, password);
       localStorage.setItem('stc_token', res.accessToken);
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login gagal');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7] px-4 py-10">
+      <div className="w-full max-w-[360px]">
 
-        {/* Logo */}
+        {/* Heading */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 mb-4">
-            <span className="text-2xl">📈</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Stockity</h1>
-          <p className="text-sm text-gray-500 mt-1">Schedule Bot Dashboard</p>
+          <h1 className="text-[26px] font-semibold text-[#1d1d1f] tracking-[-0.5px] leading-snug">
+            Selamat datang
+          </h1>
+          <p className="text-[13px] text-[#86868b] mt-1.5 tracking-[-0.1px]">
+            Masuk ke akun Stockity kamu
+          </p>
         </div>
 
         {/* Card */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-4">
+        <div className="bg-white rounded-[18px] px-7 py-8 border border-black/[0.08]">
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                Email
-              </label>
-              <input
-                type="email" value={email}
-                onChange={e => setEmail(e.target.value)}
-                required placeholder="admin@example.com"
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm
-                           text-white placeholder-gray-600 focus:outline-none focus:border-green-500
-                           focus:ring-1 focus:ring-green-500/20 transition-all"
-              />
+          {/* Email */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-[#86868b] uppercase tracking-[0.06em] mb-1.5">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              placeholder="nama@contoh.com"
+              className="w-full bg-[#f9f9f9] border border-black/10 rounded-[10px]
+                         px-3.5 py-[11px] text-[14px] text-[#1d1d1f] placeholder-[#c7c7cc]
+                         outline-none transition-all appearance-none
+                         focus:bg-white focus:border-black/[0.28] focus:ring-[3px] focus:ring-black/[0.06]"
+            />
+          </div>
+
+          {/* Password */}
+          <div className="mb-1">
+            <label className="block text-[11px] font-medium text-[#86868b] uppercase tracking-[0.06em] mb-1.5">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+              className="w-full bg-[#f9f9f9] border border-black/10 rounded-[10px]
+                         px-3.5 py-[11px] text-[14px] text-[#1d1d1f] placeholder-[#c7c7cc]
+                         outline-none transition-all appearance-none
+                         focus:bg-white focus:border-black/[0.28] focus:ring-[3px] focus:ring-black/[0.06]"
+            />
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200/50
+                            rounded-[10px] px-3 py-2.5 mt-3">
+              <span className="w-[5px] h-[5px] rounded-full bg-red-500 flex-shrink-0 mt-[5px]" />
+              <p className="text-[12.5px] text-red-600 leading-snug">{error}</p>
             </div>
+          )}
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                Password
-              </label>
-              <input
-                type="password" value={password}
-                onChange={e => setPassword(e.target.value)}
-                required placeholder="••••••••"
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm
-                           text-white placeholder-gray-600 focus:outline-none focus:border-green-500
-                           focus:ring-1 focus:ring-green-500/20 transition-all"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3.5 py-2.5 text-sm text-red-400">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit" disabled={loading}
-              className="w-full bg-green-500 hover:bg-green-400 active:bg-green-600
-                         disabled:bg-gray-800 disabled:text-gray-500
-                         text-white font-semibold rounded-xl py-2.5 text-sm transition-colors mt-1"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Masuk...
-                </span>
-              ) : 'Masuk'}
-            </button>
-          </form>
+          {/* Submit */}
+          <button
+            type="submit"
+            onClick={handleLogin as any}
+            disabled={loading}
+            className="w-full mt-5 bg-[#1d1d1f] text-white font-medium text-[14px]
+                       tracking-[-0.2px] rounded-[11px] py-[12.5px] transition-all
+                       hover:opacity-85 active:scale-[0.988]
+                       disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-[7px]">
+                <span className="w-[13px] h-[13px] rounded-full border-[1.5px]
+                                 border-white/25 border-t-white animate-spin" />
+                Masuk...
+              </span>
+            ) : 'Masuk'}
+          </button>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-[11.5px] text-[#aeaeb2] mt-5 leading-relaxed">
+          © 2025 Stockity ·{' '}
+          <span className="text-[#1d1d1f] underline underline-offset-2 cursor-pointer">
+            Ketentuan Layanan
+          </span>
+        </p>
+
       </div>
     </div>
   );
