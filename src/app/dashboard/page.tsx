@@ -50,6 +50,12 @@ const FT_TF: {value:FastTradeTimeframe; label:string}[] = [
   {value:'15m',label:'15 Menit'},{value:'30m',label:'30 Menit'},{value:'1h',label:'1 Jam'},
 ];
 
+// ── Amount constants (display values, in IDR) ─────────────────────────────
+// Stockity WebSocket expects amount in CENTS (×100 of display).
+// IDR minimum = 1_400_000 cents = 14_000 IDR display.
+const IDR_MIN_DISPLAY = 14_000;
+const QUICK_AMOUNTS   = [14_000, 25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000];
+
 // ═══════════════════════════════════════════
 // PRIMITIVES
 // ═══════════════════════════════════════════
@@ -584,7 +590,7 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
 };
 
 // ═══════════════════════════════════════════
-// MODE SESSION PANEL (combined tabs + content)
+// MODE SESSION PANEL
 // ═══════════════════════════════════════════
 const ModeSessionPanel: React.FC<{
   mode:TradingMode; onModeChange:(m:TradingMode)=>void; locked:boolean;
@@ -604,7 +610,6 @@ const ModeSessionPanel: React.FC<{
 
   return (
     <div style={{display:'flex',flexDirection:'column',height:fillHeight?'100%':undefined,gap:6}}>
-      {/* Mode dropdown */}
       <div style={{position:'relative',flexShrink:0}}>
         <button type="button" onClick={()=>setDropOpen(v=>!v)} style={{
           width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
@@ -655,8 +660,6 @@ const ModeSessionPanel: React.FC<{
           </>
         )}
       </div>
-
-      {/* Content */}
       <div style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
         <div style={{display:mode==='schedule'?'flex':'none',flexDirection:'column',flex:1,minHeight:0}}>
           <SchedulePanel orders={orders} logs={logs} onOpenModal={onOpenModal} isRunning={isRunning} isLoading={false} fillHeight={fillHeight}/>
@@ -694,6 +697,9 @@ const SettingsCard: React.FC<{
   const selectedAsset = assets.find(a=>a.ric===assetRic);
   const ac = mode==='ctc'?C.violet:C.cyan;
 
+  // FIX: Validate display amount against IDR minimum (14.000)
+  const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
+
   return (
     <>
       <PickerModal open={pickerOpen==='asset'} onClose={()=>setPickerOpen(null)} title="Pilih Aset" options={assetOpts} value={assetRic} searchable onSelect={v=>{const a=assets.find(x=>x.ric===v);if(a)onAssetChange(a);}}/>
@@ -720,7 +726,6 @@ const SettingsCard: React.FC<{
               <FL>Aset Trading</FL>
               <PickerBtn label={selectedAsset?.name||''} placeholder="Pilih aset trading" disabled={disabled} onClick={()=>setPickerOpen('asset')}/>
             </div>
-            {/* Mode info for CTC */}
             {mode==='ctc'&&(
               <div style={{marginBottom:10,padding:'10px 12px',borderRadius:10,background:'rgba(167,139,250,0.06)',border:'1px solid rgba(167,139,250,0.2)',display:'flex',gap:8}}>
                 <Copy style={{width:14,height:14,color:C.violet,flexShrink:0,marginTop:2}}/>
@@ -749,7 +754,16 @@ const SettingsCard: React.FC<{
               <div style={{display:'flex',gap:6}}>
                 <div style={{flex:1,position:'relative'}}>
                   <span style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none'}}>Rp</span>
-                  <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={10000} step={1000} style={{paddingLeft:30}}/>
+                  <input
+                    type="number"
+                    className="ds-input"
+                    value={amount}
+                    onChange={e=>onAmountChange(+e.target.value||0)}
+                    disabled={disabled}
+                    min={IDR_MIN_DISPLAY}
+                    step={1000}
+                    style={{paddingLeft:30,borderColor:isBelowMin?C.coral:undefined}}
+                  />
                 </div>
                 <div style={{position:'relative',flexShrink:0}}>
                   <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{height:'100%',padding:'0 10px',display:'flex',alignItems:'center',gap:4,borderRadius:8,fontSize:11,fontWeight:600,background:amtDrop?'rgba(52,211,153,0.12)':'rgba(255,255,255,0.04)',border:`1px solid ${amtDrop?'rgba(52,211,153,0.4)':'rgba(255,255,255,0.1)'}`,color:amtDrop?C.cyan:C.muted,cursor:disabled?'not-allowed':'pointer'}}>
@@ -759,11 +773,12 @@ const SettingsCard: React.FC<{
                     <>
                       <div style={{position:'fixed',inset:0,zIndex:5}} onClick={()=>setAmtDrop(false)}/>
                       <div style={{position:'absolute',right:0,marginTop:4,zIndex:10,minWidth:160,borderRadius:12,overflow:'hidden',background:'linear-gradient(160deg,#0d1f18 0%,#091510 100%)',border:'1px solid rgba(52,211,153,0.2)',boxShadow:'0 8px 32px rgba(0,0,0,0.5)',animation:'slide-up 0.15s ease'}}>
-                        {[10000,25000,50000,100000,250000,500000,1000000].map((a,idx)=>{
+                        {/* FIX: Quick amounts start at IDR_MIN_DISPLAY (14.000) */}
+                        {QUICK_AMOUNTS.map((a,idx)=>{
                           const isAct=amount===a;
                           return (
-                            <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 12px',fontSize:12,background:isAct?'rgba(52,211,153,0.1)':'transparent',borderBottom:idx<6?'1px solid rgba(255,255,255,0.04)':'none',borderLeft:isAct?`2px solid ${C.cyan}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?C.cyan:C.sub,fontWeight:isAct?700:400,cursor:'pointer'}}>
-                              <span>{a>=1000000?`Rp ${a/1000000}M`:`Rp ${a/1000}K`}</span>
+                            <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 12px',fontSize:12,background:isAct?'rgba(52,211,153,0.1)':'transparent',borderBottom:idx<QUICK_AMOUNTS.length-1?'1px solid rgba(255,255,255,0.04)':'none',borderLeft:isAct?`2px solid ${C.cyan}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?C.cyan:C.sub,fontWeight:isAct?700:400,cursor:'pointer'}}>
+                              <span>{a>=1000000?`Rp ${a/1000000}M`:`Rp ${(a/1000).toFixed(a%1000===0?0:1)}K`}</span>
                               {isAct&&<span style={{color:C.cyan}}>✓</span>}
                             </button>
                           );
@@ -773,6 +788,18 @@ const SettingsCard: React.FC<{
                   )}
                 </div>
               </div>
+              {/* FIX: Show validation warning if below IDR minimum */}
+              {isBelowMin&&(
+                <div style={{display:'flex',alignItems:'center',gap:6,marginTop:6,padding:'6px 10px',borderRadius:8,background:'rgba(248,113,113,0.08)',border:'1px solid rgba(248,113,113,0.25)'}}>
+                  <AlertCircle style={{width:11,height:11,color:C.coral,flexShrink:0}}/>
+                  <p style={{fontSize:10,color:C.coral}}>
+                    Minimum IDR Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')} — trade akan ditolak Stockity
+                  </p>
+                  <button type="button" onClick={()=>onAmountChange(IDR_MIN_DISPLAY)} style={{marginLeft:'auto',fontSize:9,fontWeight:700,color:C.coral,background:'transparent',border:'none',cursor:'pointer',textDecoration:'underline',flexShrink:0}}>
+                    Set min →
+                  </button>
+                </div>
+              )}
             </div>
             <Divider/>
             <SL>Martingale</SL>
@@ -845,7 +872,8 @@ const ControlCard: React.FC<{
   profit:number;
   onStart:()=>void; onStop:()=>void; onPause:()=>void; onResume:()=>void;
   error:string|null;
-}> = ({mode,scheduleStatus,orders,ftStatus,canStart,isLoading,profit,onStart,onStop,onPause,onResume,error}) => {
+  isBelowMin:boolean;
+}> = ({mode,scheduleStatus,orders,ftStatus,canStart,isLoading,profit,onStart,onStop,onPause,onResume,error,isBelowMin}) => {
   const [open,setOpen] = useState(true);
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
@@ -887,7 +915,6 @@ const ControlCard: React.FC<{
       </button>
       {open&&(
         <div style={{padding:'12px 16px 16px'}}>
-          {/* Stats */}
           <div style={{display:'flex',gap:8,marginBottom:12}}>
             {mode==='schedule'?(
               <>
@@ -930,13 +957,18 @@ const ControlCard: React.FC<{
             </div>
           )}
           <div style={{display:'flex',gap:8}}>
-            {!isActive&&<CtrlBtn onClick={onStart} disabled={isLoading||!canStart} loading={isLoading&&!isActive} accent={ac} label={isSchedPaused&&mode==='schedule'?'Lanjutkan':`Mulai ${mode==='ctc'?'CTC':mode==='fastrade'?'FTT':'Bot'}`} icon={<PlayCircle style={{width:14,height:14}}/>} solid/>}
+            {!isActive&&<CtrlBtn onClick={onStart} disabled={isLoading||!canStart||isBelowMin} loading={isLoading&&!isActive} accent={ac} label={isSchedPaused&&mode==='schedule'?'Lanjutkan':`Mulai ${mode==='ctc'?'CTC':mode==='fastrade'?'FTT':'Bot'}`} icon={<PlayCircle style={{width:14,height:14}}/>} solid/>}
             {isSchedRunning&&mode==='schedule'&&<CtrlBtn onClick={onPause} loading={isLoading} accent="#6ee7b7" label="Jeda" icon={<Timer style={{width:14,height:14}}/>}/>}
             {isActive&&<CtrlBtn onClick={onStop} loading={isLoading} accent={C.coral} label="Stop" icon={<StopCircle style={{width:14,height:14}}/>}/>}
           </div>
-          {!canStart&&!isActive&&!error&&(
+          {!canStart&&!isActive&&!error&&!isBelowMin&&(
             <p style={{marginTop:10,fontSize:10,textAlign:'center',color:C.muted}}>
               {mode==='schedule'?'Pilih aset + tambah signal untuk memulai':'Pilih aset untuk memulai'}
+            </p>
+          )}
+          {isBelowMin&&!isActive&&(
+            <p style={{marginTop:10,fontSize:10,textAlign:'center',color:C.coral}}>
+              ✗ Amount di bawah minimum — set minimal Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}
             </p>
           )}
         </div>
@@ -953,14 +985,12 @@ export default function DashboardPage() {
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
 
-  // ── Auth ──
   useEffect(()=>{
     const token = typeof window!=='undefined'?localStorage.getItem('stc_token'):null;
     if(!token){router.push('/login');return;}
     loadAll();
   },[]); // eslint-disable-line
 
-  // ── Data ──
   const [assets,setAssets] = useState<StockityAsset[]>([]);
   const [balance,setBalance] = useState<ProfileBalance|null>(null);
   const [scheduleStatus,setScheduleStatus] = useState<ScheduleStatus|null>(null);
@@ -970,7 +1000,6 @@ export default function DashboardPage() {
   const [ftLogs,setFtLogs] = useState<FastradeLog[]>([]);
   const [isLoading,setIsLoading] = useState(true);
 
-  // ── UI ──
   const [tradingMode,setTradingMode] = useState<TradingMode>('schedule');
   const [error,setError] = useState<string|null>(null);
   const [actionLoading,setActionLoading] = useState(false);
@@ -978,17 +1007,16 @@ export default function DashboardPage() {
   const [addOrderLoading,setAddOrderLoading] = useState(false);
   const [deviceType,setDeviceType] = useState<'mobile'|'tablet'|'desktop'>('mobile');
 
-  // ── Settings ──
   const [selectedRic,setSelectedRic] = useState('');
   const [isDemo,setIsDemo] = useState(true);
   const [duration,setDuration] = useState(60);
-  const [amount,setAmount] = useState(50000);
+  // FIX: Initialize amount as display IDR value. Will be multiplied ×100 → cents on submit.
+  const [amount,setAmount] = useState(50_000);
   const [martingale,setMartingale] = useState<MartingaleConfig>({enabled:false,maxStep:3,multiplier:2});
   const [ftTf,setFtTf] = useState<FastTradeTimeframe>('1m');
   const [stopLoss,setStopLoss] = useState(0);
   const [stopProfit,setStopProfit] = useState(0);
 
-  // ── Win/lose flash ──
   const [flash,setFlash] = useState<'win'|'lose'|null>(null);
   const prevWRef = useRef(0), prevLRef = useRef(0);
   const flashTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1003,7 +1031,6 @@ export default function DashboardPage() {
     prevWRef.current=w; prevLRef.current=l;
   },[ftStatus?.totalWins,ftStatus?.totalLosses]); // eslint-disable-line
 
-  // ── Modeblock toast ──
   const [modeBlock,setModeBlock] = useState<string|null>(null);
   const mbTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
   const showBlock=(msg:string)=>{
@@ -1038,7 +1065,6 @@ export default function DashboardPage() {
     }finally{if(!silent&&isMounted.current)setIsLoading(false);}
   },[router]);
 
-  // Polling
   useEffect(()=>{
     const iv=setInterval(async()=>{
       const [sRes,fRes,oRes,ftlRes] = await Promise.allSettled([
@@ -1055,7 +1081,6 @@ export default function DashboardPage() {
     return()=>clearInterval(iv);
   },[]); // eslint-disable-line
 
-  // ── Derived ──
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
   const isFtRunning = ftStatus?.isRunning??false;
@@ -1077,7 +1102,9 @@ export default function DashboardPage() {
   const canStart = tradingMode==='schedule' ? !!(selectedRic&&pendingOrders.length>0) : !!selectedRic;
   const sessionPnL = tradingMode==='schedule' ? (scheduleStatus as any)?.sessionPnL??0 : ftStatus?.sessionPnL??0;
 
-  // ── Handlers ──
+  // FIX: Validate amount before allowing start
+  const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
+
   const handleModeChange = (m:TradingMode)=>{
     if(m===tradingMode)return;
     if(blockedModes.includes(m)){showBlock('Hentikan mode yang aktif terlebih dahulu.');return;}
@@ -1086,29 +1113,55 @@ export default function DashboardPage() {
 
   const handleStart = async()=>{
     if(!selectedRic)return;
+    if(isBelowMin){setError(`Amount Rp ${amount.toLocaleString('id-ID')} di bawah minimum. Minimum IDR adalah Rp ${IDR_MIN_DISPLAY.toLocaleString('id-ID')}.`);return;}
     setActionLoading(true);setError(null);
     try{
       if(tradingMode==='schedule'){
         await api.updateConfig({
           asset:{ric:selectedRic,name:selectedAsset?.name??selectedRic,profitRate:selectedAsset?.profitRate,iconUrl:selectedAsset?.iconUrl},
-          martingale:{isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount,multiplierValue:martingale.multiplier,multiplierType:'FIXED',isAlwaysSignal:false},
-          isDemoAccount:isDemo,currency:'IDR',currencyIso:'IDR',
-          duration,stopLoss:stopLoss||undefined,stopProfit:stopProfit||undefined,
+          martingale:{
+            isEnabled:martingale.enabled,
+            maxSteps:martingale.maxStep,
+            // FIX: Convert display IDR to cents (×100). Stockity WebSocket expects cents.
+            // Example: Rp 50.000 display × 100 = 5.000.000 cents → valid (min 1.400.000)
+            baseAmount: amount * 100,
+            multiplierValue:martingale.multiplier,
+            multiplierType:'FIXED',
+            isAlwaysSignal:false,
+          },
+          isDemoAccount:isDemo,
+          currency:'IDR',
+          currencyIso:'IDR',
+          duration,
+          // FIX: Convert stop loss/profit to cents as well
+          stopLoss: stopLoss ? stopLoss * 100 : undefined,
+          stopProfit: stopProfit ? stopProfit * 100 : undefined,
         });
         await api.scheduleStart();
       }else{
         await api.fastradeStart({
           mode:tradingMode==='ctc'?'CTC':'FTT',
           asset:{ric:selectedRic,name:selectedAsset?.name??selectedRic,profitRate:selectedAsset?.profitRate,iconUrl:selectedAsset?.iconUrl},
-          martingale:{isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount,multiplierValue:martingale.multiplier,multiplierType:'FIXED'},
-          isDemoAccount:isDemo,currency:'IDR',currencyIso:'IDR',
-          stopLoss:stopLoss||undefined,stopProfit:stopProfit||undefined,
+          martingale:{
+            isEnabled:martingale.enabled,
+            maxSteps:martingale.maxStep,
+            // FIX: Same cents conversion for FastTrade/CTC
+            baseAmount: amount * 100,
+            multiplierValue:martingale.multiplier,
+            multiplierType:'FIXED',
+          },
+          isDemoAccount:isDemo,
+          currency:'IDR',
+          currencyIso:'IDR',
+          stopLoss: stopLoss ? stopLoss * 100 : undefined,
+          stopProfit: stopProfit ? stopProfit * 100 : undefined,
         });
       }
       await loadAll(true);
     }catch(e:any){setError(e?.message??'Gagal memulai');}
     finally{setActionLoading(false);}
   };
+
   const handleStop = async()=>{
     if(!confirm('Yakin ingin menghentikan bot?'))return;
     setActionLoading(true);setError(null);
@@ -1136,13 +1189,7 @@ export default function DashboardPage() {
   const g = deviceType==='desktop'?20:deviceType==='tablet'?18:16;
   const px = 16;
 
-  // ── Layout helpers ──
-  const TopCards = (
-    <>
-      {/* Profit */}
-      <ProfitCard profit={sessionPnL} isLoading={isLoading} flash={flash}/>
-    </>
-  );
+  const TopCards = <ProfitCard profit={sessionPnL} isLoading={isLoading} flash={flash}/>;
 
   const InfoRow = (
     <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(4,1fr)':deviceType==='tablet'?'repeat(3,1fr)':'1fr 1fr',gap:g}}>
@@ -1188,6 +1235,7 @@ export default function DashboardPage() {
       ftStatus={ftStatus} canStart={canStart} isLoading={actionLoading} profit={sessionPnL}
       onStart={handleStart} onStop={handleStop} onPause={handlePause} onResume={handleResume}
       error={error}
+      isBelowMin={isBelowMin}
     />
   );
 
@@ -1197,7 +1245,6 @@ export default function DashboardPage() {
 
       <OrderInputModal open={orderModalOpen} onClose={()=>setOrderModalOpen(false)} orders={scheduleOrders} onAdd={handleAddOrders} onDelete={handleDeleteOrder} onClear={async()=>{await api.clearOrders();setScheduleOrders([]);}} loading={addOrderLoading}/>
 
-      {/* Mobile header image strip */}
       {deviceType!=='desktop'&&(
         <div style={{position:'relative',overflow:'hidden',marginBottom:20}}>
           <div style={{height:4,background:`linear-gradient(90deg,transparent,${C.cyan}55,transparent)`}}/>
@@ -1215,7 +1262,6 @@ export default function DashboardPage() {
       )}
 
       <div style={{maxWidth:1280,margin:'0 auto',padding:`0 ${px}px`}}>
-        {/* Error / mode block */}
         {error&&(
           <div style={{display:'flex',alignItems:'flex-start',gap:9,padding:'10px 14px',borderRadius:8,marginBottom:g,background:C.cord,border:`1px solid rgba(248,113,113,0.2)`,borderLeft:`2px solid ${C.coral}`}}>
             <AlertCircle style={{width:13,height:13,flexShrink:0,marginTop:2,color:C.coral}}/>
@@ -1231,7 +1277,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ─── DESKTOP ─── */}
         {deviceType==='desktop'&&(
           <div style={{paddingTop:24,display:'flex',flexDirection:'column',gap:g}}>
             {InfoRow}
@@ -1255,7 +1300,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ─── TABLET ─── */}
         {deviceType==='tablet'&&(
           <div style={{display:'flex',flexDirection:'column',gap:g}}>
             {InfoRow}
@@ -1271,7 +1315,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ─── MOBILE ─── */}
         {deviceType==='mobile'&&(
           <div style={{display:'flex',flexDirection:'column',gap:g}}>
             {TopCards}
