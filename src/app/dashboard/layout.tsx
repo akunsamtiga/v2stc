@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
+import { BottomNav } from '@/components/BottomNav';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router          = useRouter();
+  const router            = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -25,9 +25,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-gray-950 p-6">{children}</main>
+    <div className="flex flex-col min-h-screen">
+      <main className="flex-1 overflow-y-auto">
+        {children}
+      </main>
+
+      <BottomNav />
     </div>
   );
 }

@@ -36,17 +36,26 @@ function formatDisplay(cents: number, iso: string): string {
     : val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function calcStepAmountCents(
-  baseAmountCents: number,
-  step: number,
-  type: 'FIXED' | 'PERCENTAGE',
-  value: number,
-): number {
-  if (step === 0) return baseAmountCents;
-  if (type === 'FIXED') {
-    return Math.floor(baseAmountCents * Math.pow(value, step));
+// ── Validate entire config before save ───────────────────────────────
+function validateConfig(cfg: Record<string, unknown>): string | null {
+  const asset = (cfg.asset as any) ?? {};
+  const mg = (cfg.martingale as any) ?? {};
+  const currencyIso = ((cfg.currencyIso as string) || 'IDR').toUpperCase();
+  const minCents = CURRENCY_MIN_CENTS[currencyIso] ?? 100;
+  const baseAmountCents: number = mg.baseAmount ?? 0;
+
+  if (!asset.ric) return 'Pilih asset terlebih dahulu.';
+  if (baseAmountCents < minCents) {
+    return `Base amount (${formatDisplay(baseAmountCents, currencyIso)} ${currencyIso}) di bawah minimum Stockity (${formatDisplay(minCents, currencyIso)} ${currencyIso}). Bot tidak akan bisa mengeksekusi trade.`;
   }
-  return Math.floor(baseAmountCents * Math.pow(1 + value / 100, step));
+  if (mg.isEnabled) {
+    if (!mg.maxSteps || mg.maxSteps < 1) return 'Martingale max steps harus minimal 1.';
+    if (mg.multiplierType === 'FIXED' && mg.multiplierValue < 1.1)
+      return 'Fixed multiplier harus ≥ 1.1×.';
+    if (mg.multiplierType === 'PERCENTAGE' && mg.multiplierValue < 1)
+      return 'Percentage multiplier harus ≥ 1%.';
+  }
+  return null;
 }
 
 // ── sub-components ───────────────────────────────────────────────────
@@ -96,7 +105,7 @@ const DEFAULT_CONFIG: ScheduleConfig = {
   martingale: {
     isEnabled: false,
     maxSteps: 3,
-    baseAmount: 10000,
+    baseAmount: 0,          // ← start at 0 so user is forced to set a valid amount
     multiplierValue: 2,
     multiplierType: 'FIXED',
     isAlwaysSignal: false,
@@ -110,23 +119,28 @@ const DEFAULT_CONFIG: ScheduleConfig = {
 
 // ── main component ────────────────────────────────────────────────────
 export default function ConfigPage() {
-  const [cfg,     setCfg]     = useState<ScheduleConfig>(DEFAULT_CONFIG as unknown as ScheduleConfig);
-  const [assets,  setAssets]  = useState<StockityAsset[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [cfg,          setCfg]          = useState<ScheduleConfig>(DEFAULT_CONFIG as unknown as ScheduleConfig);
+  const [assets,       setAssets]       = useState<StockityAsset[]>([]);
+  const [loading,      setLoading]      = useState(true);
   const [assetLoading, setAssetLoading] = useState(false);
-  const [saving,  setSaving]  = useState(false);
-  const [msg,     setMsg]     = useState('');
-  const [assetSearch, setAssetSearch] = useState('');
-  const [showAssetList, setShowAssetList] = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [msg,          setMsg]          = useState('');
+  const [msgType,      setMsgType]      = useState<'ok' | 'err'>('ok');
+  const [assetSearch,  setAssetSearch]  = useState('');
+  const [showAssetList,setShowAssetList]= useState(false);
 
   // typed accessors
-  const asset      = (cfg as any).asset       ?? {};
-  const mg         = (cfg as any).martingale  ?? {};
-  const isDemo     = (cfg as any).isDemoAccount ?? true;
-  const currency   = (cfg as any).currency    ?? 'IDR';
-  const currencyIso = (cfg as any).currencyIso ?? 'IDR';
-  const stopLoss   = (cfg as any).stopLoss ?? 0;
-  const stopProfit = (cfg as any).stopProfit ?? 0;
+  const asset       = (cfg as any).asset       ?? {};
+  const mg          = (cfg as any).martingale  ?? {};
+  const isDemo      = (cfg as any).isDemoAccount ?? true;
+  const currencyIso = ((cfg as any).currencyIso ?? 'IDR') as string;
+  const stopLoss    = (cfg as any).stopLoss    ?? 0;
+  const stopProfit  = (cfg as any).stopProfit  ?? 0;
+
+  const iso     = currencyIso.toUpperCase();
+  const minCents = CURRENCY_MIN_CENTS[iso] ?? 100;
+  const baseAmountCents: number = mg.baseAmount ?? 0;
+  const isBelowMin = baseAmountCents < minCents;
 
   const setField = (path: string[], value: unknown) => {
     setCfg(prev => {
@@ -153,8 +167,17 @@ export default function ConfigPage() {
             : { ...(prev as object) };
         if (me?.currency)    base['currency']    = me.currency;
         if (me?.currencyIso) base['currencyIso'] = me.currencyIso;
-        if (base['stopLoss'] === undefined) base['stopLoss'] = 0;
+        if (base['stopLoss']   === undefined) base['stopLoss']   = 0;
         if (base['stopProfit'] === undefined) base['stopProfit'] = 0;
+
+        // ── FIX: if saved baseAmount is below current currency minimum, reset to minimum
+        const savedMg = (base['martingale'] as any) ?? {};
+        const savedIso = ((base['currencyIso'] as string) || 'IDR').toUpperCase();
+        const savedMin = CURRENCY_MIN_CENTS[savedIso] ?? 100;
+        if (!savedMg.baseAmount || savedMg.baseAmount < savedMin) {
+          base['martingale'] = { ...savedMg, baseAmount: savedMin };
+        }
+
         return base as ScheduleConfig;
       });
     } catch { /* use default */ }
@@ -173,13 +196,23 @@ export default function ConfigPage() {
   useEffect(() => { load(); }, [load]);
 
   const handleSave = async () => {
-    if (!asset.ric) { setMsg('✗ Pilih asset terlebih dahulu'); return; }
-    setSaving(true); setMsg('');
+    setMsg('');
+    // ── Validate before sending ──────────────────────────────────────
+    const err = validateConfig(cfg as unknown as Record<string, unknown>);
+    if (err) {
+      setMsg(`✗ ${err}`);
+      setMsgType('err');
+      return;
+    }
+
+    setSaving(true);
     try {
       await api.updateConfig(cfg as unknown as UpdateConfigPayload);
       setMsg('✓ Konfigurasi berhasil disimpan');
+      setMsgType('ok');
     } catch (e: unknown) {
       setMsg(`✗ ${e instanceof Error ? e.message : 'Gagal menyimpan'}`);
+      setMsgType('err');
     } finally { setSaving(false); }
   };
 
@@ -337,13 +370,9 @@ export default function ConfigPage() {
       {/* ── 3. Amount ── */}
       <Section title="Amount">
         {(() => {
-          const iso = (currencyIso || 'IDR').toUpperCase();
-          const minCents = CURRENCY_MIN_CENTS[iso] ?? 100;
-          const minDisplay = centsToDisplay(minCents);
-          const baseAmountCents: number = mg.baseAmount ?? minCents;
-          const displayVal = centsToDisplay(baseAmountCents);
           const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(iso);
-          const isBelowMin = baseAmountCents < minCents;
+          const displayVal = centsToDisplay(baseAmountCents);
+          const minDisplay = centsToDisplay(minCents);
 
           return (
             <Field
@@ -355,36 +384,52 @@ export default function ConfigPage() {
                   type="number"
                   min={minDisplay}
                   step={isZeroDecimal ? 1000 : 0.01}
-                  value={displayVal}
+                  value={displayVal || ''}
                   onChange={e => {
                     const display = Number(e.target.value);
                     setField(['martingale', 'baseAmount'], displayToCents(display));
                   }}
-                  className={inputCls + ' pr-14' + (isBelowMin ? ' border-red-500/50 focus:border-red-500' : '')}
+                  className={inputCls + ' pr-14' + (isBelowMin ? ' border-red-500 focus:border-red-500 focus:ring-red-500/20' : '')}
+                  placeholder={`Min. ${formatDisplay(minCents, iso)}`}
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
                   {iso}
                 </span>
               </div>
+
+              {/* ── FIX: Block save with a prominent error banner, not just hint ── */}
               {isBelowMin && (
-                <p className="text-xs text-red-400 mt-1">
-                  ⚠ Di bawah minimum Stockity ({formatDisplay(minCents, iso)} {iso})
-                </p>
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 mt-2">
+                  <span className="text-red-400 text-sm shrink-0">✗</span>
+                  <div>
+                    <p className="text-xs text-red-400 font-semibold">Amount di bawah minimum Stockity</p>
+                    <p className="text-[11px] text-red-400/70 mt-0.5">
+                      Set ke minimal <span className="font-mono font-bold">{formatDisplay(minCents, iso)} {iso}</span> agar trade bisa dieksekusi.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setField(['martingale', 'baseAmount'], minCents)}
+                      className="mt-1.5 text-[11px] font-semibold text-red-300 underline underline-offset-2 hover:text-red-200 transition-colors"
+                    >
+                      Set ke minimum sekarang →
+                    </button>
+                  </div>
+                </div>
               )}
+
               <p className="text-[11px] text-gray-700 mt-1">
-                Nilai internal: <span className="font-mono text-gray-600">{baseAmountCents.toLocaleString()}</span>
+                Nilai internal: <span className="font-mono text-gray-600">{baseAmountCents.toLocaleString()}</span> cents
               </p>
             </Field>
           );
         })()}
       </Section>
 
-      {/* ── 4. Risk Management (NEW) ── */}
+      {/* ── 4. Risk Management ── */}
       <Section title="Risk Management">
         <div className="space-y-4">
           {/* Stop Loss */}
           {(() => {
-            const iso = (currencyIso || 'IDR').toUpperCase();
             const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(iso);
             const displayVal = centsToDisplay(stopLoss || 0);
             const isEnabled = (stopLoss || 0) > 0;
@@ -400,11 +445,10 @@ export default function ConfigPage() {
                   </div>
                   <Toggle
                     checked={isEnabled}
-                    onChange={v => setField(['stopLoss'], v ? 50000000 : 0)}
+                    onChange={v => setField(['stopLoss'], v ? minCents * 10 : 0)}
                     label="Stop Loss toggle"
                   />
                 </div>
-                
                 {isEnabled && (
                   <div className="pl-4 border-l-2 border-red-500/30 space-y-2">
                     <div className="relative">
@@ -413,10 +457,7 @@ export default function ConfigPage() {
                         min={0}
                         step={isZeroDecimal ? 1000 : 0.01}
                         value={displayVal}
-                        onChange={e => {
-                          const display = Number(e.target.value);
-                          setField(['stopLoss'], displayToCents(display));
-                        }}
+                        onChange={e => setField(['stopLoss'], displayToCents(Number(e.target.value)))}
                         className={inputCls + ' pr-14'}
                         placeholder="0"
                       />
@@ -437,7 +478,6 @@ export default function ConfigPage() {
 
           {/* Stop Profit */}
           {(() => {
-            const iso = (currencyIso || 'IDR').toUpperCase();
             const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(iso);
             const displayVal = centsToDisplay(stopProfit || 0);
             const isEnabled = (stopProfit || 0) > 0;
@@ -453,11 +493,10 @@ export default function ConfigPage() {
                   </div>
                   <Toggle
                     checked={isEnabled}
-                    onChange={v => setField(['stopProfit'], v ? 50000000 : 0)}
+                    onChange={v => setField(['stopProfit'], v ? minCents * 10 : 0)}
                     label="Stop Profit toggle"
                   />
                 </div>
-                
                 {isEnabled && (
                   <div className="pl-4 border-l-2 border-green-500/30 space-y-2">
                     <div className="relative">
@@ -466,10 +505,7 @@ export default function ConfigPage() {
                         min={0}
                         step={isZeroDecimal ? 1000 : 0.01}
                         value={displayVal}
-                        onChange={e => {
-                          const display = Number(e.target.value);
-                          setField(['stopProfit'], displayToCents(display));
-                        }}
+                        onChange={e => setField(['stopProfit'], displayToCents(Number(e.target.value)))}
                         className={inputCls + ' pr-14'}
                         placeholder="0"
                       />
@@ -486,7 +522,6 @@ export default function ConfigPage() {
             );
           })()}
 
-          {/* Info */}
           <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-500/5 border border-blue-500/20">
             <span className="text-blue-400 text-sm shrink-0">ℹ</span>
             <p className="text-xs text-blue-400 leading-relaxed">
@@ -580,24 +615,37 @@ export default function ConfigPage() {
       </Section>
 
       {/* ── Save ── */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-6 py-2.5 text-sm font-bold rounded-xl bg-green-500 hover:bg-green-400
-                     disabled:opacity-40 text-white transition-colors"
-        >
-          {saving ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Menyimpan...
-            </span>
-          ) : 'Simpan Konfigurasi'}
-        </button>
-
-        {msg && (
-          <p className={`text-sm ${msg.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>{msg}</p>
+      <div className="space-y-3">
+        {/* Validation summary — shown only when there's a blocking error */}
+        {isBelowMin && (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30">
+            <span className="text-red-400">✗</span>
+            <p className="text-sm text-red-400">
+              Konfigurasi tidak valid — perbaiki error di atas sebelum menyimpan
+            </p>
+          </div>
         )}
+
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleSave}
+            disabled={saving || isBelowMin || !asset.ric}
+            title={isBelowMin ? `Base amount harus minimal ${formatDisplay(minCents, iso)} ${iso}` : undefined}
+            className="px-6 py-2.5 text-sm font-bold rounded-xl bg-green-500 hover:bg-green-400
+                       disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
+          >
+            {saving ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Menyimpan...
+              </span>
+            ) : 'Simpan Konfigurasi'}
+          </button>
+
+          {msg && (
+            <p className={`text-sm ${msgType === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{msg}</p>
+          )}
+        </div>
       </div>
     </div>
   );

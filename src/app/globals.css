@@ -2,51 +2,512 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body { height: 100%; background: #0f0f0f; }
+/* ============================================================
+   DESIGN TOKENS — synced with dashboard palette
+   ============================================================ */
+:root {
+  --bg:          #0f0f0f;
+  --s1:          #0f0f0f;
+  --s2:          #1e5c3c;
+  --s3:          #134529;
+  --cyan:        #34d399;
+  --cyan-dim:    rgba(52, 211, 153, 0.12);
+  --cyan-glow:   rgba(52, 211, 153, 0.06);
+  --coral:       #f87171;
+  --coral-dim:   rgba(248, 113, 113, 0.12);
+  --amber:       #fbbf24;
+  --amber-dim:   rgba(251, 191, 36, 0.10);
+  --violet:      #a78bfa;
+  --violet-dim:  rgba(167, 139, 250, 0.10);
+  --text:        #ffffff;
+  --sub:         rgba(255, 255, 255, 0.95);
+  --muted:       rgba(255, 255, 255, 0.65);
+  --faint:       rgba(52, 211, 153, 0.10);
+  --bdr:         rgba(52, 211, 153, 0.28);
+  --bdr-act:     rgba(52, 211, 153, 0.60);
+  --font-exo:    var(--font-geist-sans), 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:   'Courier New', monospace;
+}
 
-::-webkit-scrollbar        { width: 3px; height: 3px; }
-::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: rgba(52,211,153,0.2); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(52,211,153,0.4); }
-
-.ds-card {
-  background: #1e5c3c;
-  border: 1px solid rgba(52,211,153,0.28);
-  border-radius: 10px;
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { overflow-x: hidden; }
+body {
+  font-family: var(--font-exo);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  max-width: 100vw;
   position: relative;
 }
 
-.ds-input {
-  display: block; width: 100%;
-  background: rgba(0,0,0,0.40);
-  border: 1px solid rgba(52,211,153,0.22);
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 13px; color: #fff;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  font-family: inherit; resize: vertical;
+/* ============================================================
+   GRID BACKGROUND — deep dark with subtle green tint
+   ============================================================ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      rgba(52, 211, 153, 0.025) 1px,
+      transparent 2px,
+      transparent 40px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      rgba(52, 211, 153, 0.015) 1px,
+      transparent 2px,
+      transparent 40px
+    );
+  pointer-events: none;
+  z-index: 0;
 }
-.ds-input:focus { border-color: rgba(52,211,153,0.5); box-shadow: 0 0 0 2px rgba(52,211,153,0.08); }
-.ds-input::placeholder { color: rgba(255,255,255,0.3); }
-.ds-input:disabled { opacity: 0.45; cursor: not-allowed; }
-select.ds-input { cursor: pointer; }
-textarea.ds-input { min-height: 80px; }
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(52, 211, 153, 0.06) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+body > * { position: relative; z-index: 1; }
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar        { width: 3px; height: 3px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(52, 211, 153, 0.25); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(52, 211, 153, 0.45); }
+
+/* ============================================================
+   DS-INPUT — matches dashboard input style
+   ============================================================ */
+.ds-input {
+  display: block;
+  width: 100%;
+  padding: 10px 13px;
+  background: rgba(0, 0, 0, 0.30) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(52, 211, 153, 0.18) !important;
+  border-radius: 8px !important;
+  font-family: var(--font-exo) !important;
+  font-size: 13px !important;
+  outline: none !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  line-height: 1.4;
+  -webkit-appearance: none;
+  clip-path: none !important;
+}
+.ds-input:focus {
+  border-color: rgba(52, 211, 153, 0.50) !important;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.08) !important;
+  background: rgba(52, 211, 153, 0.04) !important;
+}
+.ds-input::placeholder { color: rgba(255, 255, 255, 0.28) !important; }
+.ds-input:disabled { opacity: 0.4; cursor: not-allowed; }
+
+select.ds-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2334d399' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  padding-right: 36px !important;
+}
+select.ds-input option { background: #0f0f0f; color: #ffffff; }
+select.ds-input option:checked { background: #1e5c3c; color: #34d399; font-weight: 700; }
 
 input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button { opacity: 0; }
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
 
-.schedule-item:hover { background: rgba(52,211,153,0.04) !important; }
+textarea.ds-input { resize: vertical; min-height: 80px; }
 
-@keyframes spin          { to { transform: rotate(360deg); } }
-@keyframes ping          { 75%,100% { transform: scale(2.2); opacity: 0; } }
-@keyframes pulse         { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
-@keyframes fade-in       { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slide-up      { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-@keyframes shimmer-h     { 0%,100% { background-position: 200% 0; } 50% { background-position: -200% 0; } }
-@keyframes shimmer       { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-@keyframes skeleton-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 0.85; } }
-@keyframes win-flash  { 0% { box-shadow:none; } 15% { box-shadow:0 0 0 4px rgba(52,211,153,0.35),inset 0 0 20px rgba(52,211,153,0.08); } 60% { box-shadow:0 0 0 8px rgba(52,211,153,0.12); } 100% { box-shadow:none; } }
-@keyframes lose-flash { 0% { box-shadow:none; } 15% { box-shadow:0 0 0 4px rgba(248,113,113,0.35),inset 0 0 20px rgba(248,113,113,0.08); } 60% { box-shadow:0 0 0 8px rgba(248,113,113,0.12); } 100% { box-shadow:none; } }
-@keyframes profit-slide-up   { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-@keyframes profit-slide-down { from { transform: translateY(-12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+/* ============================================================
+   DS-CARD — matches dashboard card style exactly
+   ============================================================ */
+.ds-card {
+  background: linear-gradient(135deg, #0b1812 0%, #081310 100%) !important;
+  border: 1px solid rgba(52, 211, 153, 0.13) !important;
+  border-radius: 14px !important;
+  clip-path: none !important;
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.25s ease;
+  box-shadow:
+    0 4px 20px rgba(52, 211, 153, 0.05),
+    0 2px 8px rgba(0, 0, 0, 0.50);
+}
+
+/* Top lit edge — cyan gradient shimmer */
+.ds-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(52, 211, 153, 0.45),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ds-card::after { display: none; }
+
+.ds-card:hover {
+  border-color: rgba(52, 211, 153, 0.32) !important;
+  box-shadow:
+    0 8px 30px rgba(52, 211, 153, 0.10),
+    0 0 40px rgba(52, 211, 153, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.50) !important;
+  transform: translateY(-2px);
+}
+
+/* Active / running card — brighter border glow */
+.ds-card.active {
+  border-color: rgba(52, 211, 153, 0.40) !important;
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.15),
+    0 8px 30px rgba(52, 211, 153, 0.12) !important;
+}
+
+/* Violet variant for CTC mode */
+.ds-card.ctc {
+  border-color: rgba(167, 139, 250, 0.20) !important;
+}
+.ds-card.ctc::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(167, 139, 250, 0.40),
+    transparent
+  );
+}
+.ds-card.ctc:hover {
+  border-color: rgba(167, 139, 250, 0.38) !important;
+  box-shadow:
+    0 8px 30px rgba(167, 139, 250, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.50) !important;
+}
+
+/* ============================================================
+   SCHEDULE ITEM
+   ============================================================ */
+.schedule-item {
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.schedule-item:hover {
+  background: rgba(52, 211, 153, 0.05) !important;
+  transform: translateX(2px);
+}
+
+/* ============================================================
+   ANIMATIONS — dashboard-synced full set
+   ============================================================ */
+
+/* Core */
+@keyframes spin           { to { transform: rotate(360deg); } }
+@keyframes ping           { 0% { transform: scale(1); opacity: .8; } 70%, 100% { transform: scale(2.2); opacity: 0; } }
+@keyframes slide-up       { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fade-in        { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulse          { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes float          { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes countUp        { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Skeleton / shimmer */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes shimmer-h {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+@keyframes skeleton-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.85; } }
+
+/* Ticker */
+@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+/* Win / Lose result flash */
+@keyframes win-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  20%  {
+    box-shadow:
+      0 0 0 3px rgba(52, 211, 153, 0.65),
+      0 0 35px rgba(52, 211, 153, 0.22);
+  }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+@keyframes lose-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+  20%  {
+    box-shadow:
+      0 0 0 3px rgba(248, 113, 113, 0.65),
+      0 0 35px rgba(248, 113, 113, 0.22);
+  }
+  100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+}
+
+/* Profit counter slide */
+@keyframes profit-slide-up   { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes profit-slide-down { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ============================================================
+   UTILITY — animation helpers
+   ============================================================ */
+.animate-spin     { animation: spin 0.7s linear infinite; }
+.animate-ping     { animation: ping 1.6s ease-in-out infinite; }
+.animate-pulse    { animation: pulse 1.8s ease-in-out infinite; }
+.animate-slide-up { animation: slide-up 0.25s cubic-bezier(0.32, 0.72, 0, 1); }
+.animate-fade-in  { animation: fade-in 0.15s ease; }
+
+.win-flash  { animation: win-flash  2s ease forwards; }
+.lose-flash { animation: lose-flash 2s ease forwards; }
+
+/* ============================================================
+   SKELETON LOADER
+   ============================================================ */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(52, 211, 153, 0.08) 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(52, 211, 153, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease infinite;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   DASHBOARD PAGE OVERRIDES
+   ============================================================ */
+html.dashboard-page,
+html.dashboard-page body {
+  background: #0f0f0f !important;
+}
+
+/* ============================================================
+   MARKET TICKER BAR
+   ============================================================ */
+.market-ticker  { display: flex; overflow: hidden; position: relative; }
+.ticker-track   { display: flex; animation: ticker 32s linear infinite; }
+
+/* ============================================================
+   STATUS CHIP
+   ============================================================ */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 99px;
+}
+.status-chip .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.status-chip .dot.pulse { animation: ping 1.6s ease-in-out infinite; }
+
+/* ============================================================
+   SECTION LABEL DIVIDER (SL component)
+   ============================================================ */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  margin-top: 4px;
+}
+.section-label span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(52, 211, 153, 0.60);
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, rgba(52, 211, 153, 0.18), transparent);
+}
+
+/* ============================================================
+   TOGGLE SWITCH
+   ============================================================ */
+.ds-toggle-track {
+  width: 44px;
+  height: 22px;
+  border-radius: 22px;
+  position: relative;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.ds-toggle-track.checked {
+  background: rgba(52, 211, 153, 0.20);
+  border-color: rgba(52, 211, 153, 0.50);
+}
+.ds-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transition: left 0.2s;
+  left: 2px;
+  background: rgba(255, 255, 255, 0.50);
+}
+.ds-toggle-thumb.checked {
+  left: 23px;
+  background: #34d399;
+}
+
+/* ============================================================
+   CONTROL BUTTON
+   ============================================================ */
+.ds-ctrl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.ds-ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.ds-ctrl-btn:not(:disabled):hover { filter: brightness(1.12); }
+
+/* ============================================================
+   PICKER BUTTON
+   ============================================================ */
+.ds-picker-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid rgba(52, 211, 153, 0.18);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.ds-picker-btn:hover {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.04);
+}
+.ds-picker-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============================================================
+   MODAL / BOTTOM SHEET
+   ============================================================ */
+.ds-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  animation: fade-in 0.15s ease;
+}
+.ds-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.80);
+  backdrop-filter: blur(12px);
+}
+.ds-modal-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(160deg, #0b1812 0%, #081310 100%);
+  border-radius: 16px 16px 0 0;
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  border-bottom: none;
+  box-shadow: 0 -8px 60px rgba(0, 0, 0, 0.60);
+  animation: slide-up 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  overflow: hidden;
+}
+.ds-modal-sheet::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.55), transparent);
+  pointer-events: none;
+}
+.ds-modal-handle {
+  width: 32px;
+  height: 3px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 12px auto 0;
+}
+
+/* ============================================================
+   MINI STATS TILE (used inside ControlCard / FastradePanel)
+   ============================================================ */
+.ds-stat-tile {
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(52, 211, 153, 0.05);
+  border: 1px solid rgba(52, 211, 153, 0.10);
+}
+.ds-stat-tile .label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 4px;
+}
+.ds-stat-tile .value {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-family: var(--font-mono);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 767px) {
+  .badge-text-hide-mobile { display: none; }
+  .ds-modal-sheet { margin-bottom: 64px; max-height: calc(100dvh - 112px); display: flex; flex-direction: column; }
+}
