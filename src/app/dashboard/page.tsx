@@ -1182,7 +1182,8 @@ export default function DashboardPage() {
     if (scheduleState === 'RUNNING' || scheduleState === 'PAUSED') { b.push('ftt'); b.push('ctc'); }
     if (isFastradeRunning && fastradeStatus?.mode === 'FTT') { b.push('schedule'); b.push('ctc'); }
     if (isFastradeRunning && fastradeStatus?.mode === 'CTC') { b.push('schedule'); b.push('ftt'); }
-    return [...new Set(b)];
+    // Gunakan filter untuk menghapus duplikat alih-alih Set
+    return b.filter((item, index) => b.indexOf(item) === index);
   })();
 
   const isCurrentModeActive = mode === 'schedule'
@@ -1402,7 +1403,7 @@ export default function DashboardPage() {
             <ControlBar
               mode={mode}
               scheduleState={scheduleState}
-              fastradeStatus={fastradeStatus}
+              fastradeState={fastradeStatus}
               canStart={canStart}
               isLoading={isActionLoading}
               onStart={handleStart}

@@ -1,15 +1,14 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { api } from '@/lib/api';
-import type { Order } from '@/types';
+import { api, type ScheduleOrder } from '@/lib/api';
 
 export default function OrdersPage() {
-  const [orders,     setOrders]     = useState<Order[]>([]);
+  const [orders,     setOrders]     = useState<ScheduleOrder[]>([]);
   const [input,      setInput]      = useState('');
   const [loading,    setLoading]    = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [msg,        setMsg]        = useState('');
-  const [preview,    setPreview]    = useState<{ orders: Order[]; errors: string[] } | null>(null);
+  const [preview,    setPreview]    = useState<{ orders: ScheduleOrder[]; errors: string[] } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -87,12 +86,12 @@ export default function OrdersPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
         <div>
           <p className="text-sm font-semibold text-gray-300 mb-1">Tambah Orders</p>
-          <p className="text-xs text-gray-600">Format per baris: <code className="text-green-500 bg-gray-800 px-1 rounded">HH:MM UP</code> atau <code className="text-red-500 bg-gray-800 px-1 rounded">HH:MM DOWN</code></p>
+          <p className="text-xs text-gray-600">Format per baris: <code className="text-green-500 bg-gray-800 px-1 rounded">HH:MM call</code> atau <code className="text-red-500 bg-gray-800 px-1 rounded">HH:MM put</code></p>
         </div>
         <textarea
           value={input}
           onChange={e => { setInput(e.target.value); setPreview(null); }}
-          placeholder={'09:00 UP\n09:30 DOWN\n10:00 UP\n10:30 DOWN'}
+          placeholder={'09:00 call\n09:30 put\n10:00 call\n10:30 put'}
           rows={6}
           className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-3 text-sm
                      text-white placeholder-gray-700 font-mono focus:outline-none
@@ -107,7 +106,7 @@ export default function OrdersPage() {
             {preview.orders.slice(0, 5).map((o, i) => (
               <p key={i} className="font-mono">
                 <span className="text-gray-500">{o.time}</span>
-                <span className={o.trend === 'UP' ? ' text-green-400' : ' text-red-400'}> {o.trend}</span>
+                <span className={o.trend === 'call' ? ' text-green-400' : ' text-red-400'}> {o.trend}</span>
               </p>
             ))}
             {preview.orders.length > 5 && <p className="text-gray-600">+ {preview.orders.length - 5} lainnya...</p>}
@@ -164,10 +163,10 @@ export default function OrdersPage() {
                   <td className="px-4 py-3 font-mono text-gray-300 text-sm">{order.time}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-md text-xs font-bold
-                      ${order.trend === 'UP'
+                      ${order.trend === 'call'
                         ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                         : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                      {order.trend === 'UP' ? '↑ UP' : '↓ DOWN'}
+                      {order.trend === 'call' ? '↑ CALL' : '↓ PUT'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
