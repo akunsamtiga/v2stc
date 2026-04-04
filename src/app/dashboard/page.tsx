@@ -256,13 +256,30 @@ const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?
   const modeBdr  = mode==='ctc'?'rgba(167,139,250,0.25)':'rgba(52,211,153,0.25)';
   const abbr     = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '—';
   const [imgErr,setImgErr] = useState(false);
+
+  // Debug: log icon URL
+  useEffect(() => {
+    if (asset?.iconUrl) {
+      console.log('[AssetCard] Icon URL:', asset.iconUrl);
+    }
+  }, [asset?.iconUrl]);
+
   if(isLoading) return <Card style={{padding:'11px 14px',height:'100%'}}><Sk w={100} h={22}/></Card>;
   return (
     <Card style={{padding:0,height:'100%'}}>
       <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',height:68}}>
         <div style={{width:40,height:40,borderRadius:11,overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:modeBg,border:`1.5px solid ${modeBdr}`}}>
           {asset?.iconUrl&&!imgErr?(
-            <img src={asset.iconUrl} alt={asset.ric} onError={()=>setImgErr(true)} style={{width:'100%',height:'100%',objectFit:'contain',padding:4}}/>
+            <img 
+              src={asset.iconUrl} 
+              alt={asset.ric} 
+              crossOrigin="anonymous"
+              onError={(e) => {
+                console.warn('[AssetCard] Failed to load icon:', asset.iconUrl, e);
+                setImgErr(true);
+              }} 
+              style={{width:'100%',height:'100%',objectFit:'contain',padding:4}}
+            />
           ):(
             <span style={{fontWeight:700,fontSize:13,color:modeCol,letterSpacing:'-0.02em'}}>{abbr}</span>
           )}
