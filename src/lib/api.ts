@@ -33,7 +33,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 }
 
 // ─────────────────────────────────────────────
-// TYPES
+// TYPES — Schedule / Fastrade (existing)
 // ─────────────────────────────────────────────
 export interface StockityAsset {
   ric: string;
@@ -59,7 +59,7 @@ export interface ScheduleStatus {
   skippedOrders?: number;
   activeOrders?: number;
   sessionPnL?: number;
-  nextExecutionTime?: string;   // ← add this line
+  nextExecutionTime?: string;
   startedAt?: string;
   updatedAt?: string;
   [key: string]: unknown;
@@ -186,6 +186,157 @@ export interface UpdateConfigPayload {
 }
 
 // ─────────────────────────────────────────────
+// TYPES — AI Signal
+// ─────────────────────────────────────────────
+export interface AISignalConfig {
+  asset: { ric: string; name: string } | null;
+  baseAmount: number;
+  martingale: {
+    isEnabled: boolean;
+    maxSteps: number;
+    multiplierValue: number;
+    multiplierType: 'FIXED' | 'PERCENTAGE';
+    isAlwaysSignal: boolean;
+  };
+  isDemoAccount: boolean;
+  currency: string;
+}
+
+export interface AISignalStatus {
+  isRunning: boolean;
+  pendingOrders: number;
+  executedOrders: number;
+  sessionPnL?: number;
+  totalWins?: number;
+  totalLosses?: number;
+  totalTrades?: number;
+  lastStatus?: string;
+  [key: string]: unknown;
+}
+
+export interface AISignalOrder {
+  id: string;
+  assetRic: string;
+  assetName: string;
+  trend: string;
+  amount: number;
+  executionTime: number;
+  receivedAt: number;
+  originalMessage: string;
+  isExecuted: boolean;
+  result?: string;
+  status: string;
+  martingaleStep: number;
+  maxMartingaleSteps: number;
+}
+
+export interface UpdateAISignalConfigPayload {
+  baseAmount?: number;
+  isDemoAccount?: boolean;
+  martingaleEnabled?: boolean;
+  maxSteps?: number;
+  multiplierValue?: number;
+  isAlwaysSignal?: boolean;
+}
+
+// ─────────────────────────────────────────────
+// TYPES — Indicator
+// ─────────────────────────────────────────────
+export type IndicatorType = 'SMA' | 'EMA' | 'RSI';
+
+export interface IndicatorConfig {
+  asset: { ric: string; name: string } | null;
+  isDemoAccount: boolean;
+  settings: {
+    type: IndicatorType;
+    period: number;
+    rsiOverbought: number;
+    rsiOversold: number;
+    isEnabled: boolean;
+    sensitivity: number;
+    amount: number;
+  };
+  martingale: {
+    isEnabled: boolean;
+    maxSteps: number;
+    baseAmount: number;
+    multiplierValue: number;
+    multiplierType: 'FIXED' | 'PERCENTAGE';
+    isAlwaysSignal: boolean;
+  };
+  [key: string]: unknown;
+}
+
+export interface IndicatorStatus {
+  isRunning: boolean;
+  currentIndicatorValue?: number;
+  lastTrend?: string | null;
+  lastSignalTime?: number | null;
+  sessionPnL?: number;
+  totalWins?: number;
+  totalLosses?: number;
+  totalTrades?: number;
+  lastStatus?: string;
+  indicatorType?: IndicatorType;
+  [key: string]: unknown;
+}
+
+export interface UpdateIndicatorConfigPayload {
+  type?: IndicatorType;
+  period?: number;
+  rsiOverbought?: number;
+  rsiOversold?: number;
+  isEnabled?: boolean;
+  sensitivity?: number;
+  amount?: number;
+}
+
+// ─────────────────────────────────────────────
+// TYPES — Momentum
+// ─────────────────────────────────────────────
+export interface MomentumConfig {
+  asset: { ric: string; name: string } | null;
+  isDemoAccount: boolean;
+  enabledMomentums: {
+    candleSabit: boolean;
+    dojiTerjepit: boolean;
+    dojiPembatalan: boolean;
+    bbSarBreak: boolean;
+  };
+  martingale: {
+    isEnabled: boolean;
+    maxSteps: number;
+    baseAmount: number;
+    multiplierValue: number;
+    multiplierType: 'FIXED' | 'PERCENTAGE';
+    isAlwaysSignal: boolean;
+  };
+  [key: string]: unknown;
+}
+
+export interface MomentumStatus {
+  isRunning: boolean;
+  lastDetectedPattern?: string | null;
+  lastSignalTime?: number | null;
+  sessionPnL?: number;
+  totalWins?: number;
+  totalLosses?: number;
+  totalTrades?: number;
+  lastStatus?: string;
+  [key: string]: unknown;
+}
+
+export interface UpdateMomentumConfigPayload {
+  candleSabitEnabled?: boolean;
+  dojiTerjepitEnabled?: boolean;
+  dojiPembatalanEnabled?: boolean;
+  bbSarBreakEnabled?: boolean;
+  maxSteps?: number;
+  multiplierValue?: number;
+  baseAmount?: number;
+}
+
+// ─────────────────────────────────────────────
 // API OBJECT
 // ─────────────────────────────────────────────
 export const api = {
@@ -251,4 +402,44 @@ export const api = {
   fastradeStatus: () => req<FastradeStatus>('GET', '/fastrade/status'),
   fastradeLogs:   (limit = 100) =>
     req<FastradeLog[]>('GET', `/fastrade/logs?limit=${limit}`),
-};  
+
+  // ── AI Signal ────────────────────────────
+  aiSignalGetConfig:    () => req<AISignalConfig>('GET', '/aisignal/config'),
+  aiSignalUpdateConfig: (data: UpdateAISignalConfigPayload) =>
+    req<AISignalConfig>('PUT', '/aisignal/config', data),
+  aiSignalSetAsset:     (ric: string, name: string) =>
+    req<AISignalConfig>('PUT', '/aisignal/config/asset', { ric, name }),
+  aiSignalStart:        () => req<{ message: string }>('POST', '/aisignal/start'),
+  aiSignalStop:         () => req<{ message: string }>('POST', '/aisignal/stop'),
+  aiSignalStatus:       () => req<AISignalStatus>('GET', '/aisignal/status'),
+  aiSignalPendingOrders: () => req<AISignalOrder[]>('GET', '/aisignal/orders/pending'),
+  aiSignalExecutedOrders: () => req<AISignalOrder[]>('GET', '/aisignal/orders/executed'),
+  aiSignalReceive:      (trend: string, executionTime: number, originalMessage?: string) =>
+    req<{ message: string }>('POST', '/aisignal/signal', { trend, executionTime, originalMessage: originalMessage ?? '' }),
+
+  // ── Indicator ────────────────────────────
+  indicatorGetConfig:    () => req<IndicatorConfig>('GET', '/indicator/config'),
+  indicatorUpdateConfig: (data: UpdateIndicatorConfigPayload) =>
+    req<IndicatorConfig>('PUT', '/indicator/config', data),
+  indicatorSetAsset:     (ric: string, name: string) =>
+    req<IndicatorConfig>('PUT', '/indicator/config/asset', { ric, name }),
+  indicatorSetMartingale: (data: Partial<IndicatorConfig['martingale']>) =>
+    req<IndicatorConfig>('PUT', '/indicator/config/martingale', data),
+  indicatorSetAccount:   (isDemoAccount: boolean) =>
+    req<IndicatorConfig>('PUT', '/indicator/config/account', { isDemoAccount }),
+  indicatorStart:        () => req<{ message: string }>('POST', '/indicator/start'),
+  indicatorStop:         () => req<{ message: string }>('POST', '/indicator/stop'),
+  indicatorStatus:       () => req<IndicatorStatus>('GET', '/indicator/status'),
+
+  // ── Momentum ─────────────────────────────
+  momentumGetConfig:    () => req<MomentumConfig>('GET', '/momentum/config'),
+  momentumUpdateConfig: (data: UpdateMomentumConfigPayload) =>
+    req<MomentumConfig>('PUT', '/momentum/config', data),
+  momentumSetAsset:     (ric: string, name: string) =>
+    req<MomentumConfig>('PUT', '/momentum/config/asset', { ric, name }),
+  momentumSetAccount:   (isDemoAccount: boolean) =>
+    req<MomentumConfig>('PUT', '/momentum/config/account', { isDemoAccount }),
+  momentumStart:        () => req<{ message: string }>('POST', '/momentum/start'),
+  momentumStop:         () => req<{ message: string }>('POST', '/momentum/stop'),
+  momentumStatus:       () => req<MomentumStatus>('GET', '/momentum/status'),
+};
