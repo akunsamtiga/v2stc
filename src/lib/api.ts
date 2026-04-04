@@ -199,6 +199,7 @@ export const api = {
 
   // ── Profile ───────────────────────────────
   balance: () => req<ProfileBalance>('GET', '/profile/balance'),
+  getProfile: () => req<{ userId: string; email: string; first_name?: string; last_name?: string; phone?: string; country?: string; user_status?: string }>('GET', '/profile'),
 
   // ── Assets ───────────────────────────────
   getAssets: () => req<StockityAsset[]>('GET', '/schedule/assets'),
