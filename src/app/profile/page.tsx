@@ -6,7 +6,7 @@ import {
   ArrowLeft, User, Mail, Smartphone, Globe, Wallet,
   TrendingUp, TrendingDown, LogOut, ChevronRight,
   Shield, Bell, Moon, CircleDollarSign, Building2,
-  Copy, Check, AlertCircle
+  Copy, Check, AlertCircle, Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -32,17 +32,23 @@ const C = {
   faint: 'rgba(52,211,153,0.10)',
 };
 
-interface UserProfile {
-  id?: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
+interface UserProfileData {
+  id: number;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  nickname?: string;
   phone?: string;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
+  gender?: string;
   country?: string;
+  birthday?: string;
+  registeredAt?: string;
+  registrationCountryIso?: string;
   avatar?: string;
-  user_status?: string;
-  created_at?: string;
-  [key: string]: unknown;
+  personalDataLocked?: boolean;
+  docsVerified?: boolean;
 }
 
 // ═══════════════════════════════════════════
@@ -119,7 +125,7 @@ const StatRow: React.FC<{
 export default function ProfilePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [balance, setBalance] = useState<ProfileBalance | null>(null);
   const [copied, setCopied] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -137,24 +143,9 @@ export default function ProfilePage() {
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Get user info from localStorage (stored at login)
-      const userStr = typeof window !== 'undefined' ? localStorage.getItem('stc_user') : null;
-      let userData: UserProfile = {};
-      
-      if (userStr) {
-        try {
-          userData = JSON.parse(userStr);
-        } catch {}
-      }
-
-      // Get additional profile data from API
-      let profileData: UserProfile = userData;
-      try {
-        const apiProfile = await api.getProfile();
-        profileData = { ...userData, ...apiProfile };
-      } catch {}
-
-      setProfile(profileData);
+      // Get profile from API (fetches from Stockity)
+      const apiProfile = await api.getProfile();
+      setProfile(apiProfile);
 
       // Get balance
       const bal = await api.balance().catch(() => null);
@@ -176,7 +167,7 @@ export default function ProfilePage() {
 
   const copyUserId = () => {
     if (profile?.id) {
-      navigator.clipboard.writeText(profile.id);
+      navigator.clipboard.writeText(String(profile.id));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -188,16 +179,22 @@ export default function ProfilePage() {
   };
 
   const getUserInitials = () => {
-    const first = profile?.first_name?.[0] || '';
-    const last = profile?.last_name?.[0] || '';
-    return (first + last).toUpperCase() || profile?.email?.[0].toUpperCase() || 'U';
+    const first = profile?.firstName?.[0] || '';
+    const last = profile?.lastName?.[0] || '';
+    const nickname = profile?.nickname?.[0] || '';
+    return (first + last).toUpperCase() || nickname.toUpperCase() || profile?.email?.[0].toUpperCase() || 'U';
   };
 
   const getDisplayName = () => {
-    if (profile?.first_name || profile?.last_name) {
-      return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-    }
-    return profile?.email?.split('@')[0] || 'User';
+    const first = profile?.firstName?.trim() || '';
+    const last = profile?.lastName?.trim() || '';
+    const nickname = profile?.nickname?.trim() || '';
+    
+    if (first && last) return `${first} ${last}`;
+    if (first) return first;
+    if (last) return last;
+    if (nickname) return nickname;
+    return profile?.email?.split('@')[0] || `User ${profile?.id || ''}`;
   };
 
   return (
@@ -282,23 +279,23 @@ export default function ProfilePage() {
                     cursor: 'pointer',
                   }}
                 >
-                  ID: {profile.id.slice(0, 12)}...
+                  ID: {String(profile.id).slice(0, 12)}...
                   {copied ? <Check size={12} color={C.cyan} /> : <Copy size={12} />}
                 </button>
               )}
 
-              {/* Status Badge */}
-              {profile?.user_status && (
+              {/* Docs Verified Badge */}
+              {profile?.docsVerified && (
                 <div style={{marginTop: 12}}>
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '4px 12px', borderRadius: 99,
-                    background: `${C.amber}15`, border: `1px solid ${C.amber}30`,
-                    color: C.amber, fontSize: 10, fontWeight: 600,
+                    background: `${C.cyan}15`, border: `1px solid ${C.cyan}30`,
+                    color: C.cyan, fontSize: 10, fontWeight: 600,
                     textTransform: 'uppercase', letterSpacing: '0.08em',
                   }}>
                     <Shield size={12} />
-                    {profile.user_status}
+                    Terverifikasi
                   </span>
                 </div>
               )}
@@ -394,19 +391,36 @@ export default function ProfilePage() {
               value={profile?.email || '-'}
             />
             <StatRow
+              label="Verifikasi Email"
+              value={profile?.emailVerified ? 'Terverifikasi ✓' : 'Belum Verifikasi'}
+              color={profile?.emailVerified ? C.cyan : C.muted}
+            />
+            <StatRow
               label="Nomor Telepon"
               value={profile?.phone || 'Belum diatur'}
               color={profile?.phone ? C.text : C.muted}
             />
             <StatRow
-              label="Negara"
-              value={profile?.country || 'Indonesia'}
+              label="Verifikasi Telepon"
+              value={profile?.phoneVerified ? 'Terverifikasi ✓' : 'Belum Verifikasi'}
+              color={profile?.phoneVerified ? C.cyan : C.muted}
             />
             <StatRow
-              label="Status Akun"
-              value={profile?.user_status || 'Active'}
-              color={C.cyan}
+              label="Negara"
+              value={profile?.country || profile?.registrationCountryIso || 'Indonesia'}
             />
+            {profile?.registeredAt && (
+              <StatRow
+                label="Terdaftar Sejak"
+                value={new Date(profile.registeredAt).toLocaleDateString('id-ID', {day: '2-digit', month: 'long', year: 'numeric'})}
+              />
+            )}
+            {profile?.birthday && (
+              <StatRow
+                label="Tanggal Lahir"
+                value={new Date(profile.birthday).toLocaleDateString('id-ID', {day: '2-digit', month: 'long', year: 'numeric'})}
+              />
+            )}
           </div>
         </Card>
 

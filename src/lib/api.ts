@@ -199,7 +199,24 @@ export const api = {
 
   // ── Profile ───────────────────────────────
   balance: () => req<ProfileBalance>('GET', '/profile/balance'),
-  getProfile: () => req<{ userId: string; email: string; first_name?: string; last_name?: string; phone?: string; country?: string; user_status?: string }>('GET', '/profile'),
+  getProfile: () => req<{
+    id: number;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    nickname?: string;
+    phone?: string;
+    emailVerified?: boolean;
+    phoneVerified?: boolean;
+    gender?: string;
+    country?: string;
+    birthday?: string;
+    registeredAt?: string;
+    registrationCountryIso?: string;
+    avatar?: string;
+    personalDataLocked?: boolean;
+    docsVerified?: boolean;
+  }>('GET', '/profile'),
 
   // ── Assets ───────────────────────────────
   getAssets: () => req<StockityAsset[]>('GET', '/schedule/assets'),
