@@ -237,11 +237,22 @@ export default function HistoryPage() {
         })),
       ];
 
+      // Deduplicate by id — safety net untuk log lama di Firebase yang mungkin masih duplikat.
+      // Entry dengan result (WIN/LOSE/DRAW) diprioritaskan atas entry tanpa result ("—").
+      const dedupMap = new Map<string, CombinedLog>();
+      for (const log of combined) {
+        const existing = dedupMap.get(log.id);
+        if (!existing || (!existing.result && log.result)) {
+          dedupMap.set(log.id, log);
+        }
+      }
+      const deduped = Array.from(dedupMap.values());
+
       // Sort by executedAt descending
-      combined.sort((a, b) => b.executedAt - a.executedAt);
+      deduped.sort((a, b) => b.executedAt - a.executedAt);
       
-      setLogs(combined);
-      calculateStats(combined);
+      setLogs(deduped);
+      calculateStats(deduped);
     } catch (err: any) {
       console.error('Failed to load history:', err);
     } finally {
@@ -254,8 +265,8 @@ export default function HistoryPage() {
     const wins = completed.filter(l => l.result === 'WIN').length;
     const losses = completed.filter(l => l.result === 'LOSE' || l.result === 'LOSS').length;
     const draws = completed.filter(l => l.result === 'DRAW').length;
-    // FIX: profit from API is in cents → divide by 100
-    const totalPnL = allLogs.reduce((sum, l) => sum + ((l.profit || 0) / 100), 0);
+    // totalPnL langsung dari profit (sudah dalam IDR)
+    const totalPnL = allLogs.reduce((sum, l) => sum + (l.profit || 0), 0);
     
     setStats({
       totalTrades: completed.length,
@@ -303,10 +314,10 @@ export default function HistoryPage() {
     setFilteredLogs(filtered);
   }, [logs, typeFilter, resultFilter, dateFilter]);
 
-  // FIX: API returns amount & profit in cents → divide by 100 for display
+  // Amount sudah dalam IDR langsung dari API (bukan cents)
   const formatAmount = (amount?: number) => {
     if (!amount) return '0';
-    return (amount / 100).toLocaleString('id-ID');
+    return Math.abs(amount).toLocaleString('id-ID');
   };
 
   const formatDate = (timestamp: number) => {
