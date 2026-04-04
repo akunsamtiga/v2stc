@@ -130,7 +130,6 @@ export default function ProfilePage() {
   const [copied, setCopied] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // Check auth and load data
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('stc_token') : null;
     if (!token) {
@@ -143,11 +142,8 @@ export default function ProfilePage() {
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Get profile from API (fetches from Stockity)
       const apiProfile = await api.getProfile();
       setProfile(apiProfile);
-
-      // Get balance
       const bal = await api.balance().catch(() => null);
       setBalance(bal);
     } catch (err: any) {
@@ -173,9 +169,10 @@ export default function ProfilePage() {
     }
   };
 
+  // FIX: API returns balance in cents, divide by 100 for display
   const formatCurrency = (amount?: number) => {
     if (amount === undefined) return '0';
-    return amount.toLocaleString('id-ID');
+    return (amount / 100).toLocaleString('id-ID');
   };
 
   const getUserInitials = () => {
@@ -189,7 +186,6 @@ export default function ProfilePage() {
     const first = profile?.firstName?.trim() || '';
     const last = profile?.lastName?.trim() || '';
     const nickname = profile?.nickname?.trim() || '';
-    
     if (first && last) return `${first} ${last}`;
     if (first) return first;
     if (last) return last;
@@ -231,20 +227,11 @@ export default function ProfilePage() {
                 margin: '0 auto 16px',
                 animation: 'pulse 1.5s ease-in-out infinite',
               }} />
-              <div style={{
-                width: 120, height: 16, borderRadius: 4,
-                background: 'rgba(255,255,255,0.05)',
-                margin: '0 auto 8px',
-              }} />
-              <div style={{
-                width: 180, height: 12, borderRadius: 4,
-                background: 'rgba(255,255,255,0.05)',
-                margin: '0 auto',
-              }} />
+              <div style={{width: 120, height: 16, borderRadius: 4, background: 'rgba(255,255,255,0.05)', margin: '0 auto 8px'}} />
+              <div style={{width: 180, height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.05)', margin: '0 auto'}} />
             </div>
           ) : (
             <>
-              {/* Avatar */}
               <div style={{
                 width: 90, height: 90, borderRadius: '50%',
                 background: `linear-gradient(135deg, ${C.cyan}30, ${C.cyan}10)`,
@@ -257,17 +244,14 @@ export default function ProfilePage() {
                 {getUserInitials()}
               </div>
 
-              {/* Name */}
               <h2 style={{fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 4}}>
                 {getDisplayName()}
               </h2>
 
-              {/* Email */}
               <p style={{fontSize: 12, color: C.muted, marginBottom: 12}}>
                 {profile?.email || 'user@example.com'}
               </p>
 
-              {/* User ID */}
               {profile?.id && (
                 <button
                   onClick={copyUserId}
@@ -275,8 +259,7 @@ export default function ProfilePage() {
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '6px 12px', borderRadius: 99,
                     background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.bdr}`,
-                    color: C.muted, fontSize: 11,
-                    cursor: 'pointer',
+                    color: C.muted, fontSize: 11, cursor: 'pointer',
                   }}
                 >
                   ID: {String(profile.id).slice(0, 12)}...
@@ -284,7 +267,6 @@ export default function ProfilePage() {
                 </button>
               )}
 
-              {/* Docs Verified Badge */}
               {profile?.docsVerified && (
                 <div style={{marginTop: 12}}>
                   <span style={{
@@ -308,7 +290,6 @@ export default function ProfilePage() {
           <div style={{padding: '14px 16px', borderBottom: `1px solid ${C.bdr}`}}>
             <span style={{fontSize: 12, fontWeight: 600, color: C.sub}}>Saldo</span>
           </div>
-          
           <div style={{padding: 16}}>
             {/* Real Balance */}
             <div style={{
@@ -384,12 +365,8 @@ export default function ProfilePage() {
           <div style={{padding: '14px 16px', borderBottom: `1px solid ${C.bdr}`}}>
             <span style={{fontSize: 12, fontWeight: 600, color: C.sub}}>Informasi Akun</span>
           </div>
-          
           <div style={{padding: '0 16px'}}>
-            <StatRow
-              label="Email"
-              value={profile?.email || '-'}
-            />
+            <StatRow label="Email" value={profile?.email || '-'} />
             <StatRow
               label="Verifikasi Email"
               value={profile?.emailVerified ? 'Terverifikasi ✓' : 'Belum Verifikasi'}
@@ -429,31 +406,10 @@ export default function ProfilePage() {
           <div style={{padding: '14px 16px', borderBottom: `1px solid ${C.bdr}`}}>
             <span style={{fontSize: 12, fontWeight: 600, color: C.sub}}>Pengaturan</span>
           </div>
-          
-          <MenuItem
-            icon={<Bell size={18} />}
-            label="Notifikasi"
-            value="Aktif"
-            onClick={() => {}}
-          />
-          <MenuItem
-            icon={<Moon size={18} />}
-            label="Tampilan"
-            value="Dark Mode"
-            onClick={() => {}}
-          />
-          <MenuItem
-            icon={<Globe size={18} />}
-            label="Bahasa"
-            value="Indonesia"
-            onClick={() => {}}
-          />
-          <MenuItem
-            icon={<Building2 size={18} />}
-            label="Mata Uang"
-            value={balance?.currency || 'IDR'}
-            onClick={() => {}}
-          />
+          <MenuItem icon={<Bell size={18} />} label="Notifikasi" value="Aktif" onClick={() => {}} />
+          <MenuItem icon={<Moon size={18} />} label="Tampilan" value="Dark Mode" onClick={() => {}} />
+          <MenuItem icon={<Globe size={18} />} label="Bahasa" value="Indonesia" onClick={() => {}} />
+          <MenuItem icon={<Building2 size={18} />} label="Mata Uang" value={balance?.currency || 'IDR'} onClick={() => {}} />
         </Card>
 
         {/* Security */}
@@ -461,18 +417,8 @@ export default function ProfilePage() {
           <div style={{padding: '14px 16px', borderBottom: `1px solid ${C.bdr}`}}>
             <span style={{fontSize: 12, fontWeight: 600, color: C.sub}}>Keamanan</span>
           </div>
-          
-          <MenuItem
-            icon={<Shield size={18} />}
-            label="Ubah Password"
-            onClick={() => {}}
-          />
-          <MenuItem
-            icon={<Smartphone size={18} />}
-            label="Verifikasi 2-Faktor"
-            value="Nonaktif"
-            onClick={() => {}}
-          />
+          <MenuItem icon={<Shield size={18} />} label="Ubah Password" onClick={() => {}} />
+          <MenuItem icon={<Smartphone size={18} />} label="Verifikasi 2-Faktor" value="Nonaktif" onClick={() => {}} />
         </Card>
 
         {/* Logout */}
@@ -486,11 +432,7 @@ export default function ProfilePage() {
           />
         </Card>
 
-        {/* Version */}
-        <p style={{
-          textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.2)',
-          marginTop: 24,
-        }}>
+        <p style={{textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 24}}>
           Stockity Bot v1.0.0
         </p>
       </div>
@@ -503,42 +445,28 @@ export default function ProfilePage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: 20,
         }}>
-          <Card style={{
-            width: '100%', maxWidth: 320, padding: 24,
-            animation: 'slide-up 0.2s ease',
-          }}>
+          <Card style={{width: '100%', maxWidth: 320, padding: 24, animation: 'slide-up 0.2s ease'}}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
               background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px',
-              color: C.coral,
+              margin: '0 auto 16px', color: C.coral,
             }}>
               <AlertCircle size={28} />
             </div>
-            
-            <h3 style={{
-              fontSize: 16, fontWeight: 700, color: C.text,
-              textAlign: 'center', marginBottom: 8,
-            }}>
+            <h3 style={{fontSize: 16, fontWeight: 700, color: C.text, textAlign: 'center', marginBottom: 8}}>
               Keluar dari Aplikasi?
             </h3>
-            
-            <p style={{
-              fontSize: 12, color: C.muted, textAlign: 'center',
-              marginBottom: 24,
-            }}>
+            <p style={{fontSize: 12, color: C.muted, textAlign: 'center', marginBottom: 24}}>
               Anda perlu login kembali untuk mengakses akun.
             </p>
-            
             <div style={{display: 'flex', gap: 12}}>
               <button
                 onClick={() => setShowLogoutConfirm(false)}
                 style={{
                   flex: 1, padding: '12px', borderRadius: 10,
                   background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.bdr}`,
-                  color: C.muted, fontSize: 13, fontWeight: 600,
-                  cursor: 'pointer',
+                  color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 Batal
@@ -548,8 +476,7 @@ export default function ProfilePage() {
                 style={{
                   flex: 1, padding: '12px', borderRadius: 10,
                   background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)',
-                  color: C.coral, fontSize: 13, fontWeight: 600,
-                  cursor: 'pointer',
+                  color: C.coral, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 Keluar
@@ -560,14 +487,8 @@ export default function ProfilePage() {
       )}
 
       <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.5; }
-          50% { opacity: 1; }
-        }
-        @keyframes slide-up {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
     </div>
   );

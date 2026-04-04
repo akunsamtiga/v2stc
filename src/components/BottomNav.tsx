@@ -1,91 +1,90 @@
 'use client';
-import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { SquaresFour, ClockCounterClockwise, User } from '@phosphor-icons/react';
+import { LayoutDashboard, History, User } from 'lucide-react';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', Icon: SquaresFour },
-  { href: '/history',   label: 'History',   Icon: ClockCounterClockwise },
-  { href: '/profile',   label: 'Profil',    Icon: User },
+const NAV_ITEMS = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/history',   label: 'History',   icon: History },
+  { href: '/profile',   label: 'Profile',   icon: User },
 ];
 
-export const BottomNav = () => {
+export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50"
-      style={{
-        background: 'rgba(10, 10, 12, 0.97)',
+    <div style={{
+      position: 'fixed',
+      bottom: 20,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 50,
+    }}>
+      <nav style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '6px 8px',
+        borderRadius: 9999,
+        background: 'rgba(20, 20, 20, 0.82)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
-    >
-      {/* Active indicator line */}
-      <div className="relative flex">
-        {navItems.map(({ href }) => {
-          const isActive = pathname === href;
-          return (
-            <div
-              key={href}
-              className="flex-1 h-[1px] transition-all duration-400"
-              style={{
-                background: isActive
-                  ? 'linear-gradient(to right, transparent, rgba(180, 195, 215, 0.7), transparent)'
-                  : 'transparent',
-              }}
-            />
-          );
-        })}
-      </div>
-
-      {/* Nav items */}
-      <div className="flex items-stretch">
-        {navItems.map(({ href, label, Icon }) => {
-          const isActive = pathname === href;
+        border: '1px solid rgba(255,255,255,0.10)',
+        boxShadow:
+          '0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
+      }}>
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link
               key={href}
               href={href}
-              className="flex-1 flex flex-col items-center justify-center gap-[4px] py-3 relative"
               style={{
-                color: isActive ? 'rgba(210, 220, 235, 0.95)' : 'rgba(255, 255, 255, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: isActive ? 7 : 0,
+                padding: isActive ? '9px 18px' : '9px 16px',
+                borderRadius: 9999,
+                background: isActive
+                  ? 'rgba(52, 211, 153, 0.15)'
+                  : 'transparent',
+                border: isActive
+                  ? '1px solid rgba(52,211,153,0.30)'
+                  : '1px solid transparent',
+                color: isActive ? '#34d399' : 'rgba(255,255,255,0.45)',
                 textDecoration: 'none',
-                transition: 'color 0.2s ease',
+                transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: isActive
+                  ? '0 0 14px rgba(52,211,153,0.12), inset 0 1px 0 rgba(52,211,153,0.12)'
+                  : 'none',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
               }}
             >
-              <div
+              <Icon
+                size={18}
                 style={{
-                  transform: isActive ? 'translateY(-1px)' : 'translateY(0)',
-                  transition: 'transform 0.2s ease',
+                  flexShrink: 0,
+                  strokeWidth: isActive ? 2.2 : 1.8,
+                  filter: isActive ? 'drop-shadow(0 0 6px rgba(52,211,153,0.45))' : 'none',
                 }}
-              >
-                <Icon
-                  size={19}
-                  weight={isActive ? 'fill' : 'regular'}
-                />
-              </div>
-
-              <span
-                style={{
-                  fontFamily: 'var(--font-exo)',
-                  fontSize: 9,
-                  fontWeight: isActive ? 500 : 400,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  opacity: isActive ? 0.9 : 0.5,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {label}
-              </span>
+              />
+              {isActive && (
+                <span style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1,
+                  maxWidth: 80,
+                  opacity: 1,
+                }}>
+                  {label}
+                </span>
+              )}
             </Link>
           );
         })}
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
-};
+}

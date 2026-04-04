@@ -50,9 +50,6 @@ const FT_TF: {value:FastTradeTimeframe; label:string}[] = [
   {value:'15m',label:'15 Menit'},{value:'30m',label:'30 Menit'},{value:'1h',label:'1 Jam'},
 ];
 
-// ── Amount constants (display values, in IDR) ─────────────────────────────
-// Stockity WebSocket expects amount in CENTS (×100 of display).
-// IDR minimum = 1_400_000 cents = 14_000 IDR display.
 const IDR_MIN_DISPLAY = 14_000;
 const QUICK_AMOUNTS   = [14_000, 25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000];
 
@@ -169,11 +166,16 @@ const RealtimeClockCompact: React.FC = () => {
 
 // ═══════════════════════════════════════════
 // BALANCE CARD
+// FIX: API returns balance in cents → divide by 100 for display
 // ═══════════════════════════════════════════
 const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'real';isLoading?:boolean}> = ({balance,accountType,isLoading}) => {
   const [hidden,setHidden] = useState(false);
   const isDemo = accountType==='demo';
-  const amount = isDemo?(balance?.demo_balance??balance?.balance??0):(balance?.real_balance??balance?.balance??0);
+  const rawAmount = isDemo
+    ? (balance?.demo_balance ?? balance?.balance ?? 0)
+    : (balance?.real_balance ?? balance?.balance ?? 0);
+  // Divide by 100: API stores balance in cents
+  const amount = rawAmount / 100;
   const col  = isDemo?C.amber:C.cyan;
   const colBg = isDemo?'rgba(251,191,36,0.08)':'rgba(52,211,153,0.08)';
   return (
@@ -188,7 +190,9 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
             {[...Array(6)].map((_,i)=><span key={i} style={{width:5,height:5,borderRadius:'50%',background:col,opacity:0.4+(i%2)*0.2}}/>)}
           </div>
         ):(
-          <p style={{fontSize:'clamp(16px,4vw,24px)',fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col}}>{amount.toLocaleString('id-ID')}</p>
+          <p style={{fontSize:'clamp(16px,4vw,24px)',fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col}}>
+            {amount.toLocaleString('id-ID')}
+          </p>
         )
       }
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:4}}>
@@ -257,11 +261,8 @@ const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?
   const abbr     = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '—';
   const [imgErr,setImgErr] = useState(false);
 
-  // Debug: log icon URL
   useEffect(() => {
-    if (asset?.iconUrl) {
-      console.log('[AssetCard] Icon URL:', asset.iconUrl);
-    }
+    if (asset?.iconUrl) console.log('[AssetCard] Icon URL:', asset.iconUrl);
   }, [asset?.iconUrl]);
 
   if(isLoading) return <Card style={{padding:'11px 14px',height:'100%'}}><Sk w={100} h={22}/></Card>;
@@ -270,14 +271,8 @@ const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?
       <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',height:68}}>
         <div style={{width:40,height:40,borderRadius:11,overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:modeBg,border:`1.5px solid ${modeBdr}`}}>
           {asset?.iconUrl&&!imgErr?(
-            <img 
-              src={asset.iconUrl} 
-              alt={asset.ric} 
-              crossOrigin="anonymous"
-              onError={(e) => {
-                console.warn('[AssetCard] Failed to load icon:', asset.iconUrl, e);
-                setImgErr(true);
-              }} 
+            <img src={asset.iconUrl} alt={asset.ric} crossOrigin="anonymous"
+              onError={(e) => { console.warn('[AssetCard] Failed to load icon:', asset.iconUrl, e); setImgErr(true); }}
               style={{width:'100%',height:'100%',objectFit:'contain',padding:4}}
             />
           ):(
@@ -713,8 +708,6 @@ const SettingsCard: React.FC<{
   const acOpts: PickerOpt[] = [{value:'demo',label:'Demo',sub:'Virtual · tidak pakai dana nyata'},{value:'real',label:'Real',sub:'Menggunakan saldo sesungguhnya'}];
   const selectedAsset = assets.find(a=>a.ric===assetRic);
   const ac = mode==='ctc'?C.violet:C.cyan;
-
-  // FIX: Validate display amount against IDR minimum (14.000)
   const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
 
   return (
@@ -738,7 +731,6 @@ const SettingsCard: React.FC<{
         </button>
         {open&&(
           <div style={{padding:'14px 16px',pointerEvents:disabled?'none':undefined}}>
-            {/* Asset */}
             <div style={{marginBottom:10}}>
               <FL>Aset Trading</FL>
               <PickerBtn label={selectedAsset?.name||''} placeholder="Pilih aset trading" disabled={disabled} onClick={()=>setPickerOpen('asset')}/>
@@ -752,7 +744,6 @@ const SettingsCard: React.FC<{
                 </div>
               </div>
             )}
-            {/* Account + Timeframe */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
               <div><FL>Tipe Akun</FL><PickerBtn label={isDemo?'Demo':'Real'} disabled={disabled} onClick={()=>setPickerOpen('actype')}/></div>
               <div>
@@ -765,22 +756,12 @@ const SettingsCard: React.FC<{
                 }
               </div>
             </div>
-            {/* Amount */}
             <div style={{marginBottom:16}}>
               <FL>Jumlah per Order</FL>
               <div style={{display:'flex',gap:6}}>
                 <div style={{flex:1,position:'relative'}}>
                   <span style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none'}}>Rp</span>
-                  <input
-                    type="number"
-                    className="ds-input"
-                    value={amount}
-                    onChange={e=>onAmountChange(+e.target.value||0)}
-                    disabled={disabled}
-                    min={IDR_MIN_DISPLAY}
-                    step={1000}
-                    style={{paddingLeft:30,borderColor:isBelowMin?C.coral:undefined}}
-                  />
+                  <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{paddingLeft:30,borderColor:isBelowMin?C.coral:undefined}}/>
                 </div>
                 <div style={{position:'relative',flexShrink:0}}>
                   <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{height:'100%',padding:'0 10px',display:'flex',alignItems:'center',gap:4,borderRadius:8,fontSize:11,fontWeight:600,background:amtDrop?'rgba(52,211,153,0.12)':'rgba(255,255,255,0.04)',border:`1px solid ${amtDrop?'rgba(52,211,153,0.4)':'rgba(255,255,255,0.1)'}`,color:amtDrop?C.cyan:C.muted,cursor:disabled?'not-allowed':'pointer'}}>
@@ -790,7 +771,6 @@ const SettingsCard: React.FC<{
                     <>
                       <div style={{position:'fixed',inset:0,zIndex:5}} onClick={()=>setAmtDrop(false)}/>
                       <div style={{position:'absolute',right:0,marginTop:4,zIndex:10,minWidth:160,borderRadius:12,overflow:'hidden',background:'linear-gradient(160deg,#0d1f18 0%,#091510 100%)',border:'1px solid rgba(52,211,153,0.2)',boxShadow:'0 8px 32px rgba(0,0,0,0.5)',animation:'slide-up 0.15s ease'}}>
-                        {/* FIX: Quick amounts start at IDR_MIN_DISPLAY (14.000) */}
                         {QUICK_AMOUNTS.map((a,idx)=>{
                           const isAct=amount===a;
                           return (
@@ -805,16 +785,11 @@ const SettingsCard: React.FC<{
                   )}
                 </div>
               </div>
-              {/* FIX: Show validation warning if below IDR minimum */}
               {isBelowMin&&(
                 <div style={{display:'flex',alignItems:'center',gap:6,marginTop:6,padding:'6px 10px',borderRadius:8,background:'rgba(248,113,113,0.08)',border:'1px solid rgba(248,113,113,0.25)'}}>
                   <AlertCircle style={{width:11,height:11,color:C.coral,flexShrink:0}}/>
-                  <p style={{fontSize:10,color:C.coral}}>
-                    Minimum IDR Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')} — trade akan ditolak Stockity
-                  </p>
-                  <button type="button" onClick={()=>onAmountChange(IDR_MIN_DISPLAY)} style={{marginLeft:'auto',fontSize:9,fontWeight:700,color:C.coral,background:'transparent',border:'none',cursor:'pointer',textDecoration:'underline',flexShrink:0}}>
-                    Set min →
-                  </button>
+                  <p style={{fontSize:10,color:C.coral}}>Minimum IDR Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')} — trade akan ditolak Stockity</p>
+                  <button type="button" onClick={()=>onAmountChange(IDR_MIN_DISPLAY)} style={{marginLeft:'auto',fontSize:9,fontWeight:700,color:C.coral,background:'transparent',border:'none',cursor:'pointer',textDecoration:'underline',flexShrink:0}}>Set min →</button>
                 </div>
               )}
             </div>
@@ -1027,7 +1002,6 @@ export default function DashboardPage() {
   const [selectedRic,setSelectedRic] = useState('');
   const [isDemo,setIsDemo] = useState(true);
   const [duration,setDuration] = useState(60);
-  // FIX: Initialize amount as display IDR value. Will be multiplied ×100 → cents on submit.
   const [amount,setAmount] = useState(50_000);
   const [martingale,setMartingale] = useState<MartingaleConfig>({enabled:false,maxStep:3,multiplier:2});
   const [ftTf,setFtTf] = useState<FastTradeTimeframe>('1m');
@@ -1118,8 +1092,6 @@ export default function DashboardPage() {
   const pendingOrders = scheduleOrders.filter(o=>!o.isExecuted&&!o.isSkipped);
   const canStart = tradingMode==='schedule' ? !!(selectedRic&&pendingOrders.length>0) : !!selectedRic;
   const sessionPnL = tradingMode==='schedule' ? (scheduleStatus as any)?.sessionPnL??0 : ftStatus?.sessionPnL??0;
-
-  // FIX: Validate amount before allowing start
   const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
 
   const handleModeChange = (m:TradingMode)=>{
@@ -1139,8 +1111,6 @@ export default function DashboardPage() {
           martingale:{
             isEnabled:martingale.enabled,
             maxSteps:martingale.maxStep,
-            // FIX: Convert display IDR to cents (×100). Stockity WebSocket expects cents.
-            // Example: Rp 50.000 display × 100 = 5.000.000 cents → valid (min 1.400.000)
             baseAmount: amount * 100,
             multiplierValue:martingale.multiplier,
             multiplierType:'FIXED',
@@ -1150,7 +1120,6 @@ export default function DashboardPage() {
           currency:'IDR',
           currencyIso:'IDR',
           duration,
-          // FIX: Convert stop loss/profit to cents as well
           stopLoss: stopLoss ? stopLoss * 100 : undefined,
           stopProfit: stopProfit ? stopProfit * 100 : undefined,
         });
@@ -1162,7 +1131,6 @@ export default function DashboardPage() {
           martingale:{
             isEnabled:martingale.enabled,
             maxSteps:martingale.maxStep,
-            // FIX: Same cents conversion for FastTrade/CTC
             baseAmount: amount * 100,
             multiplierValue:martingale.multiplier,
             multiplierType:'FIXED',

@@ -254,7 +254,8 @@ export default function HistoryPage() {
     const wins = completed.filter(l => l.result === 'WIN').length;
     const losses = completed.filter(l => l.result === 'LOSE' || l.result === 'LOSS').length;
     const draws = completed.filter(l => l.result === 'DRAW').length;
-    const totalPnL = allLogs.reduce((sum, l) => sum + (l.profit || 0), 0);
+    // FIX: profit from API is in cents → divide by 100
+    const totalPnL = allLogs.reduce((sum, l) => sum + ((l.profit || 0) / 100), 0);
     
     setStats({
       totalTrades: completed.length,
@@ -302,9 +303,10 @@ export default function HistoryPage() {
     setFilteredLogs(filtered);
   }, [logs, typeFilter, resultFilter, dateFilter]);
 
+  // FIX: API returns amount & profit in cents → divide by 100 for display
   const formatAmount = (amount?: number) => {
     if (!amount) return '0';
-    return amount.toLocaleString('id-ID');
+    return (amount / 100).toLocaleString('id-ID');
   };
 
   const formatDate = (timestamp: number) => {
@@ -378,7 +380,7 @@ export default function HistoryPage() {
           <StatCard
             label="Win Rate"
             value={`${stats.winRate}%`}
-            subValue={stats.totalPnL >= 0 ? `+${formatAmount(stats.totalPnL)}` : formatAmount(stats.totalPnL)}
+            subValue={stats.totalPnL >= 0 ? `+${stats.totalPnL.toLocaleString('id-ID')}` : stats.totalPnL.toLocaleString('id-ID')}
             color={stats.winRate >= 50 ? C.cyan : C.coral}
             icon={stats.winRate >= 50 ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
           />
@@ -534,6 +536,7 @@ export default function HistoryPage() {
                     {log.profit !== undefined && log.result && (
                       <p style={{
                         fontSize: 10, fontWeight: 600, marginTop: 4,
+                        // FIX: profit in cents → divide by 100
                         color: log.profit >= 0 ? C.cyan : C.coral,
                       }}>
                         {log.profit >= 0 ? '+' : ''}{formatAmount(log.profit)}
