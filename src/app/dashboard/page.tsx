@@ -12,8 +12,7 @@ import {
 } from '@/lib/api';
 import { ChartCard } from '@/components/ChartCard';
 import AssetIcon from '@/components/common/AssetIcon';
-// ✅ FIX: import storage helper agar berfungsi di native Capacitor
-import { storage } from '@/components/ClientLayout';
+import { storage } from '@/lib/storage';
 import {
   Activity, AlertCircle, BarChart2, Calendar,
   ChevronDown, ChevronUp, Info, Plus,

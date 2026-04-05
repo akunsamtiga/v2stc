@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type ProfileBalance } from '@/lib/api';
-import { storage } from '@/components/ClientLayout';
+import { storage } from '@/lib/storage';
 
 // ─────────────────────────────────────────────
 // TYPES

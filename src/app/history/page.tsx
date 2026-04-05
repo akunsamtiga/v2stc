@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type ExecutionLog, type FastradeLog, type IndicatorLog, type MomentumLog } from '@/lib/api';
-import { storage } from '@/components/ClientLayout';
+import { storage } from '@/lib/storage';
 import {
   TrendingUp, TrendingDown, Filter, History, RotateCcw,
   ArrowUpRight, ArrowDownRight, BarChart3, ChevronRight,

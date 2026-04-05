@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { storage } from '@/components/ClientLayout';
+import { storage } from '@/lib/storage';
 
 // hidden → welcome (3s) → verified (4s) → out → navigate
 type SplashPhase = 'hidden' | 'welcome' | 'verified' | 'out';
