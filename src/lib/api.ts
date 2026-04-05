@@ -336,6 +336,22 @@ export interface UpdateMomentumConfigPayload {
   baseAmount?: number;
 }
 
+// FIX: MomentumLog — mirrors FastradeLog structure so history page can reuse same component
+export interface MomentumLog {
+  id: string;
+  orderId: string;
+  momentumType: string;
+  trend: string;
+  amount: number;
+  martingaleStep: number;
+  dealId?: string;
+  result?: string;
+  profit?: number;
+  sessionPnL?: number;
+  executedAt: number;
+  note?: string;
+}
+
 // ─────────────────────────────────────────────
 // API OBJECT
 // ─────────────────────────────────────────────
@@ -442,4 +458,6 @@ export const api = {
   momentumStart:        () => req<{ message: string }>('POST', '/momentum/start'),
   momentumStop:         () => req<{ message: string }>('POST', '/momentum/stop'),
   momentumStatus:       () => req<MomentumStatus>('GET', '/momentum/status'),
+  // FIX: mirrors fastradeLogs / scheduleLogs
+  momentumLogs:         (limit = 100) => req<MomentumLog[]>('GET', `/momentum/logs?limit=${limit}`),
 };

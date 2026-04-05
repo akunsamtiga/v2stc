@@ -221,7 +221,7 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
 };
 
 // ═══════════════════════════════════════════
-// PROFIT CARD
+// PROFIT CARD — sekarang menampilkan profit 24 jam
 // ═══════════════════════════════════════════
 const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'|null}> = ({profit,isLoading,flash}) => {
   const isPos = profit>=0;
@@ -236,10 +236,12 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
     <Card style={{padding:'11px 16px'}} flash={flash}>
       <div style={{display:'flex',alignItems:'center',gap:12}}>
         <div style={{display:'flex',flexDirection:'column',gap:4,flexShrink:0}}>
-          <span style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>Profit Sesi</span>
+          {/* ← CHANGED: "Profit Sesi" → "Profit Hari Ini" */}
+          <span style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>Profit Hari Ini</span>
           <span style={{display:'flex',alignItems:'center',gap:5,padding:'2px 7px',borderRadius:99,background:`${col}10`,border:`1px solid ${col}22`,width:'fit-content'}}>
             <span style={{width:5,height:5,borderRadius:'50%',background:col,boxShadow:`0 0 5px ${col}`,animation:'pulse 1.8s ease-in-out infinite'}}/>
-            <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:col}}>Live</span>
+            {/* ← CHANGED: "Live" → "24j" */}
+            <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:col}}>24j</span>
           </span>
         </div>
         <div style={{width:1,alignSelf:'stretch',background:'rgba(255,255,255,0.07)'}}/>
@@ -970,13 +972,11 @@ const SettingsCard: React.FC<{
   ftTf:FastTradeTimeframe; onFtTfChange:(v:FastTradeTimeframe)=>void;
   stopLoss:number; onSlChange:(v:number)=>void;
   stopProfit:number; onSpChange:(v:number)=>void;
-  // Indicator settings
   indicatorType:IndicatorType; onIndicatorTypeChange:(v:IndicatorType)=>void;
   indicatorPeriod:number; onIndicatorPeriodChange:(v:number)=>void;
   indicatorSensitivity:number; onSensitivityChange:(v:number)=>void;
   rsiOverbought:number; onOverboughtChange:(v:number)=>void;
   rsiOversold:number; onOversoldChange:(v:number)=>void;
-  // Momentum settings
   momentumPatterns:{candleSabit:boolean;dojiTerjepit:boolean;dojiPembatalan:boolean;bbSarBreak:boolean};
   onMomentumPatternsChange:(p:any)=>void;
   disabled?:boolean;
@@ -1016,13 +1016,10 @@ const SettingsCard: React.FC<{
         </button>
         {open&&(
           <div style={{padding:'14px 16px',pointerEvents:disabled?'none':undefined}}>
-            {/* ── Aset ── */}
             <div style={{marginBottom:10}}>
               <FL>Aset Trading</FL>
               <PickerBtn label={selectedAsset?.name||''} placeholder="Pilih aset trading" disabled={disabled} onClick={()=>setPickerOpen('asset')}/>
             </div>
-
-            {/* ── Akun + Durasi ── */}
             {!isNewMode&&(
               <>
                 {mode==='ctc'&&(
@@ -1048,16 +1045,12 @@ const SettingsCard: React.FC<{
                 </div>
               </>
             )}
-
-            {/* ── Tipe Akun untuk mode baru ── */}
             {isNewMode&&(
               <div style={{marginBottom:10}}>
                 <FL>Tipe Akun</FL>
                 <PickerBtn label={isDemo?'Demo':'Real'} disabled={disabled} onClick={()=>setPickerOpen('actype')}/>
               </div>
             )}
-
-            {/* ── Jumlah per order (semua mode kecuali indicator punya sendiri) ── */}
             {mode!=='indicator'&&(
               <div style={{marginBottom:16}}>
                 <FL>Jumlah per Order</FL>
@@ -1097,8 +1090,6 @@ const SettingsCard: React.FC<{
                 )}
               </div>
             )}
-
-            {/* ── Indicator specific settings ── */}
             {mode==='indicator'&&(
               <>
                 <Divider/>
@@ -1152,8 +1143,6 @@ const SettingsCard: React.FC<{
                 </div>
               </>
             )}
-
-            {/* ── Momentum specific settings ── */}
             {mode==='momentum'&&(
               <>
                 <Divider/>
@@ -1176,8 +1165,6 @@ const SettingsCard: React.FC<{
                 </div>
               </>
             )}
-
-            {/* ── AI Signal info ── */}
             {mode==='aisignal'&&(
               <>
                 <Divider/>
@@ -1200,10 +1187,7 @@ const SettingsCard: React.FC<{
                 </div>
               </>
             )}
-
             <Divider/>
-
-            {/* ── Martingale ── */}
             <SL accent={`${ac}60`}>Martingale</SL>
             <div style={{padding:12,borderRadius:12,background:`${ac}06`,border:`1px solid ${ac}12`,marginBottom:12}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:martingale.enabled?12:0}}>
@@ -1236,8 +1220,6 @@ const SettingsCard: React.FC<{
                 </div>
               )}
             </div>
-
-            {/* ── Risk management (non-new modes) ── */}
             {!isNewMode&&(
               <>
                 <Divider/>
@@ -1357,7 +1339,7 @@ const ControlCard: React.FC<{
             ):(
               <>
                 <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:'rgba(0,0,0,0.25)',border:`1px solid ${pnlPos?`${ac}12`:'rgba(248,113,113,0.12)'}`}}>
-                  <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L</span>
+                  <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L Sesi</span>
                   <span style={{fontSize:17,fontWeight:700,lineHeight:'1.1',color:pnlPos?ac:C.coral}}>{pnlPos?'+':''}{profit.toLocaleString('id-ID')}</span>
                 </div>
                 <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:`${ac}05`,border:`1px solid ${ac}10`}}>
@@ -1412,7 +1394,6 @@ export default function DashboardPage() {
     loadAll();
   },[]); // eslint-disable-line
 
-  // ── existing state ──
   const [assets,setAssets] = useState<StockityAsset[]>([]);
   const [balance,setBalance] = useState<ProfileBalance|null>(null);
   const [scheduleStatus,setScheduleStatus] = useState<ScheduleStatus|null>(null);
@@ -1422,13 +1403,11 @@ export default function DashboardPage() {
   const [ftLogs,setFtLogs] = useState<FastradeLog[]>([]);
   const [isLoading,setIsLoading] = useState(true);
 
-  // ── new mode state ──
   const [aiStatus,setAiStatus] = useState<AISignalStatus|null>(null);
   const [aiPendingOrders,setAiPendingOrders] = useState<AISignalOrder[]>([]);
   const [indicatorStatus,setIndicatorStatus] = useState<IndicatorStatus|null>(null);
   const [momentumStatus,setMomentumStatus] = useState<MomentumStatus|null>(null);
 
-  // ── ui state ──
   const [tradingMode,setTradingMode] = useState<TradingMode>('schedule');
   const [error,setError] = useState<string|null>(null);
   const [actionLoading,setActionLoading] = useState(false);
@@ -1438,7 +1417,6 @@ export default function DashboardPage() {
   const [aiSendLoading,setAiSendLoading] = useState(false);
   const [deviceType,setDeviceType] = useState<'mobile'|'tablet'|'desktop'>('mobile');
 
-  // ── settings state ──
   const [selectedRic,setSelectedRic] = useState('');
   const [isDemo,setIsDemo] = useState(true);
   const [duration,setDuration] = useState(60);
@@ -1448,17 +1426,14 @@ export default function DashboardPage() {
   const [stopLoss,setStopLoss] = useState(0);
   const [stopProfit,setStopProfit] = useState(0);
 
-  // ── indicator settings ──
   const [indicatorType,setIndicatorType] = useState<IndicatorType>('SMA');
   const [indicatorPeriod,setIndicatorPeriod] = useState(14);
   const [indicatorSensitivity,setIndicatorSensitivity] = useState(0.5);
   const [rsiOverbought,setRsiOverbought] = useState(70);
   const [rsiOversold,setRsiOversold] = useState(30);
 
-  // ── momentum settings ──
   const [momentumPatterns,setMomentumPatterns] = useState({candleSabit:true,dojiTerjepit:true,dojiPembatalan:true,bbSarBreak:true});
 
-  // ── flash effect ──
   const [flash,setFlash] = useState<'win'|'lose'|null>(null);
   const prevWRef = useRef(0), prevLRef = useRef(0);
   const flashTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1490,8 +1465,12 @@ export default function DashboardPage() {
     try{
       const [assRes,balRes,schRes,ordRes,logRes,ftRes,ftLogRes,aiRes,aiPendRes,indRes,momRes] = await Promise.allSettled([
         api.getAssets(),api.balance(),api.scheduleStatus(),
-        api.getOrders(),api.scheduleLogs(50),
-        api.fastradeStatus(),api.fastradeLogs(30),
+        api.getOrders(),
+        // ← CHANGED: limit 500 untuk tangkap log 24 jam penuh
+        api.scheduleLogs(500),
+        api.fastradeStatus(),
+        // ← CHANGED: limit 500 untuk tangkap log 24 jam penuh
+        api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
       ]);
@@ -1516,7 +1495,9 @@ export default function DashboardPage() {
   useEffect(()=>{
     const iv=setInterval(async()=>{
       const results = await Promise.allSettled([
-        api.scheduleStatus(),api.fastradeStatus(),api.getOrders(),api.fastradeLogs(30),
+        api.scheduleStatus(),api.fastradeStatus(),api.getOrders(),
+        // ← CHANGED: limit 500 di polling juga
+        api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
       ]);
@@ -1576,6 +1557,19 @@ export default function DashboardPage() {
     return 0;
   })();
 
+  // ── PROFIT HARI INI: akumulasi semua log 24 jam terakhir dari semua mode ──
+  const profitToday = React.useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    let total = 0;
+    for (const log of scheduleLogs) {
+      if ((log.executedAt ?? 0) >= cutoff && log.profit != null) total += log.profit;
+    }
+    for (const log of ftLogs) {
+      if ((log.executedAt ?? 0) >= cutoff && log.profit != null) total += log.profit;
+    }
+    return total;
+  }, [scheduleLogs, ftLogs]);
+
   const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
 
   const handleModeChange = (m:TradingMode)=>{
@@ -1606,7 +1600,6 @@ export default function DashboardPage() {
           stopLoss:stopLoss?stopLoss*100:undefined,stopProfit:stopProfit?stopProfit*100:undefined,
         });
       } else if(tradingMode==='aisignal'){
-        // Sync config first then start
         await api.aiSignalSetAsset(selectedRic, selectedAsset?.name??selectedRic);
         await api.aiSignalUpdateConfig({
           baseAmount:amount*100,isDemoAccount:isDemo,
@@ -1673,7 +1666,8 @@ export default function DashboardPage() {
   const g = deviceType==='desktop'?20:deviceType==='tablet'?18:16;
   const px = 16;
 
-  const TopCards = <ProfitCard profit={sessionPnL} isLoading={isLoading} flash={flash}/>;
+  // ← CHANGED: sekarang pakai profitToday bukan sessionPnL
+  const TopCards = <ProfitCard profit={profitToday} isLoading={isLoading} flash={flash}/>;
 
   const InfoRow = (
     <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(4,1fr)':deviceType==='tablet'?'repeat(3,1fr)':'1fr 1fr',gap:g}}>
