@@ -1486,6 +1486,27 @@ export default function DashboardPage() {
       if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
       if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
       if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
+
+      // ── Auto-switch ke mode yang sedang aktif (hanya saat load pertama, bukan polling) ──
+      if (!silent) {
+        const ftData  = ftRes.status  === 'fulfilled' ? ftRes.value  : null;
+        const aiData  = aiRes.status  === 'fulfilled' ? aiRes.value  : null;
+        const indData = indRes.status === 'fulfilled' ? indRes.value : null;
+        const momData = momRes.status === 'fulfilled' ? momRes.value : null;
+        const schData = schRes.status === 'fulfilled' ? schRes.value : null;
+
+        if (ftData?.isRunning) {
+          setTradingMode(ftData.mode === 'CTC' ? 'ctc' : 'fastrade');
+        } else if (aiData?.isRunning) {
+          setTradingMode('aisignal');
+        } else if (indData?.isRunning) {
+          setTradingMode('indicator');
+        } else if (momData?.isRunning) {
+          setTradingMode('momentum');
+        } else if (schData?.botState === 'RUNNING' || schData?.botState === 'PAUSED') {
+          setTradingMode('schedule');
+        }
+      }
     }catch(e:any){
       if(e?.status===401){router.push('/login');return;}
       if(!silent&&isMounted.current)setError('Gagal memuat data. Silakan refresh.');
