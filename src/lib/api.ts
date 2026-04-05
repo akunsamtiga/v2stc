@@ -352,6 +352,23 @@ export interface MomentumLog {
   note?: string;
 }
 
+// FIX: IndicatorLog — mirrors MomentumLog/FastradeLog for history page
+export interface IndicatorLog {
+  id: string;
+  orderId: string;
+  indicatorType?: string;
+  trend: string;
+  amount: number;
+  martingaleStep: number;
+  dealId?: string;
+  result?: string;
+  profit?: number;
+  sessionPnL?: number;
+  executedAt: number;
+  note?: string;
+  cycleNumber?: number;
+}
+
 // ─────────────────────────────────────────────
 // API OBJECT
 // ─────────────────────────────────────────────
@@ -446,6 +463,8 @@ export const api = {
   indicatorStart:        () => req<{ message: string }>('POST', '/indicator/start'),
   indicatorStop:         () => req<{ message: string }>('POST', '/indicator/stop'),
   indicatorStatus:       () => req<IndicatorStatus>('GET', '/indicator/status'),
+  // FIX: mirrors fastradeLogs / scheduleLogs / momentumLogs
+  indicatorLogs:         (limit = 100) => req<IndicatorLog[]>('GET', `/indicator/logs?limit=${limit}`),
 
   // ── Momentum ─────────────────────────────
   momentumGetConfig:    () => req<MomentumConfig>('GET', '/momentum/config'),

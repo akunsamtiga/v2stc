@@ -1,10 +1,10 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, type ExecutionLog, type FastradeLog, type ScheduleStatus, type FastradeStatus } from '@/lib/api';
+import { api, type ExecutionLog, type FastradeLog, type IndicatorLog, type MomentumLog, type ScheduleStatus, type FastradeStatus } from '@/lib/api';
 import {
   ArrowLeft, Calendar, TrendingUp, TrendingDown, Filter,
-  ChevronDown, History, Zap, Copy, RotateCcw, X,
+  ChevronDown, History, RotateCcw, X,
   ArrowUpRight, ArrowDownRight, Minus, BarChart3
 } from 'lucide-react';
 import Link from 'next/link';
@@ -32,12 +32,12 @@ const C = {
   faint: 'rgba(52,211,153,0.10)',
 };
 
-type LogType = 'all' | 'schedule' | 'fastrade' | 'ctc';
+type LogType = 'all' | 'schedule' | 'fastrade' | 'ctc' | 'indicator' | 'momentum';
 type ResultFilter = 'all' | 'win' | 'loss' | 'draw';
 
 interface CombinedLog {
   id: string;
-  type: 'schedule' | 'fastrade' | 'ctc';
+  type: 'schedule' | 'fastrade' | 'ctc' | 'indicator' | 'momentum';
   time: string;
   trend: 'call' | 'put';
   amount: number;
@@ -95,19 +95,20 @@ const TrendBadge: React.FC<{trend: string}> = ({trend}) => {
 };
 
 const TypeBadge: React.FC<{type: string}> = ({type}) => {
-  const isCTC = type === 'ctc';
-  const col = isCTC ? C.violet : C.cyan;
-  const Icon = isCTC ? Copy : Zap;
+  const isCTC       = type === 'ctc';
+  const isIndicator = type === 'indicator';
+  const isMomentum  = type === 'momentum';
+  const col = isCTC ? C.violet : isIndicator ? C.amber : isMomentum ? '#60a5fa' : C.cyan;
+  const bg  = isCTC ? 'rgba(167,139,250,0.12)' : isIndicator ? 'rgba(251,191,36,0.12)' : isMomentum ? 'rgba(96,165,250,0.12)' : 'rgba(52,211,153,0.12)';
+  const label = type === 'schedule' ? 'Signal' : isCTC ? 'CTC' : isIndicator ? 'Indicator' : isMomentum ? 'Momentum' : 'FastTrade';
   return (
     <span style={{
       display: 'flex', alignItems: 'center', gap: 4,
       fontSize: 10, fontWeight: 500, color: col,
       padding: '2px 8px', borderRadius: 6,
-      background: isCTC ? 'rgba(167,139,250,0.12)' : 'rgba(52,211,153,0.12)',
-      border: `1px solid ${col}25`,
+      background: bg, border: `1px solid ${col}25`,
     }}>
-      <Icon size={11} />
-      {type === 'schedule' ? 'Signal' : isCTC ? 'CTC' : 'FastTrade'}
+      {label}
     </span>
   );
 };
@@ -204,9 +205,11 @@ export default function HistoryPage() {
   const loadHistory = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [scheduleLogs, fastradeLogs] = await Promise.all([
+      const [scheduleLogs, fastradeLogs, indicatorLogs, momentumLogs] = await Promise.all([
         api.scheduleLogs(200).catch(() => [] as ExecutionLog[]),
         api.fastradeLogs(200).catch(() => [] as FastradeLog[]),
+        api.indicatorLogs(200).catch(() => [] as IndicatorLog[]),
+        api.momentumLogs(200).catch(() => [] as MomentumLog[]),
       ]);
 
       // Combine and format logs
@@ -234,6 +237,30 @@ export default function HistoryPage() {
           martingaleStep: log.martingaleStep,
           executedAt: log.executedAt,
           note: log.note,
+        })),
+        ...indicatorLogs.map((log): CombinedLog => ({
+          id: log.id,
+          type: 'indicator',
+          time: new Date(log.executedAt).toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'}),
+          trend: (log.trend as 'call' | 'put') || 'call',
+          amount: log.amount || 0,
+          result: log.result as 'WIN' | 'LOSE' | 'DRAW' | 'LOSS',
+          profit: log.profit,
+          martingaleStep: log.martingaleStep,
+          executedAt: log.executedAt,
+          note: log.note ?? log.indicatorType,
+        })),
+        ...momentumLogs.map((log): CombinedLog => ({
+          id: log.id,
+          type: 'momentum',
+          time: new Date(log.executedAt).toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'}),
+          trend: (log.trend as 'call' | 'put') || 'call',
+          amount: log.amount || 0,
+          result: log.result as 'WIN' | 'LOSE' | 'DRAW' | 'LOSS',
+          profit: log.profit,
+          martingaleStep: log.martingaleStep,
+          executedAt: log.executedAt,
+          note: log.note ?? log.momentumType,
         })),
       ];
 
@@ -427,6 +454,8 @@ export default function HistoryPage() {
                 <FilterChip label="Signal" active={typeFilter === 'schedule'} onClick={() => setTypeFilter('schedule')} accent={C.cyan} />
                 <FilterChip label="FastTrade" active={typeFilter === 'fastrade'} onClick={() => setTypeFilter('fastrade')} accent={C.cyan} />
                 <FilterChip label="CTC" active={typeFilter === 'ctc'} onClick={() => setTypeFilter('ctc')} accent={C.violet} />
+                <FilterChip label="Indicator" active={typeFilter === 'indicator'} onClick={() => setTypeFilter('indicator')} accent={C.amber} />
+                <FilterChip label="Momentum" active={typeFilter === 'momentum'} onClick={() => setTypeFilter('momentum')} accent="#60a5fa" />
               </div>
             </div>
             
