@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { LayoutDashboard, History, User } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -11,18 +11,55 @@ const NAV_ITEMS = [
 ];
 
 export function BottomNav() {
-  const pathname  = usePathname();
-  const [mounted, setMounted] = useState(false);
+  const pathname     = usePathname();
+  const [mounted,    setMounted]    = useState(false);
+  const [safeBottom, setSafeBottom] = useState(0);
+  const [kbOffset,   setKbOffset]   = useState(0);
+  const rafRef = useRef<number>(0);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+
+    const readSafeArea = () => {
+      const val = getComputedStyle(document.documentElement).getPropertyValue('--sab').trim();
+      setSafeBottom(parseFloat(val) || 0);
+    };
+    readSafeArea();
+    window.addEventListener('resize', readSafeArea);
+    window.addEventListener('orientationchange', readSafeArea);
+
+    const vv = window.visualViewport;
+    if (vv) {
+      const onVVChange = () => {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+          const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+          setKbOffset(kb);
+        });
+      };
+      vv.addEventListener('resize', onVVChange);
+      vv.addEventListener('scroll', onVVChange);
+      return () => {
+        window.removeEventListener('resize', readSafeArea);
+        window.removeEventListener('orientationchange', readSafeArea);
+        vv.removeEventListener('resize', onVVChange);
+        vv.removeEventListener('scroll', onVVChange);
+        cancelAnimationFrame(rafRef.current);
+      };
+    }
+
+    return () => {
+      window.removeEventListener('resize', readSafeArea);
+      window.removeEventListener('orientationchange', readSafeArea);
+    };
+  }, []);
+
   if (!mounted) return null;
 
   const isDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
 
-  // Token warna berdasarkan tema
   const theme = isDashboard
     ? {
-        // ── DARK ──
         navBg:         'rgba(18,18,20,0.82)',
         navBorder:     '1px solid rgba(255,255,255,0.08)',
         navShadow:     [
@@ -31,22 +68,21 @@ export function BottomNav() {
           'inset 0 1px 0 rgba(255,255,255,0.06)',
           'inset 0 -1px 0 rgba(0,0,0,0.20)',
         ].join(', '),
-        itemColor:     'rgba(255,255,255,0.45)',
-        itemHoverBg:   'rgba(255,255,255,0.08)',
-        itemHoverColor:'rgba(255,255,255,0.80)',
-        activeBg:      'rgba(99,179,237,0.14)',
-        activeBorder:  'rgba(99,179,237,0.30)',
-        activeColor:   '#63b3ed',
-        activeShadow:  [
+        itemColor:      'rgba(255,255,255,0.45)',
+        itemHoverBg:    'rgba(255,255,255,0.08)',
+        itemHoverColor: 'rgba(255,255,255,0.80)',
+        activeBg:       'rgba(99,179,237,0.14)',
+        activeBorder:   'rgba(99,179,237,0.30)',
+        activeColor:    '#63b3ed',
+        activeShadow:   [
           '0 0 0 3px rgba(99,179,237,0.08)',
           '0 1px 6px rgba(99,179,237,0.18)',
           'inset 0 1px 0 rgba(255,255,255,0.08)',
         ].join(', '),
-        activeGlow:    'drop-shadow(0 0 5px rgba(99,179,237,0.45))',
-        sepBg:         'rgba(255,255,255,0.08)',
+        activeGlow:     'drop-shadow(0 0 5px rgba(99,179,237,0.45))',
+        sepBg:          'rgba(255,255,255,0.08)',
       }
     : {
-        // ── LIGHT ──
         navBg:         'rgba(255,255,255,0.88)',
         navBorder:     '1px solid rgba(60,60,67,0.10)',
         navShadow:     [
@@ -55,20 +91,22 @@ export function BottomNav() {
           'inset 0 1px 0 rgba(255,255,255,0.90)',
           'inset 0 -1px 0 rgba(60,60,67,0.04)',
         ].join(', '),
-        itemColor:     'rgba(60,60,67,0.72)',
-        itemHoverBg:   'rgba(60,60,67,0.06)',
-        itemHoverColor:'rgba(60,60,67,0.90)',
-        activeBg:      'rgba(0,122,255,0.09)',
-        activeBorder:  'rgba(0,122,255,0.18)',
-        activeColor:   '#007aff',
-        activeShadow:  [
+        itemColor:      'rgba(60,60,67,0.72)',
+        itemHoverBg:    'rgba(60,60,67,0.06)',
+        itemHoverColor: 'rgba(60,60,67,0.90)',
+        activeBg:       'rgba(0,122,255,0.09)',
+        activeBorder:   'rgba(0,122,255,0.18)',
+        activeColor:    '#007aff',
+        activeShadow:   [
           '0 0 0 3px rgba(0,122,255,0.05)',
           '0 1px 6px rgba(0,122,255,0.10)',
           'inset 0 1px 0 rgba(255,255,255,0.70)',
         ].join(', '),
-        activeGlow:    'drop-shadow(0 0 4px rgba(0,122,255,0.35))',
-        sepBg:         'rgba(60,60,67,0.10)',
+        activeGlow:     'drop-shadow(0 0 4px rgba(0,122,255,0.35))',
+        sepBg:          'rgba(60,60,67,0.10)',
       };
+
+  const navBottom = 16 + safeBottom - kbOffset;
 
   return (
     <>
@@ -103,10 +141,7 @@ export function BottomNav() {
           white-space: nowrap;
           overflow: hidden;
         }
-
-        .bnav-item:active {
-          transform: scale(0.91);
-        }
+        .bnav-item:active { transform: scale(0.91); }
 
         .bnav-icon {
           flex-shrink: 0;
@@ -125,23 +160,24 @@ export function BottomNav() {
             max-width 0.28s cubic-bezier(0.4,0,0.2,1),
             opacity   0.18s cubic-bezier(0.4,0,0.2,1);
         }
-
         .bnav-item.active .bnav-label {
           max-width: 80px;
           opacity: 1;
         }
       `}</style>
 
+      {/* Nav pill — pure floating, no background overlay */}
       <div
         suppressHydrationWarning
         style={{
           position: 'fixed',
-          bottom: 24,
+          bottom: navBottom,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 50,
           pointerEvents: 'none',
           animation: 'nav-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both',
+          transition: 'bottom 0.08s linear',
         }}
       >
         <nav

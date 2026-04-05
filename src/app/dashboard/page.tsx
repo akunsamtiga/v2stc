@@ -313,12 +313,28 @@ const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:
 ({open,onClose,title,options,value,onSelect,searchable}) => {
   const [q,setQ] = useState('');
   useEffect(()=>{if(open)setQ('');},[open]);
+
+  // ✅ FIX KEYBOARD: track visualViewport agar bottom-sheet tidak lompat saat keyboard muncul
+  const [vpTop,setVpTop] = useState(0);
+  const [vpH,setVpH]     = useState(0);
+  useEffect(()=>{
+    if(!open) return;
+    const vv = window.visualViewport;
+    const update = () => { setVpTop(vv?.offsetTop??0); setVpH(vv?.height??window.innerHeight); };
+    update();
+    vv?.addEventListener('resize',update);
+    vv?.addEventListener('scroll',update);
+    return ()=>{ vv?.removeEventListener('resize',update); vv?.removeEventListener('scroll',update); };
+  },[open]);
+
   if(!open) return null;
   const filtered = q.trim() ? options.filter(o=>o.label.toLowerCase().includes(q.toLowerCase())||o.value.toLowerCase().includes(q.toLowerCase())) : options;
+  const vpStyle = vpH>0 ? {top:vpTop,height:vpH} : {top:0,height:'100dvh' as const};
+  const innerMaxH = vpH>0 ? `calc(${vpH}px - 48px)` : 'calc(100dvh - 48px - 64px)';
   return (
-    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',left:0,right:0,...vpStyle,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',transition:'top 0.08s linear,height 0.08s linear',animation:'fade-in 0.15s ease'}}>
       <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)'}}/>
-      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:'calc(100dvh - 48px - 64px)',display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:'16px 16px 0 0',border:`1px solid ${C.bdr}`,borderBottom:'none',boxShadow:'0 -8px 60px rgba(0,0,0,0.6)',marginBottom:64,overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
+      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:innerMaxH,display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:'16px 16px 0 0',border:`1px solid ${C.bdr}`,borderBottom:'none',boxShadow:'0 -8px 60px rgba(0,0,0,0.6)',overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
         <div style={{width:32,height:3,borderRadius:99,background:'rgba(255,255,255,0.12)',margin:'12px auto 0',flexShrink:0}}/>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 16px 12px',borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
           <span style={{fontSize:14,fontWeight:600,color:C.text}}>{title}</span>
@@ -391,11 +407,34 @@ const PickerBtn: React.FC<{label:string;placeholder?:string;disabled?:boolean;on
 const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>void;loading:boolean}> =
 ({open,onClose,orders,onAdd,onDelete,onClear,loading}) => {
   const [input,setInput] = useState('');
+
+  // ✅ FIX KEYBOARD: Track visualViewport agar modal tidak lompat saat keyboard muncul.
+  // Masalah lama: inset:0 + alignItems:center → keyboard muncul → viewport mengecil →
+  // flex center hitung ulang dari ruang baru → modal terangkat (lompat).
+  // Solusi: top=vv.offsetTop, height=vv.height → container selalu pas di area visible.
+  const [vpTop,setVpTop] = useState(0);
+  const [vpH,setVpH]     = useState(0);
+  useEffect(()=>{
+    if(!open) return;
+    const vv = window.visualViewport;
+    const update = () => {
+      setVpTop(vv?.offsetTop ?? 0);
+      setVpH(vv?.height    ?? window.innerHeight);
+    };
+    update();
+    vv?.addEventListener('resize',update);
+    vv?.addEventListener('scroll',update);
+    return ()=>{ vv?.removeEventListener('resize',update); vv?.removeEventListener('scroll',update); };
+  },[open]);
+
   if(!open) return null;
+  const vpStyle = vpH>0 ? {top:vpTop,height:vpH} : {top:0,height:'100dvh' as const};
+  const innerMaxH = vpH>0 ? `calc(${vpH}px - 32px)` : 'calc(100dvh - 64px)';
+
   return (
-    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',left:0,right:0,...vpStyle,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',transition:'top 0.08s linear,height 0.08s linear',animation:'fade-in 0.15s ease'}}>
       <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)'}}/>
-      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:'calc(100dvh - 64px)',display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:16,border:`1px solid ${C.bdr}`,overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
+      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:innerMaxH,display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:16,border:`1px solid ${C.bdr}`,overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
           <div>
             <h2 style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:2}}>Input Signal</h2>
@@ -451,12 +490,33 @@ const AISignalInputModal: React.FC<{open:boolean;onClose:()=>void;onSend:(trend:
   const [trend,setTrend] = useState<'call'|'put'>('call');
   const [delayMs,setDelayMs] = useState(5000);
   const [msg,setMsg] = useState('');
+
+  // ✅ FIX KEYBOARD: sama seperti OrderInputModal — track visualViewport.
+  // Bottom sheet dengan marginBottom hardcoded tidak tahu tinggi keyboard,
+  // sehingga input bisa tertutup. Dengan vv.height, sheet selalu di atas keyboard.
+  const [vpTop,setVpTop] = useState(0);
+  const [vpH,setVpH]     = useState(0);
+  useEffect(()=>{
+    if(!open) return;
+    const vv = window.visualViewport;
+    const update = () => {
+      setVpTop(vv?.offsetTop ?? 0);
+      setVpH(vv?.height    ?? window.innerHeight);
+    };
+    update();
+    vv?.addEventListener('resize',update);
+    vv?.addEventListener('scroll',update);
+    return ()=>{ vv?.removeEventListener('resize',update); vv?.removeEventListener('scroll',update); };
+  },[open]);
+
   if(!open) return null;
   const execTime = Date.now()+delayMs;
+  const vpStyle = vpH>0 ? {top:vpTop,height:vpH} : {top:0,height:'100dvh' as const};
+
   return (
-    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',left:0,right:0,...vpStyle,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',transition:'top 0.08s linear,height 0.08s linear',animation:'fade-in 0.15s ease'}}>
       <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)'}}/>
-      <div style={{position:'relative',width:'100%',maxWidth:480,display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:'16px 16px 0 0',border:`1px solid ${C.sky}44`,borderBottom:'none',marginBottom:64,overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
+      <div style={{position:'relative',width:'100%',maxWidth:480,display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:'16px 16px 0 0',border:`1px solid ${C.sky}44`,borderBottom:'none',overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
         <div style={{width:32,height:3,borderRadius:99,background:`${C.sky}44`,margin:'12px auto 0'}}/>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:`1px solid ${C.sky}20`}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -1576,10 +1636,15 @@ export default function DashboardPage() {
   const profitToday = React.useMemo(()=>{
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     let total = 0;
-    for(const log of scheduleLogs){ if((log.executedAt??0)>=cutoff&&log.profit!=null) total+=log.profit; }
-    for(const log of ftLogs){ if((log.executedAt??0)>=cutoff&&log.profit!=null) total+=log.profit; }
+    // Filter berdasarkan mode akun yang sedang dipilih (demo/real)
+    for(const log of scheduleLogs){
+      if((log.executedAt??0)>=cutoff&&log.profit!=null&&log.isDemoAccount===isDemo) total+=log.profit;
+    }
+    for(const log of ftLogs){
+      if((log.executedAt??0)>=cutoff&&log.profit!=null&&log.isDemoAccount===isDemo) total+=log.profit;
+    }
     return total;
-  },[scheduleLogs,ftLogs]);
+  },[scheduleLogs,ftLogs,isDemo]);
 
   const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
 

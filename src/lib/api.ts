@@ -1,13 +1,30 @@
 // lib/api.ts  — maps to actual NestJS backend routes
 const getBase = () => process.env.NEXT_PUBLIC_API_URL ?? '';
 
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('stc_token');
+// ✅ FIX: async getToken pakai Capacitor Preferences (sama seperti storage.ts)
+async function getToken(): Promise<string | null> {
+  try {
+    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+      const { Preferences } = await import('@capacitor/preferences');
+      const { value } = await Preferences.get({ key: 'stc_token' });
+      return value;
+    }
+  } catch {
+    // fallback ke localStorage
+  }
+  return typeof window !== 'undefined' ? localStorage.getItem('stc_token') : null;
+}
+
+// ✅ FIX: emit custom event untuk logout — tidak pakai window.location.href
+//         ClientLayout / komponen lain bisa listen event ini untuk redirect
+function emitUnauthorized() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('stc:unauthorized'));
+  }
 }
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const token = getToken();
+  const token = await getToken(); // ✅ sekarang await async
   const res = await fetch(`${getBase()}/api/v1${path}`, {
     method,
     headers: {
@@ -19,10 +36,16 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   });
 
   if (res.status === 401) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('stc_token');
-      window.location.href = '/login';
-    }
+    // ✅ FIX: hapus token lalu emit event, jangan pakai window.location.href
+    try {
+      if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.remove({ key: 'stc_token' });
+      } else if (typeof window !== 'undefined') {
+        localStorage.removeItem('stc_token');
+      }
+    } catch { /* ignore */ }
+    emitUnauthorized();
     throw new Error('Sesi habis, silakan login kembali.');
   }
 
@@ -115,6 +138,7 @@ export interface ExecutionLog {
   executedAt?: number;
   note?: string;
   martingaleStep?: number;
+  isDemoAccount?: boolean; // true = demo, false = real (untuk filter profit hari ini)
 }
 
 export interface FastradeStatus {
@@ -148,6 +172,7 @@ export interface FastradeLog {
   note?: string;
   cycleNumber: number;
   mode?: 'FTT' | 'CTC';
+  isDemoAccount?: boolean; // true = demo, false = real (untuk filter profit hari ini)
 }
 
 export interface StartFastradePayload {
@@ -336,7 +361,6 @@ export interface UpdateMomentumConfigPayload {
   baseAmount?: number;
 }
 
-// FIX: MomentumLog — mirrors FastradeLog structure so history page can reuse same component
 export interface MomentumLog {
   id: string;
   orderId: string;
@@ -350,9 +374,9 @@ export interface MomentumLog {
   sessionPnL?: number;
   executedAt: number;
   note?: string;
+  isDemoAccount?: boolean; // true = demo, false = real (untuk filter profit hari ini)
 }
 
-// FIX: IndicatorLog — mirrors MomentumLog/FastradeLog for history page
 export interface IndicatorLog {
   id: string;
   orderId: string;
@@ -367,6 +391,7 @@ export interface IndicatorLog {
   executedAt: number;
   note?: string;
   cycleNumber?: number;
+  isDemoAccount?: boolean; // true = demo, false = real (untuk filter profit hari ini)
 }
 
 // ─────────────────────────────────────────────
@@ -463,7 +488,6 @@ export const api = {
   indicatorStart:        () => req<{ message: string }>('POST', '/indicator/start'),
   indicatorStop:         () => req<{ message: string }>('POST', '/indicator/stop'),
   indicatorStatus:       () => req<IndicatorStatus>('GET', '/indicator/status'),
-  // FIX: mirrors fastradeLogs / scheduleLogs / momentumLogs
   indicatorLogs:         (limit = 100) => req<IndicatorLog[]>('GET', `/indicator/logs?limit=${limit}`),
 
   // ── Momentum ─────────────────────────────
@@ -477,6 +501,5 @@ export const api = {
   momentumStart:        () => req<{ message: string }>('POST', '/momentum/start'),
   momentumStop:         () => req<{ message: string }>('POST', '/momentum/stop'),
   momentumStatus:       () => req<MomentumStatus>('GET', '/momentum/status'),
-  // FIX: mirrors fastradeLogs / scheduleLogs
   momentumLogs:         (limit = 100) => req<MomentumLog[]>('GET', `/momentum/logs?limit=${limit}`),
 };

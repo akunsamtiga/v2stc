@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.stc.autotrade',
   appName: 'STC AutoTrade',
-  webDir: 'out', // hasil dari `next build` dengan output: 'export'
+  webDir: 'out',
   server: {
     androidScheme: 'https',
   },
@@ -20,10 +20,7 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: 'DEFAULT',
       backgroundColor: '#f2f2f7',
-    },
-    Keyboard: {
-      resize: 'body',
-      resizeOnFullScreen: true,
+    
     },
   },
 };

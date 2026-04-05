@@ -4,20 +4,21 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { storage } from '@/lib/storage';
 
-// hidden → welcome (3s) → verified (4s) → out → navigate
 type SplashPhase = 'hidden' | 'welcome' | 'verified' | 'out';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
-  const [mounted,  setMounted]  = useState(false);
-  const [focused,  setFocused]  = useState<'email' | 'password' | null>(null);
-  const [showPass, setShowPass] = useState(false);
-  const [splash,   setSplash]   = useState<SplashPhase>('hidden');
+  const [email,         setEmail]         = useState('');
+  const [password,      setPassword]      = useState('');
+  const [remember,      setRemember]      = useState(false);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState('');
+  const [mounted,       setMounted]       = useState(false);
+  const [focused,       setFocused]       = useState<'email' | 'password' | null>(null);
+  const [showPass,      setShowPass]      = useState(false);
+  const [splash,        setSplash]        = useState<SplashPhase>('hidden');
+
+
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passRef  = useRef<HTMLInputElement>(null);
@@ -25,18 +26,15 @@ export default function LoginPage() {
   useEffect(() => {
     const init = async () => {
       setMounted(true);
-
-      // Baca remember email & token via storage helper (Capacitor-safe)
       const savedEmail = await storage.get('stc_remember_email');
       if (savedEmail) { setEmail(savedEmail); setRemember(true); }
-
       const token = await storage.get('stc_token');
       if (token) router.push('/dashboard');
     };
     init();
   }, [router]);
 
-  // FIX: browser autocomplete tidak trigger onChange — poll DOM setelah mount
+  // Autofill detection
   useEffect(() => {
     if (!mounted) return;
     const check = () => {
@@ -51,34 +49,28 @@ export default function LoginPage() {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [mounted]); // eslint-disable-line
 
+
+
   const runSplash = async (token: string) => {
     await storage.set('stc_token', token);
-
     setSplash('welcome');
     setTimeout(() => setSplash('verified'), 3000);
-    setTimeout(() => {
-      setSplash('out');
-      router.push('/dashboard');
-    }, 7000);
+    setTimeout(() => { setSplash('out'); router.push('/dashboard'); }, 7000);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const emailVal = emailRef.current?.value || email;
     const passVal  = passRef.current?.value  || password;
-
     setLoading(true);
     setError('');
     try {
       const res = await api.login(emailVal, passVal);
-
       if (remember) {
         await storage.set('stc_remember_email', emailVal);
       } else {
         await storage.remove('stc_remember_email');
       }
-
       await runSplash(res.accessToken);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login gagal. Periksa email dan password.');
@@ -112,16 +104,41 @@ export default function LoginPage() {
           --font:         -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
         }
 
-        .lr {
-          font-family: var(--font);
-          position: fixed; inset: 0;
-          background: var(--bg);
-          display: flex; align-items: center; justify-content: center;
-          padding: 20px; overflow: hidden;
+        /*
+          ✅ FIX UTAMA: Ganti dari flex+spacer → block + padding-top tetap
+          ─────────────────────────────────────────────────────────────────
+          MASALAH LAMA:
+            flex column + spacer flex-shrink:1
+            → Saat keyboard muncul, container mengecil → flex hitung ulang
+            → Spacer collapse + semua elemen bergeser → LOMPAT
+
+          SOLUSI BARU:
+            • display: block (bukan flex column)
+            • padding-top TETAP → konten TIDAK bergeser saat keyboard muncul
+            • overflow-y: auto → kalau keyboard menutup tombol, user tinggal scroll
+            • padding-bottom dikontrol lewat state kbPaddingBot (dari visualViewport)
+            • Keyboard muncul → hanya padding bawah bertambah → scroll area melebar
+            → Konten di atas sama sekali TIDAK bergerak
+        */
+        .lr-page {
+          font-family:         var(--font);
+          min-height:          100dvh;
+          background:          var(--bg);
+          display:             block;              /* ← BUKAN flex */
+          padding-left:        20px;
+          padding-right:       20px;
+          padding-top:         max(60px, calc(env(safe-area-inset-top, 20px) + 24px));
+          /* padding-bottom dikontrol inline via style={{ paddingBottom: kbPaddingBot }} */
+          overflow-y:          auto;
+          overflow-x:          hidden;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-y: none;
+          position:            relative;
           -webkit-font-smoothing: antialiased;
         }
 
-        .orb { position: absolute; border-radius: 50%; pointer-events: none; animation: drift 20s ease-in-out infinite alternate; }
+        /* Orbs tetap fixed agar tidak ikut scroll */
+        .orb { position: fixed; border-radius: 50%; pointer-events: none; animation: drift 20s ease-in-out infinite alternate; }
         .o1 {
           width: min(55vw,460px); height: min(55vw,460px);
           background: radial-gradient(circle, rgba(0,122,255,0.12) 0%, transparent 68%);
@@ -141,6 +158,7 @@ export default function LoginPage() {
         .card {
           position: relative; z-index: 2;
           width: 100%; max-width: 380px;
+          margin: 0 auto;
           opacity: 0; transform: translateY(14px) scale(0.988);
           animation: rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.08s forwards;
         }
@@ -176,13 +194,15 @@ export default function LoginPage() {
         .fg.active .fl { color: var(--accent); }
         .fi {
           width: 100%; background: transparent; border: none; outline: none;
-          padding: 26px 13px 9px; font-size: 15.5px; font-weight: 400;
+          padding: 26px 13px 9px;
+          font-size: 16px; /* ≥16px cegah iOS auto-zoom */
+          font-weight: 400;
           color: var(--text-1); font-family: var(--font); letter-spacing: -0.2px;
           -webkit-tap-highlight-color: transparent; appearance: none; -webkit-appearance: none;
         }
-        .fi::placeholder { color: var(--text-3); }
-        .fi[type="password"]              { letter-spacing: 3px; font-size: 17px; }
-        .fi[type="password"]::placeholder { letter-spacing: -0.2px; font-size: 15.5px; }
+        .fi::placeholder { color: var(--text-3); font-size: 15px; }
+        .fi[type="password"]              { letter-spacing: 3px; }
+        .fi[type="password"]::placeholder { letter-spacing: -0.2px; font-size: 15px; }
         .fwrap { position: relative; }
         .eye-btn {
           position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
@@ -377,9 +397,18 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* ══ LOGIN FORM ══ */}
+      {/*
+        ✅ FIX: .lr-page = display:block + padding-top tetap + paddingBottom dari state
+           • padding-top: max(60px, safe-area-top + 24px) → TIDAK berubah saat keyboard muncul
+           • paddingBottom: kbPaddingBot → naik saat keyboard terbuka, turun saat keyboard tutup
+           • overflow-y:auto → user bisa scroll ke bawah kalau keyboard menutup tombol
+           • Konten di atas TIDAK PERNAH bergerak = tidak ada "lompat"
+      */}
       {mounted && splash === 'hidden' && (
-        <div className="lr">
+        <div
+          className="lr-page"
+          style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))' }}
+        >
           <div className="orb o1" />
           <div className="orb o2" />
 
