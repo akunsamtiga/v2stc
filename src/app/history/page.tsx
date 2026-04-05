@@ -1,39 +1,20 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, type ExecutionLog, type FastradeLog, type IndicatorLog, type MomentumLog, type ScheduleStatus, type FastradeStatus } from '@/lib/api';
+import { api, type ExecutionLog, type FastradeLog, type IndicatorLog, type MomentumLog } from '@/lib/api';
+import { storage } from '@/components/ClientLayout';
 import {
-  ArrowLeft, Calendar, TrendingUp, TrendingDown, Filter,
-  ChevronDown, History, RotateCcw, X,
-  ArrowUpRight, ArrowDownRight, Minus, BarChart3
+  TrendingUp, TrendingDown, Filter, History, RotateCcw,
+  ArrowUpRight, ArrowDownRight, BarChart3, ChevronRight,
+  CheckCircle, XCircle, MinusCircle,
 } from 'lucide-react';
-import Link from 'next/link';
 
-// ═══════════════════════════════════════════
-// DESIGN TOKENS
-// ═══════════════════════════════════════════
-const C = {
-  bg:    '#0f0f0f',
-  card:  '#1e5c3c',
-  card2: '#134529',
-  bdr:   'rgba(52,211,153,0.28)',
-  bdrAct:'rgba(52,211,153,0.60)',
-  cyan:  '#34d399',
-  cyand: 'rgba(52,211,153,0.15)',
-  coral: '#f87171',
-  cord:  'rgba(248,113,113,0.12)',
-  amber: '#fbbf24',
-  ambd:  'rgba(251,191,36,0.10)',
-  violet:'#a78bfa',
-  vltd:  'rgba(167,139,250,0.10)',
-  text:  '#ffffff',
-  sub:   'rgba(255,255,255,0.95)',
-  muted: 'rgba(255,255,255,0.65)',
-  faint: 'rgba(52,211,153,0.10)',
-};
-
-type LogType = 'all' | 'schedule' | 'fastrade' | 'ctc' | 'indicator' | 'momentum';
+// ─────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────
+type LogType      = 'all' | 'schedule' | 'fastrade' | 'ctc' | 'indicator' | 'momentum';
 type ResultFilter = 'all' | 'win' | 'loss' | 'draw';
+type DateFilter   = 'all' | 'today' | 'week' | 'month';
 
 interface CombinedLog {
   id: string;
@@ -48,162 +29,154 @@ interface CombinedLog {
   note?: string;
 }
 
-// ═══════════════════════════════════════════
-// COMPONENTS
-// ═══════════════════════════════════════════
-const Card: React.FC<{children: React.ReactNode; style?: React.CSSProperties; className?: string}> =
-({children, style, className = ''}) => (
-  <div className={`ds-card overflow-hidden ${className}`} style={{
-    boxShadow: '0 4px 18px rgba(52,211,153,0.05), 0 2px 8px rgba(0,0,0,0.3)',
-    ...style,
-  }}>{children}</div>
+// ─────────────────────────────────────────────
+// SKELETON
+// ─────────────────────────────────────────────
+const Skel: React.FC<{ w?: number | string; h?: number; r?: number }> = ({ w = '100%', h = 14, r = 6 }) => (
+  <div style={{ width: w, height: h, borderRadius: r, background: 'rgba(60,60,67,0.08)', animation: 'skel-pulse 1.6s ease-in-out infinite' }} />
 );
 
-const StatusBadge: React.FC<{result?: string}> = ({result}) => {
-  if (!result) return <span style={{fontSize: 11, color: C.muted}}>—</span>;
-  
-  const isWin = result === 'WIN';
-  const isLoss = result === 'LOSE' || result === 'LOSS';
-  const isDraw = result === 'DRAW';
-  
-  const col = isWin ? C.cyan : isLoss ? C.coral : C.amber;
-  const bg = isWin ? 'rgba(52,211,153,0.12)' : isLoss ? 'rgba(248,113,113,0.12)' : 'rgba(251,191,36,0.12)';
-  
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 99,
-      color: col, background: bg, border: `1px solid ${col}30`,
-      textTransform: 'uppercase', letterSpacing: '0.08em'
-    }}>
-      {isWin ? 'WIN' : isLoss ? 'LOSS' : 'DRAW'}
-    </span>
-  );
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+const TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
+  schedule:  { label: 'Signal',    color: '#34c759', bg: 'rgba(52,199,89,0.10)'  },
+  fastrade:  { label: 'FastTrade', color: '#007aff', bg: 'rgba(0,122,255,0.10)'  },
+  ctc:       { label: 'CTC',       color: '#af52de', bg: 'rgba(175,82,222,0.10)' },
+  indicator: { label: 'Indicator', color: '#ff9500', bg: 'rgba(255,149,0,0.10)'  },
+  momentum:  { label: 'Momentum',  color: '#ff2d55', bg: 'rgba(255,45,85,0.10)'  },
 };
 
-const TrendBadge: React.FC<{trend: string}> = ({trend}) => {
-  const isCall = trend === 'call';
-  const col = isCall ? C.cyan : C.coral;
-  return (
-    <span style={{
-      display: 'flex', alignItems: 'center', gap: 4,
-      fontSize: 11, fontWeight: 600, color: col,
-    }}>
-      {isCall ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-      {isCall ? 'CALL' : 'PUT'}
-    </span>
-  );
+const RESULT_META = {
+  WIN:  { label: 'WIN',  color: '#34c759', bg: 'rgba(52,199,89,0.10)',   icon: <CheckCircle  size={11} /> },
+  LOSE: { label: 'LOSS', color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
+  LOSS: { label: 'LOSS', color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
+  DRAW: { label: 'DRAW', color: '#ff9500', bg: 'rgba(255,149,0,0.10)',   icon: <MinusCircle  size={11} /> },
 };
 
-const TypeBadge: React.FC<{type: string}> = ({type}) => {
-  const isCTC       = type === 'ctc';
-  const isIndicator = type === 'indicator';
-  const isMomentum  = type === 'momentum';
-  const col = isCTC ? C.violet : isIndicator ? C.amber : isMomentum ? '#60a5fa' : C.cyan;
-  const bg  = isCTC ? 'rgba(167,139,250,0.12)' : isIndicator ? 'rgba(251,191,36,0.12)' : isMomentum ? 'rgba(96,165,250,0.12)' : 'rgba(52,211,153,0.12)';
-  const label = type === 'schedule' ? 'Signal' : isCTC ? 'CTC' : isIndicator ? 'Indicator' : isMomentum ? 'Momentum' : 'FastTrade';
-  return (
-    <span style={{
-      display: 'flex', alignItems: 'center', gap: 4,
-      fontSize: 10, fontWeight: 500, color: col,
-      padding: '2px 8px', borderRadius: 6,
-      background: bg, border: `1px solid ${col}25`,
-    }}>
-      {label}
-    </span>
-  );
+const fmt = (n?: number) => {
+  if (n == null) return '0';
+  return Math.abs(n / 100).toLocaleString('id-ID', { maximumFractionDigits: 0 });
 };
 
-const FilterChip: React.FC<{
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  accent?: string;
-}> = ({label, active, onClick, accent = C.cyan}) => (
-  <button
-    onClick={onClick}
-    style={{
-      padding: '6px 14px', borderRadius: 99, fontSize: 11, fontWeight: 600,
-      background: active ? `${accent}18` : 'rgba(255,255,255,0.04)',
-      border: `1px solid ${active ? accent : 'rgba(255,255,255,0.1)'}`,
-      color: active ? accent : C.muted,
-      cursor: 'pointer', transition: 'all 0.2s',
-    }}
-  >
+const fmtDate = (ts: number) =>
+  new Date(ts).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+
+const fmtTime = (ts: number) =>
+  new Date(ts).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+// ─────────────────────────────────────────────
+// SUB-COMPONENTS
+// ─────────────────────────────────────────────
+const Chip: React.FC<{ label: string; active: boolean; color?: string; onClick: () => void }> = ({
+  label, active, color = '#007aff', onClick,
+}) => (
+  <button onClick={onClick} style={{
+    padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: active ? 600 : 400,
+    background: active ? `${color}12` : 'transparent',
+    border: `1px solid ${active ? color : 'rgba(60,60,67,0.14)'}`,
+    color: active ? color : '#6e6e73',
+    cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap',
+    WebkitTapHighlightColor: 'transparent',
+  }}>
     {label}
   </button>
 );
 
-const StatCard: React.FC<{
-  label: string;
-  value: string | number;
-  subValue?: string;
-  color?: string;
-  icon?: React.ReactNode;
-}> = ({label, value, subValue, color = C.cyan, icon}) => (
-  <Card style={{padding: '14px 16px'}}>
-    <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between'}}>
-      <div>
-        <p style={{fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, marginBottom: 6}}>
-          {label}
-        </p>
-        <p style={{fontSize: 20, fontWeight: 700, color: color, letterSpacing: '-0.02em'}}>
-          {value}
-        </p>
-        {subValue && (
-          <p style={{fontSize: 10, color: C.muted, marginTop: 4}}>{subValue}</p>
-        )}
-      </div>
-      {icon && (
-        <div style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: `${color}15`, border: `1px solid ${color}25`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: color,
-        }}>
-          {icon}
-        </div>
-      )}
+const StatTile: React.FC<{
+  label: string; value: string | number; sub?: string;
+  color: string; icon: React.ReactNode;
+}> = ({ label, value, sub, color, icon }) => (
+  <div style={{
+    background: '#fff', borderRadius: 14, padding: '14px 16px',
+    boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)',
+    display: 'flex', flexDirection: 'column', gap: 6,
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <span style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+      <div style={{ width: 28, height: 28, borderRadius: 8, background: `${color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>{icon}</div>
     </div>
-  </Card>
+    <p style={{ fontSize: 22, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.5, lineHeight: 1 }}>{value}</p>
+    {sub && <p style={{ fontSize: 11, color: '#aeaeb2' }}>{sub}</p>}
+  </div>
 );
 
-// ═══════════════════════════════════════════
+const LogRow: React.FC<{ log: CombinedLog; last: boolean }> = ({ log, last }) => {
+  const type   = TYPE_META[log.type]   || TYPE_META.fastrade;
+  const res    = log.result ? (RESULT_META[log.result] || null) : null;
+  const isCall = log.trend === 'call';
+  const profitPos = (log.profit ?? 0) >= 0;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: last ? 'none' : '1px solid rgba(60,60,67,0.07)' }}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: isCall ? 'rgba(52,199,89,0.10)' : 'rgba(255,59,48,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isCall ? '#34c759' : '#ff3b30' }}>
+        {isCall ? <TrendingUp size={16} strokeWidth={2} /> : <TrendingDown size={16} strokeWidth={2} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: type.color, background: type.bg, padding: '1px 7px', borderRadius: 5, letterSpacing: '0.03em' }}>{type.label}</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: isCall ? '#34c759' : '#ff3b30' }}>{isCall ? 'CALL' : 'PUT'}</span>
+          {log.martingaleStep !== undefined && log.martingaleStep > 0 && (
+            <span style={{ fontSize: 10, color: '#ff9500', background: 'rgba(255,149,0,0.10)', padding: '1px 6px', borderRadius: 4 }}>×{log.martingaleStep}</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: '#6e6e73', fontFamily: 'monospace' }}>{log.time}</span>
+          <span style={{ fontSize: 10, color: '#aeaeb2' }}>·</span>
+          <span style={{ fontSize: 11, color: '#aeaeb2' }}>{fmtDate(log.executedAt)}</span>
+          {log.note && <>
+            <span style={{ fontSize: 10, color: '#aeaeb2' }}>·</span>
+            <span style={{ fontSize: 10, color: '#aeaeb2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 80 }}>{log.note}</span>
+          </>}
+        </div>
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e', marginBottom: 3 }}>Rp {fmt(log.amount)}</p>
+        {res ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: res.color, background: res.bg, padding: '2px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>
+            {res.icon}{res.label}
+          </span>
+        ) : (
+          <span style={{ fontSize: 10, color: '#c7c7cc' }}>—</span>
+        )}
+        {log.profit != null && log.result && (
+          <p style={{ fontSize: 11, fontWeight: 600, color: profitPos ? '#34c759' : '#ff3b30', marginTop: 2 }}>
+            {profitPos ? '+' : '-'}Rp {fmt(log.profit)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
 // MAIN PAGE
-// ═══════════════════════════════════════════
+// ─────────────────────────────────────────────
 export default function HistoryPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [logs, setLogs] = useState<CombinedLog[]>([]);
+  const [isLoading, setIsLoading]       = useState(true);
+  const [logs, setLogs]                 = useState<CombinedLog[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<CombinedLog[]>([]);
-  
-  // Filters
-  const [typeFilter, setTypeFilter] = useState<LogType>('all');
+  const [typeFilter, setTypeFilter]     = useState<LogType>('all');
   const [resultFilter, setResultFilter] = useState<ResultFilter>('all');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
-  const [showFilters, setShowFilters] = useState(false);
-  
-  // Stats
+  const [dateFilter, setDateFilter]     = useState<DateFilter>('all');
+  const [showFilters, setShowFilters]   = useState(false);
+  const [refreshing, setRefreshing]     = useState(false);
   const [stats, setStats] = useState({
-    totalTrades: 0,
-    wins: 0,
-    losses: 0,
-    draws: 0,
-    totalPnL: 0,
-    winRate: 0,
+    totalTrades: 0, wins: 0, losses: 0, draws: 0, totalPnL: 0, winRate: 0,
   });
 
-  // Check auth
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('stc_token') : null;
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-    loadHistory();
-  }, []);
+    const init = async () => {
+      const token = await storage.get('stc_token');
+      if (!token) { router.push('/login'); return; }
+      loadHistory();
+    };
+    init();
+  }, []); // eslint-disable-line
 
-  const loadHistory = useCallback(async () => {
-    setIsLoading(true);
+  const loadHistory = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true); else setRefreshing(true);
     try {
       const [scheduleLogs, fastradeLogs, indicatorLogs, momentumLogs] = await Promise.all([
         api.scheduleLogs(200).catch(() => [] as ExecutionLog[]),
@@ -212,387 +185,279 @@ export default function HistoryPage() {
         api.momentumLogs(200).catch(() => [] as MomentumLog[]),
       ]);
 
-      // Combine and format logs
       const combined: CombinedLog[] = [
-        ...scheduleLogs.map((log): CombinedLog => ({
-          id: log.id,
-          type: 'schedule',
-          time: log.time || '--:--',
-          trend: (log.trend as 'call' | 'put') || 'call',
-          amount: log.amount || 0,
-          result: log.result as 'WIN' | 'LOSE' | 'DRAW' | 'LOSS',
-          profit: log.profit,
-          martingaleStep: log.martingaleStep,
-          executedAt: log.executedAt || Date.now(),
-          note: log.note,
+        ...scheduleLogs.map((l): CombinedLog => ({
+          id: l.id, type: 'schedule',
+          time: l.time || '--:--',
+          trend: (l.trend as 'call' | 'put') || 'call',
+          amount: l.amount || 0,
+          result: l.result as any,
+          profit: l.profit,
+          martingaleStep: l.martingaleStep,
+          executedAt: l.executedAt || Date.now(),
+          note: l.note,
         })),
-        ...fastradeLogs.map((log): CombinedLog => ({
-          id: log.id,
-          type: log.mode === 'CTC' ? 'ctc' : 'fastrade',
-          time: new Date(log.executedAt).toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'}),
-          trend: (log.trend as 'call' | 'put') || 'call',
-          amount: log.amount || 0,
-          result: log.result as 'WIN' | 'LOSE' | 'DRAW' | 'LOSS',
-          profit: log.profit,
-          martingaleStep: log.martingaleStep,
-          executedAt: log.executedAt,
-          note: log.note,
+        ...fastradeLogs.map((l): CombinedLog => ({
+          id: l.id, type: l.mode === 'CTC' ? 'ctc' : 'fastrade',
+          time: fmtTime(l.executedAt),
+          trend: (l.trend as 'call' | 'put') || 'call',
+          amount: l.amount || 0,
+          result: l.result as any,
+          profit: l.profit,
+          martingaleStep: l.martingaleStep,
+          executedAt: l.executedAt,
+          note: l.note,
         })),
-        ...indicatorLogs.map((log): CombinedLog => ({
-          id: log.id,
-          type: 'indicator',
-          time: new Date(log.executedAt).toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'}),
-          trend: (log.trend as 'call' | 'put') || 'call',
-          amount: log.amount || 0,
-          result: log.result as 'WIN' | 'LOSE' | 'DRAW' | 'LOSS',
-          profit: log.profit,
-          martingaleStep: log.martingaleStep,
-          executedAt: log.executedAt,
-          note: log.note ?? log.indicatorType,
+        ...indicatorLogs.map((l): CombinedLog => ({
+          id: l.id, type: 'indicator',
+          time: fmtTime(l.executedAt),
+          trend: (l.trend as 'call' | 'put') || 'call',
+          amount: l.amount || 0,
+          result: l.result as any,
+          profit: l.profit,
+          martingaleStep: l.martingaleStep,
+          executedAt: l.executedAt,
+          note: l.note ?? l.indicatorType,
         })),
-        ...momentumLogs.map((log): CombinedLog => ({
-          id: log.id,
-          type: 'momentum',
-          time: new Date(log.executedAt).toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'}),
-          trend: (log.trend as 'call' | 'put') || 'call',
-          amount: log.amount || 0,
-          result: log.result as 'WIN' | 'LOSE' | 'DRAW' | 'LOSS',
-          profit: log.profit,
-          martingaleStep: log.martingaleStep,
-          executedAt: log.executedAt,
-          note: log.note ?? log.momentumType,
+        ...momentumLogs.map((l): CombinedLog => ({
+          id: l.id, type: 'momentum',
+          time: fmtTime(l.executedAt),
+          trend: (l.trend as 'call' | 'put') || 'call',
+          amount: l.amount || 0,
+          result: l.result as any,
+          profit: l.profit,
+          martingaleStep: l.martingaleStep,
+          executedAt: l.executedAt,
+          note: l.note ?? l.momentumType,
         })),
       ];
 
-      // Deduplicate by id — safety net untuk log lama di Firebase yang mungkin masih duplikat.
-      // Entry dengan result (WIN/LOSE/DRAW) diprioritaskan atas entry tanpa result ("—").
-      const dedupMap = new Map<string, CombinedLog>();
-      for (const log of combined) {
-        const existing = dedupMap.get(log.id);
-        if (!existing || (!existing.result && log.result)) {
-          dedupMap.set(log.id, log);
-        }
+      const map = new Map<string, CombinedLog>();
+      for (const l of combined) {
+        const ex = map.get(l.id);
+        if (!ex || (!ex.result && l.result)) map.set(l.id, l);
       }
-      const deduped = Array.from(dedupMap.values());
+      const deduped = Array.from(map.values()).sort((a, b) => b.executedAt - a.executedAt);
 
-      // Sort by executedAt descending
-      deduped.sort((a, b) => b.executedAt - a.executedAt);
-      
       setLogs(deduped);
-      calculateStats(deduped);
-    } catch (err: any) {
-      console.error('Failed to load history:', err);
+
+      const done   = deduped.filter(l => l.result);
+      const wins   = done.filter(l => l.result === 'WIN').length;
+      const losses = done.filter(l => l.result === 'LOSE' || l.result === 'LOSS').length;
+      const draws  = done.filter(l => l.result === 'DRAW').length;
+      const pnl    = deduped.reduce((s, l) => s + (l.profit || 0), 0);
+      setStats({
+        totalTrades: done.length, wins, losses, draws, totalPnL: pnl,
+        winRate: done.length > 0 ? Math.round((wins / done.length) * 100) : 0,
+      });
+    } catch (e) {
+      console.error(e);
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); setRefreshing(false);
     }
-  }, []);
+  }, []); // eslint-disable-line
 
-  const calculateStats = (allLogs: CombinedLog[]) => {
-    const completed = allLogs.filter(l => l.result);
-    const wins = completed.filter(l => l.result === 'WIN').length;
-    const losses = completed.filter(l => l.result === 'LOSE' || l.result === 'LOSS').length;
-    const draws = completed.filter(l => l.result === 'DRAW').length;
-    // totalPnL langsung dari profit (sudah dalam IDR)
-    const totalPnL = allLogs.reduce((sum, l) => sum + (l.profit || 0), 0);
-    
-    setStats({
-      totalTrades: completed.length,
-      wins,
-      losses,
-      draws,
-      totalPnL,
-      winRate: completed.length > 0 ? Math.round((wins / completed.length) * 100) : 0,
-    });
-  };
-
-  // Apply filters
   useEffect(() => {
-    let filtered = [...logs];
-    
-    // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(l => l.type === typeFilter);
-    }
-    
-    // Result filter
-    if (resultFilter !== 'all') {
-      if (resultFilter === 'win') {
-        filtered = filtered.filter(l => l.result === 'WIN');
-      } else if (resultFilter === 'loss') {
-        filtered = filtered.filter(l => l.result === 'LOSE' || l.result === 'LOSS');
-      } else if (resultFilter === 'draw') {
-        filtered = filtered.filter(l => l.result === 'DRAW');
-      }
-    }
-    
-    // Date filter
-    if (dateFilter !== 'all') {
-      const now = Date.now();
-      const dayMs = 24 * 60 * 60 * 1000;
-      if (dateFilter === 'today') {
-        filtered = filtered.filter(l => now - l.executedAt < dayMs);
-      } else if (dateFilter === 'week') {
-        filtered = filtered.filter(l => now - l.executedAt < 7 * dayMs);
-      } else if (dateFilter === 'month') {
-        filtered = filtered.filter(l => now - l.executedAt < 30 * dayMs);
-      }
-    }
-    
-    setFilteredLogs(filtered);
+    let f = [...logs];
+    if (typeFilter !== 'all') f = f.filter(l => l.type === typeFilter);
+    if (resultFilter === 'win')  f = f.filter(l => l.result === 'WIN');
+    if (resultFilter === 'loss') f = f.filter(l => l.result === 'LOSE' || l.result === 'LOSS');
+    if (resultFilter === 'draw') f = f.filter(l => l.result === 'DRAW');
+    const ms = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    if (dateFilter === 'today') f = f.filter(l => now - l.executedAt < ms);
+    if (dateFilter === 'week')  f = f.filter(l => now - l.executedAt < 7 * ms);
+    if (dateFilter === 'month') f = f.filter(l => now - l.executedAt < 30 * ms);
+    setFilteredLogs(f);
   }, [logs, typeFilter, resultFilter, dateFilter]);
 
-  // Amount sudah dalam IDR langsung dari API (bukan cents)
-  const formatAmount = (amount?: number) => {
-    if (!amount) return '0';
-    return Math.abs(amount).toLocaleString('id-ID');
-  };
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: '2-digit'});
-  };
+  const hasActiveFilter = typeFilter !== 'all' || resultFilter !== 'all' || dateFilter !== 'all';
+  const pnlPos = stats.totalPnL >= 0;
 
   return (
-    <div style={{minHeight: '100dvh', background: C.bg, paddingBottom: 100}}>
-      {/* Header */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 40,
-        background: 'rgba(15,15,15,0.95)', backdropFilter: 'blur(20px)',
-        borderBottom: `1px solid ${C.bdr}`,
-      }}>
-        <div style={{maxWidth: 1280, margin: '0 auto', padding: '16px'}}>
-          <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
-            <Link href="/dashboard" style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.bdr}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: C.muted,
-            }}>
-              <ArrowLeft size={18} />
-            </Link>
-            <div>
-              <h1 style={{fontSize: 18, fontWeight: 700, color: C.text}}>Riwayat Trading</h1>
-              <p style={{fontSize: 11, color: C.muted}}>{filteredLogs.length} transaksi</p>
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              style={{
-                marginLeft: 'auto',
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 99,
-                background: showFilters ? `${C.cyan}15` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${showFilters ? C.cyan : C.bdr}`,
-                color: showFilters ? C.cyan : C.muted,
-                fontSize: 11, fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              <Filter size={14} />
-              Filter
-              {(typeFilter !== 'all' || resultFilter !== 'all' || dateFilter !== 'all') && (
-                <span style={{
-                  width: 6, height: 6, borderRadius: '50%',
-                  background: C.cyan,
-                }} />
-              )}
-            </button>
-          </div>
+    <div style={{ minHeight: '100dvh', background: '#f2f2f7', fontFamily: "-apple-system,'SF Pro Display',BlinkMacSystemFont,'Helvetica Neue',sans-serif", WebkitFontSmoothing: 'antialiased', paddingBottom: 100 }}>
+      <style>{`
+        @keyframes skel-pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+        @keyframes spin        { to{transform:rotate(360deg)} }
+        @keyframes fade-up     { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+        .hist-chip-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+        .hist-chip-scroll::-webkit-scrollbar { display: none; }
+        .hist-tap:active { opacity: 0.6; }
+
+        .hist-row { animation: fade-up 0.3s cubic-bezier(0.22,1,0.36,1) both; }
+        .hist-row:nth-child(1)  { animation-delay: 0.03s; }
+        .hist-row:nth-child(2)  { animation-delay: 0.06s; }
+        .hist-row:nth-child(3)  { animation-delay: 0.09s; }
+        .hist-row:nth-child(4)  { animation-delay: 0.12s; }
+        .hist-row:nth-child(5)  { animation-delay: 0.15s; }
+        .hist-row:nth-child(n+6){ animation-delay: 0.18s; }
+
+        @media (min-width: 768px) {
+          .hist-grid-2 { grid-template-columns: 1fr 1fr !important; }
+          .hist-grid-4 { grid-template-columns: repeat(4,1fr) !important; }
+          .hist-layout { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+          .hist-sidebar { display: flex !important; }
+          .hist-main-top { display: none !important; }
+        }
+      `}</style>
+
+      {/* ── STICKY HEADER ── */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 50, flexShrink: 0, background: 'rgba(242,242,247,0.92)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: '0.5px solid rgba(60,60,67,0.16)' }}>
+        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h1 style={{ flex: 1, fontSize: 17, fontWeight: 600, color: '#1c1c1e', letterSpacing: -0.4 }}>Riwayat</h1>
+          <button onClick={() => loadHistory(true)} disabled={refreshing || isLoading} className="hist-tap"
+            style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,0,0,0.05)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#007aff', cursor: 'pointer', opacity: (refreshing || isLoading) ? 0.4 : 1 }}>
+            <RotateCcw size={15} style={{ animation: (refreshing || isLoading) ? 'spin 0.8s linear infinite' : 'none' }} />
+          </button>
+          <button onClick={() => setShowFilters(v => !v)} className="hist-tap"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 99, background: showFilters ? 'rgba(0,122,255,0.10)' : 'rgba(0,0,0,0.05)', border: `1px solid ${showFilters ? 'rgba(0,122,255,0.22)' : 'rgba(60,60,67,0.12)'}`, color: showFilters ? '#007aff' : '#3c3c43', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+            <Filter size={13} />
+            Filter
+            {hasActiveFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#007aff', marginLeft: 1 }} />}
+          </button>
         </div>
       </div>
 
-      <div style={{maxWidth: 1280, margin: '0 auto', padding: '16px'}}>
-        {/* Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 12,
-          marginBottom: 20,
-        }}>
-          <StatCard
-            label="Total Trade"
-            value={stats.totalTrades}
-            subValue={`${stats.wins}W / ${stats.losses}L${stats.draws > 0 ? ` / ${stats.draws}D` : ''}`}
-            color={C.cyan}
-            icon={<BarChart3 size={18} />}
-          />
-          <StatCard
-            label="Win Rate"
-            value={`${stats.winRate}%`}
-            subValue={stats.totalPnL >= 0 ? `+${stats.totalPnL.toLocaleString('id-ID')}` : stats.totalPnL.toLocaleString('id-ID')}
-            color={stats.winRate >= 50 ? C.cyan : C.coral}
-            icon={stats.winRate >= 50 ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
-          />
-        </div>
+      {/* ── BODY ── */}
+      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '20px 16px 0' }}>
+        <div className="hist-layout" style={{ display: 'block' }}>
 
-        {/* Filters Panel */}
-        {showFilters && (
-          <Card style={{padding: 16, marginBottom: 16}}>
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12}}>
-              <span style={{fontSize: 12, fontWeight: 600, color: C.sub}}>Filter</span>
-              <button
-                onClick={() => {
-                  setTypeFilter('all');
-                  setResultFilter('all');
-                  setDateFilter('all');
-                }}
-                style={{
-                  fontSize: 10, color: C.coral, background: 'transparent',
-                  border: 'none', cursor: 'pointer',
-                }}
-              >
-                Reset
-              </button>
-            </div>
-            
-            {/* Type Filter */}
-            <div style={{marginBottom: 14}}>
-              <p style={{fontSize: 10, color: C.muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em'}}>
-                Tipe
-              </p>
-              <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
-                <FilterChip label="Semua" active={typeFilter === 'all'} onClick={() => setTypeFilter('all')} />
-                <FilterChip label="Signal" active={typeFilter === 'schedule'} onClick={() => setTypeFilter('schedule')} accent={C.cyan} />
-                <FilterChip label="FastTrade" active={typeFilter === 'fastrade'} onClick={() => setTypeFilter('fastrade')} accent={C.cyan} />
-                <FilterChip label="CTC" active={typeFilter === 'ctc'} onClick={() => setTypeFilter('ctc')} accent={C.violet} />
-                <FilterChip label="Indicator" active={typeFilter === 'indicator'} onClick={() => setTypeFilter('indicator')} accent={C.amber} />
-                <FilterChip label="Momentum" active={typeFilter === 'momentum'} onClick={() => setTypeFilter('momentum')} accent="#60a5fa" />
+          {/* ══ SIDEBAR (desktop) ══ */}
+          <div className="hist-sidebar" style={{ display: 'none', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+              <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid rgba(60,60,67,0.07)' }}>
+                <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Ringkasan</p>
+                {isLoading ? <Skel w={100} h={28} r={6} /> : (
+                  <p style={{ fontSize: 26, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.6, lineHeight: 1 }}>{stats.totalTrades} <span style={{ fontSize: 13, fontWeight: 400, color: '#6e6e73' }}>trade</span></p>
+                )}
               </div>
-            </div>
-            
-            {/* Result Filter */}
-            <div style={{marginBottom: 14}}>
-              <p style={{fontSize: 10, color: C.muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em'}}>
-                Hasil
-              </p>
-              <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
-                <FilterChip label="Semua" active={resultFilter === 'all'} onClick={() => setResultFilter('all')} />
-                <FilterChip label="Win" active={resultFilter === 'win'} onClick={() => setResultFilter('win')} accent={C.cyan} />
-                <FilterChip label="Loss" active={resultFilter === 'loss'} onClick={() => setResultFilter('loss')} accent={C.coral} />
-                <FilterChip label="Draw" active={resultFilter === 'draw'} onClick={() => setResultFilter('draw')} accent={C.amber} />
-              </div>
-            </div>
-            
-            {/* Date Filter */}
-            <div>
-              <p style={{fontSize: 10, color: C.muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em'}}>
-                Periode
-              </p>
-              <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
-                <FilterChip label="Semua" active={dateFilter === 'all'} onClick={() => setDateFilter('all')} />
-                <FilterChip label="Hari Ini" active={dateFilter === 'today'} onClick={() => setDateFilter('today')} />
-                <FilterChip label="7 Hari" active={dateFilter === 'week'} onClick={() => setDateFilter('week')} />
-                <FilterChip label="30 Hari" active={dateFilter === 'month'} onClick={() => setDateFilter('month')} />
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Logs List */}
-        <Card>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: `1px solid ${C.bdr}`,
-          }}>
-            <span style={{fontSize: 12, fontWeight: 600, color: C.sub}}>Daftar Transaksi</span>
-            <button
-              onClick={loadHistory}
-              disabled={isLoading}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '6px 12px', borderRadius: 8,
-                background: 'rgba(52,211,153,0.08)', border: `1px solid ${C.bdr}`,
-                color: C.cyan, fontSize: 11, fontWeight: 600,
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                opacity: isLoading ? 0.6 : 1,
-              }}
-            >
-              <RotateCcw size={12} style={{animation: isLoading ? 'spin 1s linear infinite' : 'none'}} />
-              Refresh
-            </button>
-          </div>
-
-          {isLoading ? (
-            <div style={{padding: 40, textAlign: 'center'}}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%',
-                border: '2px solid rgba(52,211,153,0.2)',
-                borderTopColor: C.cyan,
-                margin: '0 auto 12px',
-                animation: 'spin 1s linear infinite',
-              }} />
-              <p style={{fontSize: 12, color: C.muted}}>Memuat riwayat...</p>
-            </div>
-          ) : filteredLogs.length === 0 ? (
-            <div style={{padding: 50, textAlign: 'center'}}>
-              <History size={40} style={{color: C.muted, opacity: 0.3, marginBottom: 12}} />
-              <p style={{fontSize: 14, color: C.muted, marginBottom: 4}}>Tidak ada transaksi</p>
-              <p style={{fontSize: 11, color: 'rgba(255,255,255,0.3)'}}>
-                {logs.length > 0 ? 'Coba ubah filter' : 'Mulai trading untuk melihat riwayat'}
-              </p>
-            </div>
-          ) : (
-            <div>
-              {filteredLogs.map((log, idx) => (
-                <div
-                  key={log.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '14px 16px',
-                    borderBottom: idx < filteredLogs.length - 1 ? `1px solid ${C.bdr}` : 'none',
-                    background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
-                  }}
-                >
-                  {/* Time & Date */}
-                  <div style={{minWidth: 55}}>
-                    <p style={{fontSize: 13, fontWeight: 600, color: C.text, fontFamily: 'monospace'}}>
-                      {log.time}
-                    </p>
-                    <p style={{fontSize: 9, color: C.muted, marginTop: 2}}>
-                      {formatDate(log.executedAt)}
-                    </p>
-                  </div>
-
-                  {/* Type */}
-                  <TypeBadge type={log.type} />
-
-                  {/* Trend */}
-                  <TrendBadge trend={log.trend} />
-
-                  {/* Amount */}
-                  <div style={{flex: 1, textAlign: 'right'}}>
-                    <p style={{fontSize: 12, fontWeight: 600, color: C.text}}>
-                      Rp {formatAmount(log.amount)}
-                    </p>
-                    {log.martingaleStep !== undefined && log.martingaleStep > 0 && (
-                      <p style={{fontSize: 9, color: C.amber, marginTop: 2}}>
-                        Step {log.martingaleStep}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Result */}
-                  <div style={{minWidth: 70, textAlign: 'right'}}>
-                    <StatusBadge result={log.result} />
-                    {log.profit !== undefined && log.result && (
-                      <p style={{
-                        fontSize: 10, fontWeight: 600, marginTop: 4,
-                        // FIX: profit in cents → divide by 100
-                        color: log.profit >= 0 ? C.cyan : C.coral,
-                      }}>
-                        {log.profit >= 0 ? '+' : ''}{formatAmount(log.profit)}
-                      </p>
-                    )}
-                  </div>
+              {[
+                { label: 'Win', value: stats.wins, color: '#34c759' },
+                { label: 'Loss', value: stats.losses, color: '#ff3b30' },
+                { label: 'Draw', value: stats.draws, color: '#ff9500' },
+              ].map(({ label, value, color }, i, arr) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none' }}>
+                  <span style={{ fontSize: 14, color: '#3c3c43' }}>{label}</span>
+                  {isLoading ? <Skel w={30} h={13} r={4} /> : <span style={{ fontSize: 14, fontWeight: 600, color }}>{value}</span>}
                 </div>
               ))}
             </div>
-          )}
-        </Card>
-      </div>
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ background: '#fff', borderRadius: 14, padding: '12px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+                <p style={{ fontSize: 10, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Win Rate</p>
+                {isLoading ? <Skel w="70%" h={22} r={5} /> : <p style={{ fontSize: 20, fontWeight: 700, color: stats.winRate >= 50 ? '#34c759' : '#ff3b30', letterSpacing: -0.4 }}>{stats.winRate}%</p>}
+              </div>
+              <div style={{ background: '#fff', borderRadius: 14, padding: '12px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+                <p style={{ fontSize: 10, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>P&amp;L</p>
+                {isLoading ? <Skel w="80%" h={22} r={5} /> : <p style={{ fontSize: 14, fontWeight: 700, color: pnlPos ? '#34c759' : '#ff3b30', letterSpacing: -0.3, lineHeight: 1.2 }}>{pnlPos ? '+' : '-'}Rp {fmt(stats.totalPnL)}</p>}
+              </div>
+            </div>
+
+            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+              <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 16px 8px' }}>Tipe</p>
+              {([
+                ['all', 'Semua', '#007aff'], ['schedule', 'Signal', '#34c759'],
+                ['fastrade', 'FastTrade', '#007aff'], ['ctc', 'CTC', '#af52de'],
+                ['indicator', 'Indicator', '#ff9500'], ['momentum', 'Momentum', '#ff2d55'],
+              ] as [LogType, string, string][]).map(([val, lbl, col], i, arr) => {
+                const active = typeFilter === val;
+                return (
+                  <button key={val} onClick={() => setTypeFilter(val)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', background: active ? `${col}08` : 'transparent', border: 'none', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none', borderLeft: active ? `2px solid ${col}` : '2px solid transparent', cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ fontSize: 14, color: active ? col : '#1c1c1e', fontWeight: active ? 600 : 400 }}>{lbl}</span>
+                    {active && <ChevronRight size={13} color={col} />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+              <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 16px 8px' }}>Periode</p>
+              {([['all', 'Semua'], ['today', 'Hari Ini'], ['week', '7 Hari'], ['month', '30 Hari']] as [DateFilter, string][]).map(([val, lbl], i, arr) => {
+                const active = dateFilter === val;
+                return (
+                  <button key={val} onClick={() => setDateFilter(val)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', background: active ? 'rgba(0,122,255,0.06)' : 'transparent', border: 'none', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none', borderLeft: active ? '2px solid #007aff' : '2px solid transparent', cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ fontSize: 14, color: active ? '#007aff' : '#1c1c1e', fontWeight: active ? 600 : 400 }}>{lbl}</span>
+                    {active && <ChevronRight size={13} color="#007aff" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ══ MAIN COLUMN ══ */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            <div className="hist-main-top" style={{ display: 'block' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <StatTile label="Total Trade" value={isLoading ? '—' : stats.totalTrades} sub={isLoading ? '' : `${stats.wins}W · ${stats.losses}L${stats.draws > 0 ? ` · ${stats.draws}D` : ''}`} color="#007aff" icon={<BarChart3 size={14} />} />
+                <StatTile label="Win Rate" value={isLoading ? '—' : `${stats.winRate}%`} sub={isLoading ? '' : `${pnlPos ? '+' : '-'}Rp ${fmt(stats.totalPnL)}`} color={stats.winRate >= 50 ? '#34c759' : '#ff3b30'} icon={stats.winRate >= 50 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />} />
+              </div>
+            </div>
+
+            {showFilters && (
+              <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)', padding: '14px 16px', animation: 'fade-up 0.22s ease both' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Filter</span>
+                  {hasActiveFilter && (
+                    <button onClick={() => { setTypeFilter('all'); setResultFilter('all'); setDateFilter('all'); }}
+                      style={{ fontSize: 13, color: '#ff3b30', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Reset</button>
+                  )}
+                </div>
+                <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipe</p>
+                <div className="hist-chip-scroll" style={{ marginBottom: 14 }}>
+                  {([['all','Semua','#007aff'],['schedule','Signal','#34c759'],['fastrade','FastTrade','#007aff'],['ctc','CTC','#af52de'],['indicator','Indicator','#ff9500'],['momentum','Momentum','#ff2d55']] as [LogType,string,string][]).map(([v,l,c]) => (
+                    <Chip key={v} label={l} active={typeFilter===v} color={c} onClick={() => setTypeFilter(v)} />
+                  ))}
+                </div>
+                <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hasil</p>
+                <div className="hist-chip-scroll" style={{ marginBottom: 14 }}>
+                  {([['all','Semua','#007aff'],['win','Win','#34c759'],['loss','Loss','#ff3b30'],['draw','Draw','#ff9500']] as [ResultFilter,string,string][]).map(([v,l,c]) => (
+                    <Chip key={v} label={l} active={resultFilter===v} color={c} onClick={() => setResultFilter(v)} />
+                  ))}
+                </div>
+                <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Periode</p>
+                <div className="hist-chip-scroll">
+                  {([['all','Semua'],['today','Hari Ini'],['week','7 Hari'],['month','30 Hari']] as [DateFilter,string][]).map(([v,l]) => (
+                    <Chip key={v} label={l} active={dateFilter===v} onClick={() => setDateFilter(v)} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 4px' }}>
+                <p style={{ fontSize: 11.5, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Transaksi</p>
+                <p style={{ fontSize: 11.5, color: '#aeaeb2' }}>{filteredLogs.length} data</p>
+              </div>
+              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+                {isLoading ? (
+                  <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(0,122,255,0.15)', borderTopColor: '#007aff', animation: 'spin 0.8s linear infinite' }} />
+                    <p style={{ fontSize: 13, color: '#6e6e73' }}>Memuat riwayat...</p>
+                  </div>
+                ) : filteredLogs.length === 0 ? (
+                  <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <History size={36} style={{ color: '#c7c7cc', margin: '0 auto 12px', display: 'block' }} />
+                    <p style={{ fontSize: 15, fontWeight: 500, color: '#3c3c43', marginBottom: 4 }}>Tidak ada transaksi</p>
+                    <p style={{ fontSize: 13, color: '#aeaeb2' }}>{logs.length > 0 ? 'Coba ubah filter' : 'Mulai trading untuk melihat riwayat'}</p>
+                  </div>
+                ) : (
+                  <div>
+                    {filteredLogs.map((log, idx) => (
+                      <div key={log.id} className="hist-row">
+                        <LogRow log={log} last={idx === filteredLogs.length - 1} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
