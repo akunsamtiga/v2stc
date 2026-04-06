@@ -43,6 +43,9 @@ public class StcWebViewPlugin extends Plugin {
     private Dialog webViewDialog = null;
     private PluginCall savedCall = null;
     private boolean successAlreadyFired = false;
+    private boolean hasClickedDaftar = false;
+    private Handler autoClickHandler = new Handler(Looper.getMainLooper());
+    private Runnable autoClickRunnable;
 
     // Mirrors SUCCESS_URL_PATTERNS dari RegisterScreen.kt
     private static final List<String> SUCCESS_URL_PATTERNS = Arrays.asList(
@@ -53,7 +56,7 @@ public class StcWebViewPlugin extends Plugin {
 
     private static final List<String> AUTH_COOKIE_NAMES = Arrays.asList(
             "authorization_token", "authorization-token",
-            "auth_token", "authToken",
+            "auth_token", "authToken", "authtoken",
             "access_token", "accessToken",
             "token"
     );
@@ -73,6 +76,7 @@ public class StcWebViewPlugin extends Plugin {
 
         savedCall            = call;
         successAlreadyFired  = false;
+        hasClickedDaftar     = false;
         call.setKeepAlive(true);
 
         String finalUrl = url;
@@ -183,6 +187,14 @@ public class StcWebViewPlugin extends Plugin {
                 super.onPageFinished(view, pageUrl);
                 if (pageUrl != null) checkForSuccess(pageUrl, dialog);
                 progressBar.setVisibility(View.GONE);
+
+                // ✅ TAMBAHAN: Jalankan auto-click setelah page selesai load
+                // Delay 500ms untuk memastikan semua elemen sudah dirender
+                autoClickHandler.postDelayed(() -> {
+                    if (!hasClickedDaftar && !successAlreadyFired) {
+                        injectAutoClickScript(webView);
+                    }
+                }, 500);
             }
 
             @Override
@@ -193,11 +205,39 @@ public class StcWebViewPlugin extends Plugin {
             }
         });
 
+        // ✅ TAMBAHAN: WebChromeClient untuk mendengarkan console message
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 progressBar.setProgress(newProgress);
                 if (newProgress >= 100) progressBar.setVisibility(View.GONE);
+            }
+
+            @Override
+            public boolean onConsoleMessage(android.webkit.ConsoleMessage consoleMessage) {
+                String message = consoleMessage.message();
+
+                // ✅ TAMBAHAN: Deteksi jika tombol daftar berhasil diklik
+                if (message != null && message.equals("DAFTAR_BUTTON_CLICKED")) {
+                    hasClickedDaftar = true;
+                    android.util.Log.d("StcWebView", "✅ Daftar button clicked successfully");
+
+                    // Notify ke JS layer
+                    JSObject data = new JSObject();
+                    data.put("daftarClicked", true);
+                    notifyListeners("daftarButtonClicked", data);
+                }
+
+                // ✅ TAMBAHAN: Log untuk debugging
+                if (message != null && (
+                        message.startsWith("REGDATA_") ||
+                                message.contains("DAFTAR") ||
+                                message.contains("Current URL")
+                )) {
+                    android.util.Log.d("StcWebView", "Console: " + message);
+                }
+
+                return true;
             }
         });
 
@@ -221,6 +261,10 @@ public class StcWebViewPlugin extends Plugin {
         // User tutup manual tanpa registrasi selesai
         dialog.setOnDismissListener(d -> {
             webViewDialog = null;
+            // Bersihkan handler
+            if (autoClickRunnable != null) {
+                autoClickHandler.removeCallbacks(autoClickRunnable);
+            }
             if (!successAlreadyFired) {
                 JSObject data = new JSObject();
                 data.put("finished",  true);
@@ -232,6 +276,47 @@ public class StcWebViewPlugin extends Plugin {
         dialog.show();
         webViewDialog = dialog;
         webView.loadUrl(url);
+    }
+
+    // ✅ TAMBAHAN: Inject JavaScript untuk auto-click tombol daftar
+    // Mirrors: RegisterScreen.kt lines 405-424
+    private void injectAutoClickScript(WebView webView) {
+        String script = "(function() {" +
+                "var buttons = document.querySelectorAll('button, a, input[type=\"button\"], input[type=\"submit\"]');" +
+                "for (var i = 0; i < buttons.length; i++) {" +
+                "    var btn = buttons[i];" +
+                "    var text = (btn.innerText || btn.textContent || btn.value || '').trim().toLowerCase();" +
+                "    if (text.indexOf('daftar') >= 0) {" +
+                "        try {" +
+                "            btn.scrollIntoView();" +
+                "            btn.focus();" +
+                "            btn.click();" +
+                "            console.log('DAFTAR_BUTTON_CLICKED');" +
+                "            return true;" +
+                "        } catch (error) {" +
+                "            console.log('Error clicking daftar: ' + error.message);" +
+                "        }" +
+                "    }" +
+                "}" +
+                "return false;" +
+                "})();";
+
+        webView.evaluateJavascript(script, result -> {
+            android.util.Log.d("StcWebView", "Auto-click script executed, result: " + result);
+        });
+
+        // ✅ TAMBAHAN: Retry mechanism jika tombol tidak ditemukan
+        // Coba lagi setiap 1 detik selama 10 detik (untuk SPA yang load lambat)
+        for (int i = 1; i <= 10; i++) {
+            final int attempt = i;
+            autoClickHandler.postDelayed(() -> {
+                if (!hasClickedDaftar && !successAlreadyFired) {
+                    webView.evaluateJavascript(script, result -> {
+                        android.util.Log.d("StcWebView", "Auto-click retry #" + attempt + ", result: " + result);
+                    });
+                }
+            }, i * 1000);
+        }
     }
 
     // ─── checkForSuccess ──────────────────────────────────────────────────────
@@ -295,6 +380,9 @@ public class StcWebViewPlugin extends Plugin {
         if (webViewDialog != null) {
             webViewDialog.dismiss();
             webViewDialog = null;
+        }
+        if (autoClickHandler != null && autoClickRunnable != null) {
+            autoClickHandler.removeCallbacks(autoClickRunnable);
         }
         super.handleOnDestroy();
     }

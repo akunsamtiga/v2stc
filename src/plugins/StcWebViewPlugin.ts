@@ -1,6 +1,6 @@
 // src/plugins/StcWebViewPlugin.ts
 //
-// JS/TS interface untuk StcWebViewPlugin.kt
+// JS/TS interface untuk StcWebViewPlugin.java
 // Digunakan di register/page.tsx sebagai pengganti @capacitor/browser
 //
 // Usage:
@@ -8,7 +8,7 @@
 //   const result = await stcWebView.open({ url: REGISTRATION_URL });
 //   if (result.authToken) { ... }
 
-import { registerPlugin } from '@capacitor/core';
+import { registerPlugin, PluginListenerHandle } from '@capacitor/core';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +36,13 @@ export interface StcWebViewBrowserFinishedEvent {
   cancelled?: boolean;
 }
 
+export interface StcWebViewDaftarClickedEvent {
+  /** true jika tombol daftar berhasil diklik via auto-click */
+  daftarClicked: boolean;
+}
+
+// ── Plugin Interface dengan method terpisah ────────────────────────────────────
+// Gunakan method terpisah alih-alih overload untuk menghindari error TypeScript
 export interface StcWebViewPlugin {
   /**
    * Buka in-app WebView fullscreen.
@@ -47,11 +54,14 @@ export interface StcWebViewPlugin {
   /** Tutup WebView dari JS secara manual */
   close(): Promise<void>;
 
-  /** Listener untuk event browserFinished (user tutup manual) */
+  /** 
+   * Tambah listener untuk event browserFinished (user tutup manual)
+   * @deprecated Gunakan addListenerBrowserFinished untuk type safety
+   */
   addListener(
-    eventName: 'browserFinished',
-    listenerFunc: (event: StcWebViewBrowserFinishedEvent) => void
-  ): Promise<{ remove: () => void }>;
+    eventName: string,
+    listenerFunc: (event: unknown) => void
+  ): Promise<PluginListenerHandle>;
 }
 
 // ── Register plugin (nama harus match dengan @CapacitorPlugin(name = "StcWebView")) ──
@@ -93,12 +103,14 @@ export const stcWebView = {
     }
   },
 
-  async addListener(
-    eventName: 'browserFinished',
+  /**
+   * Listener untuk event browserFinished (user menutup WebView manual)
+   */
+  async addListenerBrowserFinished(
     fn: (e: StcWebViewBrowserFinishedEvent) => void
-  ): Promise<{ remove: () => void }> {
+  ): Promise<PluginListenerHandle> {
     if (isNative()) {
-      return StcWebViewNative.addListener(eventName, fn);
+      return StcWebViewNative.addListener('browserFinished', fn as (event: unknown) => void);
     }
     // Web fallback: listen ke @capacitor/browser browserFinished
     try {
@@ -108,7 +120,21 @@ export const stcWebView = {
       );
       return handle;
     } catch {
-      return { remove: () => {} };
+      return { remove: async () => {} };
     }
+  },
+
+  /**
+   * ✅ TAMBAHAN: Listener untuk event daftarButtonClicked (auto-click berhasil)
+   * Hanya tersedia di native Android
+   */
+  async addListenerDaftarClicked(
+    fn: (e: StcWebViewDaftarClickedEvent) => void
+  ): Promise<PluginListenerHandle> {
+    if (isNative()) {
+      return StcWebViewNative.addListener('daftarButtonClicked', fn as (event: unknown) => void);
+    }
+    // Web fallback: tidak ada auto-click di web
+    return { remove: async () => {} };
   },
 };

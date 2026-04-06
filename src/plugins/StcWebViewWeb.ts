@@ -1,7 +1,11 @@
 // src/plugins/StcWebViewWeb.ts
 // Web fallback saat plugin tidak tersedia (browser/web mode)
-import { WebPlugin } from '@capacitor/core';
-import type { StcWebViewPlugin, StcWebViewOpenOptions, StcWebViewOpenResult } from './StcWebViewPlugin';
+import { WebPlugin, PluginListenerHandle } from '@capacitor/core';
+import type { 
+  StcWebViewPlugin, 
+  StcWebViewOpenOptions, 
+  StcWebViewOpenResult,
+} from './StcWebViewPlugin';
 
 export class StcWebViewWeb extends WebPlugin implements StcWebViewPlugin {
   async open(options: StcWebViewOpenOptions): Promise<StcWebViewOpenResult> {
@@ -16,5 +20,17 @@ export class StcWebViewWeb extends WebPlugin implements StcWebViewPlugin {
 
   async close(): Promise<void> {
     // no-op on web
+  }
+
+  // Implement addListener dari WebPlugin base class
+  async addListener(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _eventName: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _listenerFunc: (event: unknown) => void
+  ): Promise<PluginListenerHandle> {
+    // Web fallback tidak mendukung listener native
+    // Return dummy remove function dengan Promise<void>
+    return { remove: async () => {} };
   }
 }

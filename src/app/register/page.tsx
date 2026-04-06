@@ -1,25 +1,5 @@
-'use client';
 // src/app/register/page.tsx
-// ✅ FIXED — Port 1:1 dari RegisterViewModel.kt + RegisterScreen.kt
-//
-// PERUBAHAN dari versi lama (berdasarkan analisis FirebaseRepository.kt & SessionManager.kt):
-//
-//   1. saveUserSession() — ✅ FIXED: sekarang menyimpan SEMUA field UserSession,
-//      bukan hanya 2 field. Mirrors Kotlin SessionManager.saveUserSession()
-//
-//   2. fetchUserCurrency() — ✅ FIXED: sekarang ambil DUA nilai:
-//      - currency (kode ISO: "IDR")
-//      - currencyIso (unit simbol: "Rp")
-//      Mirrors Kotlin: currencyData?.list?.find { it.iso == currentCode }?.unit
-//
-//   3. saveUserToWhitelistAndLogin() — ✅ FIXED: return userId dan email
-//      agar bisa disimpan ke session
-//
-//   4. addWhitelistUser — ✅ FIXED: gunakan sanitizeDocId(userId) sebagai doc ID,
-//      bukan random UUID. Mirrors Kotlin FirebaseRepository.addWhitelistUser()
-//
-//   5. Collection names — ✅ FIXED: 'whitelist_users', 'app_config', doc ID 'registration_config'
-//      (diperbaiki di firebaseRepository.ts)
+'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -69,13 +49,11 @@ interface WhitelistResult {
   success:   boolean;
   error?:    string;
   isBlocked?: boolean;
-  userId?:   string;  // ✅ FIXED: diperlukan untuk saveUserSession
-  email?:    string;  // ✅ FIXED: diperlukan untuk saveUserSession
+  userId?:   string;
+  email?:    string;
 }
 
 // ─── saveUserToWhitelistAndLogin ──────────────────────────────────────────────
-// Port 1:1 dari RegisterViewModel.saveUserToWhitelistAndLogin()
-// ✅ FIXED: sekarang return userId dan email
 async function saveUserToWhitelistAndLogin(
   authToken: string,
   deviceId:  string,
@@ -94,7 +72,6 @@ async function saveUserToWhitelistAndLogin(
   const userId = String(userProfile.id);
 
   // ── STEP 1: Check by email ──────────────────────────────────────────────────
-  // Mirrors: Kotlin STEP 1 — getWhitelistUserByEmail()
   const byEmail = await getWhitelistUserByEmail(userProfile.email);
   if (byEmail) {
     if (!byEmail.isActive) {
@@ -105,11 +82,10 @@ async function saveUserToWhitelistAndLogin(
       };
     }
     await updateLastLogin(byEmail.userId);
-    return { success: true, userId: byEmail.userId, email: userProfile.email }; // ✅ FIXED
+    return { success: true, userId: byEmail.userId, email: userProfile.email };
   }
 
   // ── STEP 2: Check by userId ─────────────────────────────────────────────────
-  // Mirrors: Kotlin STEP 2 — getWhitelistUserByUserId()
   const byUserId = await getWhitelistUserByUserId(userId);
   if (byUserId) {
     if (!byUserId.isActive) {
@@ -120,12 +96,10 @@ async function saveUserToWhitelistAndLogin(
       };
     }
     await updateLastLogin(byUserId.userId);
-    return { success: true, userId: byUserId.userId, email: userProfile.email }; // ✅ FIXED
+    return { success: true, userId: byUserId.userId, email: userProfile.email };
   }
 
   // ── STEP 3: Create new user ─────────────────────────────────────────────────
-  // Mirrors: Kotlin STEP 3 — addWhitelistUser dengan isActive = true
-  // ✅ FIXED: addWhitelistUser sekarang menggunakan sanitizeDocId(userId) sebagai doc ID
   await addWhitelistUser({
     email:             userProfile.email,
     name:              getFullName(userProfile),
@@ -140,7 +114,7 @@ async function saveUserToWhitelistAndLogin(
     fcmTokenUpdatedAt: 0,
   });
 
-  return { success: true, userId, email: userProfile.email }; // ✅ FIXED
+  return { success: true, userId, email: userProfile.email };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -479,7 +453,8 @@ export default function RegisterPage() {
         capturedDevice.current = result.deviceId || await getOrCreateDeviceId();
         handleSuccessDetected();
       } else {
-        const handle = await stcWebView.addListener('browserFinished', () => {
+        // ✅ FIXED: Gunakan addListenerBrowserFinished (method terpisah)
+        const handle = await stcWebView.addListenerBrowserFinished(() => {
           handle.remove();
           if (!hasShownSuccess) {
             setHasShownSuccess(true);
