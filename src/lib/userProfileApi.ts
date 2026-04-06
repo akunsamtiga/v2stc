@@ -1,9 +1,13 @@
 // lib/userProfileApi.ts
-// Mirrors: UserProfileApiService.kt — EXACT 1:1 header mapping
+// ✅ FIXED — Port 1:1 dari UserProfileApiService.kt + CurrencyRepository.kt
+//
+// PERUBAHAN dari versi lama:
+//   1. fetchUserCurrency() — ✅ BARU: mirrors CurrencyRepository.fetchUserCurrency()
+//      - Mengembalikan { currency: string, currencyIso: string }
+//      - currency = kode ISO (contoh: "IDR")
+//      - currencyIso = unit/simbol (contoh: "Rp") — dari list[].unit
+//      - Kotlin menyimpan KEDUANYA, versi lama hanya menyimpan kode
 
-// ─── Base URL Stockity ────────────────────────────────────────────────────────
-// Sama seperti Retrofit baseUrl di Kotlin — ganti sesuai konfigurasi Retrofit kamu
-// Biasanya ada di NetworkModule.kt / AppModule.kt
 const STOCKITY_BASE_URL =
   process.env.NEXT_PUBLIC_STOCKITY_API_URL ?? 'https://api.stockity.id/';
 
@@ -11,7 +15,8 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
 
-// ─── Types (mirrors LoginRequest, LoginResponse, UserProfileResponse) ─────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 export interface UserProfile {
   id:        number;
   email:     string;
@@ -29,8 +34,6 @@ export interface UserProfile {
 
 export interface UserProfileResponse {
   data: UserProfile | null;
-  status?:  string | number;
-  message?: string;
 }
 
 export interface LoginRequest {
@@ -45,8 +48,29 @@ export interface LoginResponse {
     deviceId?:           string;
     userId?:             string | number;
   };
-  status?:  string | number;
-  message?: string;
+}
+
+// ── CurrencyItem — mirrors data class Currency di Kotlin ─────────────────────
+interface CurrencyItem {
+  iso:    string;  // contoh: "IDR"
+  unit:   string;  // contoh: "Rp"
+  name?:  string;
+}
+
+// ── CurrencyData — mirrors response dari /currency/v1/user_currency ──────────
+interface CurrencyData {
+  current: string;           // kode aktif, contoh: "IDR"
+  list:    CurrencyItem[];   // daftar semua currency
+}
+
+interface CurrencyResponse {
+  data?: CurrencyData;
+}
+
+// ── FetchedCurrency — return type saveUserSession ────────────────────────────
+export interface FetchedCurrency {
+  currency:    string;  // kode: "IDR"
+  currencyIso: string;  // unit: "Rp"
 }
 
 /** Mirrors: userProfile.getFullName() di Kotlin */
@@ -55,14 +79,13 @@ export function getFullName(p: UserProfile): string {
   return full || p.nickname || p.username || p.email;
 }
 
-// ─── buildStockityHeaders — header yang sama untuk semua request Stockity ─────
+// ── buildStockityHeaders — header yang sama untuk semua request Stockity ──────
 function buildStockityHeaders(
   authToken: string,
   deviceId:  string,
   extra:     Record<string, string> = {},
 ): Record<string, string> {
   return {
-    // ── Headers wajib dari UserProfileApiService.kt ──
     'device-id':           deviceId,
     'device-type':         'web',
     'user-timezone':       'Asia/Bangkok',
@@ -71,17 +94,12 @@ function buildStockityHeaders(
     'Accept':              'application/json, text/plain, */*',
     'Origin':              'https://stockity.id',
     'Referer':             'https://stockity.id/',
-    // ── Extra per-endpoint ──
     ...extra,
   };
 }
 
-// ─── fetchUserProfile ─────────────────────────────────────────────────────────
+// ── fetchUserProfile ──────────────────────────────────────────────────────────
 // Mirrors: UserProfileApiService.getUserProfile()
-//   @GET("passport/v1/user_profile")
-//   @Query("locale") locale = "id"
-//   @Header("device-id") ...
-//   @Header("authorization-token") ...
 export async function fetchUserProfile(
   authToken: string,
   deviceId:  string,
@@ -99,7 +117,6 @@ export async function fetchUserProfile(
   }
 
   const json: UserProfileResponse = await res.json();
-
   if (!json.data) {
     throw new Error('Terjadi kesalahan saat memproses akun (data kosong)');
   }
@@ -107,12 +124,55 @@ export async function fetchUserProfile(
   return json.data;
 }
 
-// ─── loginToStockity ──────────────────────────────────────────────────────────
+// ── fetchUserCurrency ─────────────────────────────────────────────────────────
+// ✅ BARU — Mirrors: CurrencyRepository.fetchUserCurrency()
+//
+// Kotlin:
+//   val currencyData = currencyResult.getOrNull()
+//   val currentCurrencyCode = currencyData?.current ?: "IDR"
+//   val currentCurrency = currencyData?.list?.find { it.iso == currentCurrencyCode }
+//   val unitSymbol = currentCurrency?.unit ?: "Rp"
+//   userSession = userSession.copy(currency = currentCurrencyCode, currencyIso = unitSymbol)
+//
+// Jadi kita butuh KEDUANYA: kode ISO ("IDR") dan simbol unit ("Rp")
+export async function fetchUserCurrency(
+  authToken: string,
+  deviceId:  string,
+  locale     = 'id',
+): Promise<FetchedCurrency> {
+  try {
+    const url = `${STOCKITY_BASE_URL}currency/v1/user_currency?locale=${locale}`;
+
+    const res = await fetch(url, {
+      method:  'GET',
+      headers: buildStockityHeaders(authToken, deviceId),
+    });
+
+    if (!res.ok) {
+      console.warn('[Currency] fetch failed:', res.status);
+      return { currency: 'IDR', currencyIso: 'Rp' };
+    }
+
+    const json: CurrencyResponse = await res.json();
+    const data = json.data;
+
+    if (!data) {
+      return { currency: 'IDR', currencyIso: 'Rp' };
+    }
+
+    const currentCode   = data.current ?? 'IDR';
+    const currentItem   = data.list?.find(c => c.iso === currentCode);
+    const unitSymbol    = currentItem?.unit ?? 'Rp';
+
+    return { currency: currentCode, currencyIso: unitSymbol };
+  } catch (e) {
+    console.warn('[Currency] fetchUserCurrency error:', e);
+    return { currency: 'IDR', currencyIso: 'Rp' };
+  }
+}
+
+// ── loginToStockity ───────────────────────────────────────────────────────────
 // Mirrors: LoginApiService.login()
-//   @POST("passport/v2/sign_in")
-//   @Query("locale") locale = "id"
-//   @Header("device-id") ...
-//   (tidak pakai authorization-token — pre-login)
 export async function loginToStockity(
   email:    string,
   password: string,
@@ -150,8 +210,7 @@ export async function loginToStockity(
   const token    = json.data?.authorizationToken ?? json.data?.accessToken ?? '';
   const retDevId = json.data?.deviceId ?? deviceId;
 
-  if (!token)
-    throw new Error('Token tidak ditemukan dalam response login');
+  if (!token) throw new Error('Token tidak ditemukan dalam response login');
 
   return { authToken: token, deviceId: retDevId };
 }

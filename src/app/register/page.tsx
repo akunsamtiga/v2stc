@@ -1,24 +1,32 @@
 'use client';
 // src/app/register/page.tsx
+// ✅ FIXED — Port 1:1 dari RegisterViewModel.kt + RegisterScreen.kt
 //
-// Mirrors RegisterViewModel.kt + RegisterScreen.kt secara penuh:
-//   1. Buka in-app WebView via StcWebViewPlugin (native) / Browser (web fallback)
-//   2. Plugin detect success URL + capture cookies → kirim authToken, deviceId ke JS
-//   3. Jalankan saveUserToWhitelistAndLogin() — exact port dari RegisterViewModel.kt:
-//      a. fetchUserProfile(authToken, deviceId)
-//      b. getWhitelistUserByEmail → isActive check
-//      c. getWhitelistUserByUserId → isActive check
-//      d. addWhitelistUser jika baru
-//      e. storage.set('stc_token', authToken)
-//      f. router.replace('/dashboard')
+// PERUBAHAN dari versi lama (berdasarkan analisis FirebaseRepository.kt & SessionManager.kt):
 //
+//   1. saveUserSession() — ✅ FIXED: sekarang menyimpan SEMUA field UserSession,
+//      bukan hanya 2 field. Mirrors Kotlin SessionManager.saveUserSession()
+//
+//   2. fetchUserCurrency() — ✅ FIXED: sekarang ambil DUA nilai:
+//      - currency (kode ISO: "IDR")
+//      - currencyIso (unit simbol: "Rp")
+//      Mirrors Kotlin: currencyData?.list?.find { it.iso == currentCode }?.unit
+//
+//   3. saveUserToWhitelistAndLogin() — ✅ FIXED: return userId dan email
+//      agar bisa disimpan ke session
+//
+//   4. addWhitelistUser — ✅ FIXED: gunakan sanitizeDocId(userId) sebagai doc ID,
+//      bukan random UUID. Mirrors Kotlin FirebaseRepository.addWhitelistUser()
+//
+//   5. Collection names — ✅ FIXED: 'whitelist_users', 'app_config', doc ID 'registration_config'
+//      (diperbaiki di firebaseRepository.ts)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { storage } from '@/lib/storage';
+import { storage, saveUserSession, saveCurrencyWithIso } from '@/lib/storage';
 import {
   fetchUserProfile,
-  loginToStockity,
+  fetchUserCurrency,
   getFullName,
 } from '@/lib/userProfileApi';
 import {
@@ -33,13 +41,16 @@ import { stcWebView } from '@/plugins/StcWebViewPlugin';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DEFAULT_REGISTRATION_URL = 'https://stockity.id/registered?a=25db72fbbc00';
 const DEFAULT_WHATSAPP_URL     = 'https://wa.me/6285959860015';
-const LOADING_DURATION         = 9_000; // 9 s — sama dengan Kotlin
+const LOADING_DURATION         = 9_000;
+
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+  '(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 async function getOrCreateDeviceId(): Promise<string> {
   const stored = await storage.get('stc_device_id');
   if (stored) return stored;
-  // Coba @capacitor/device
   try {
     const { Device } = await import('@capacitor/device');
     const info = await Device.getId();
@@ -53,13 +64,23 @@ async function getOrCreateDeviceId(): Promise<string> {
   }
 }
 
+// ─── WhitelistResult — return type dari saveUserToWhitelistAndLogin ───────────
+interface WhitelistResult {
+  success:   boolean;
+  error?:    string;
+  isBlocked?: boolean;
+  userId?:   string;  // ✅ FIXED: diperlukan untuk saveUserSession
+  email?:    string;  // ✅ FIXED: diperlukan untuk saveUserSession
+}
+
 // ─── saveUserToWhitelistAndLogin ──────────────────────────────────────────────
 // Port 1:1 dari RegisterViewModel.saveUserToWhitelistAndLogin()
+// ✅ FIXED: sekarang return userId dan email
 async function saveUserToWhitelistAndLogin(
   authToken: string,
   deviceId:  string,
-): Promise<{ success: boolean; error?: string; isBlocked?: boolean }> {
-  // ── STEP 0: Fetch user profile ────────────────────────────────────────────
+): Promise<WhitelistResult> {
+  // ── STEP 0: Fetch user profile ──────────────────────────────────────────────
   let userProfile;
   try {
     userProfile = await fetchUserProfile(authToken, deviceId);
@@ -72,7 +93,8 @@ async function saveUserToWhitelistAndLogin(
 
   const userId = String(userProfile.id);
 
-  // ── STEP 1: Check by email ────────────────────────────────────────────────
+  // ── STEP 1: Check by email ──────────────────────────────────────────────────
+  // Mirrors: Kotlin STEP 1 — getWhitelistUserByEmail()
   const byEmail = await getWhitelistUserByEmail(userProfile.email);
   if (byEmail) {
     if (!byEmail.isActive) {
@@ -83,10 +105,11 @@ async function saveUserToWhitelistAndLogin(
       };
     }
     await updateLastLogin(byEmail.userId);
-    return { success: true };
+    return { success: true, userId: byEmail.userId, email: userProfile.email }; // ✅ FIXED
   }
 
-  // ── STEP 2: Check by userId ───────────────────────────────────────────────
+  // ── STEP 2: Check by userId ─────────────────────────────────────────────────
+  // Mirrors: Kotlin STEP 2 — getWhitelistUserByUserId()
   const byUserId = await getWhitelistUserByUserId(userId);
   if (byUserId) {
     if (!byUserId.isActive) {
@@ -97,22 +120,27 @@ async function saveUserToWhitelistAndLogin(
       };
     }
     await updateLastLogin(byUserId.userId);
-    return { success: true };
+    return { success: true, userId: byUserId.userId, email: userProfile.email }; // ✅ FIXED
   }
 
-  // ── STEP 3: Create new user ───────────────────────────────────────────────
+  // ── STEP 3: Create new user ─────────────────────────────────────────────────
+  // Mirrors: Kotlin STEP 3 — addWhitelistUser dengan isActive = true
+  // ✅ FIXED: addWhitelistUser sekarang menggunakan sanitizeDocId(userId) sebagai doc ID
   await addWhitelistUser({
-    email:     userProfile.email,
-    name:      getFullName(userProfile),
+    email:             userProfile.email,
+    name:              getFullName(userProfile),
     userId,
     deviceId,
-    isActive:  true,
-    createdAt: Date.now(),
-    lastLogin: Date.now(),
-    addedBy:   'web_registration',
+    isActive:          true,
+    createdAt:         Date.now(),
+    lastLogin:         Date.now(),
+    addedBy:           'web_registration',
+    addedAt:           Date.now(),
+    fcmToken:          '',
+    fcmTokenUpdatedAt: 0,
   });
 
-  return { success: true };
+  return { success: true, userId, email: userProfile.email }; // ✅ FIXED
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -232,16 +260,11 @@ function ModernSuccessDialog({
           boxShadow: '0 24px 64px rgba(0,0,0,0.24)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0,
         }}>
-          {/* Icon */}
           <div style={{ width: 120, height: 120, position: 'relative', marginBottom: 24 }}>
             <div style={{
               position: 'absolute', inset: 0, borderRadius: '50%',
               background: 'radial-gradient(circle, rgba(52,168,83,0.20) 0%, rgba(52,168,83,0.05) 50%, transparent 70%)',
               animation: 'icon-pulse-scale 1s ease-in-out infinite, icon-pulse-rot 2s ease-in-out infinite',
-            }} />
-            <div style={{
-              position: 'absolute', top: 15, left: 15, right: 15, bottom: 15,
-              borderRadius: '50%', background: 'rgba(52,168,83,0.15)',
             }} />
             <div style={{
               position: 'absolute', top: 25, left: 25, right: 25, bottom: 25,
@@ -405,15 +428,13 @@ export default function RegisterPage() {
   const capturedToken   = useRef('');
   const capturedDevice  = useRef('');
 
-  // ── Mount: load config + check existing session ───────────────────────────
+  // ── Mount ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     setMounted(true);
     const init = async () => {
-      // Redirect kalau sudah login
       const token = await storage.get('stc_token');
       if (token) { router.replace('/dashboard'); return; }
 
-      // Load config dari Firebase (mirrors RegisterViewModel.loadRegistrationConfig)
       try {
         const cfg = await getRegistrationConfig();
         registrationUrl.current = cfg.registrationUrl;
@@ -423,7 +444,7 @@ export default function RegisterPage() {
     init();
   }, [router]);
 
-  // ── Loading progress: 9 s / 100 steps (mirrors Kotlin LaunchedEffect(Unit)) ─
+  // ── Loading progress: 9s / 100 steps ──────────────────────────────────────
   useEffect(() => {
     if (!mounted) return;
     const stepMs = LOADING_DURATION / 100;
@@ -436,38 +457,28 @@ export default function RegisterPage() {
     return () => clearInterval(iv);
   }, [mounted]);
 
-  // ── Setelah 100%: buka WebView ────────────────────────────────────────────
-  // Mirrors: LaunchedEffect(isProgressComplete) di RegisterScreen.kt
+  // ── Setelah 100%: buka WebView ─────────────────────────────────────────────
   useEffect(() => {
     if (!isProgressComplete || hasOpenedBrowser) return;
     setHasOpenedBrowser(true);
     openRegistration();
   }, [isProgressComplete, hasOpenedBrowser]);
 
-  // ── Sembunyikan loading 500ms setelah browser dibuka ─────────────────────
   useEffect(() => {
     if (!hasOpenedBrowser) return;
     const t = setTimeout(() => setShowLoading(false), 500);
     return () => clearTimeout(t);
   }, [hasOpenedBrowser]);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // openRegistration
-  // Buka in-app WebView via StcWebViewPlugin (native) atau Browser (web)
-  // Mirrors: RegisterScreen.kt WebView + UrlDetectorWebViewClient
-  // ─────────────────────────────────────────────────────────────────────────
   const openRegistration = useCallback(async () => {
     try {
       const result = await stcWebView.open({ url: registrationUrl.current });
 
       if (result.success && result.authToken) {
-        // ✅ Native: plugin berhasil capture token dari cookies
         capturedToken.current  = result.authToken;
         capturedDevice.current = result.deviceId || await getOrCreateDeviceId();
         handleSuccessDetected();
       } else {
-        // Web fallback: browser dibuka, tunggu user selesai
-        // Pasang listener browserFinished
         const handle = await stcWebView.addListener('browserFinished', () => {
           handle.remove();
           if (!hasShownSuccess) {
@@ -490,8 +501,6 @@ export default function RegisterPage() {
     setShowSuccessDialog(true);
   }, [hasShownSuccess]);
 
-  // ── Custom events dari native bridge (stc:register:data) ─────────────────
-  // Tetap dipertahankan sebagai fallback jika ada MainActivity bridge
   useEffect(() => {
     const handler = (e: Event) => {
       const { authToken, deviceId } = (e as CustomEvent).detail ?? {};
@@ -509,7 +518,11 @@ export default function RegisterPage() {
 
   // ─────────────────────────────────────────────────────────────────────────
   // handleLoginClick
-  // Mirrors: RegisterViewModel.saveUserToWhitelistAndLogin() secara penuh
+  // ✅ FIXED — Sekarang mirrors Kotlin RegisterViewModel.saveUserSession() secara penuh:
+  //   1. saveUserToWhitelistAndLogin (whitelist check)
+  //   2. saveUserSession dengan SEMUA field (bukan hanya 2)
+  //   3. fetchUserCurrency — ambil KODE + SIMBOL unit ("IDR" + "Rp")
+  //   4. saveCurrencyWithIso — simpan keduanya
   // ─────────────────────────────────────────────────────────────────────────
   const handleLoginClick = async () => {
     setShowSuccessDialog(false);
@@ -517,12 +530,11 @@ export default function RegisterPage() {
     const deviceId = capturedDevice.current || await getOrCreateDeviceId();
 
     if (token) {
-      // ── Native flow: token dari cookies → jalankan whitelist check ─────────
       setShowSavingDialog(true);
       setSavingMessage('Memverifikasi akun...');
 
       try {
-        // Step 1: saveUserToWhitelistAndLogin (port dari RegisterViewModel.kt)
+        // ── STEP 1: Whitelist check ──────────────────────────────────────────
         setSavingMessage('Memeriksa akses...');
         const result = await saveUserToWhitelistAndLogin(token, deviceId);
 
@@ -533,13 +545,51 @@ export default function RegisterPage() {
           return;
         }
 
-        // Step 2: Simpan token ke storage
+        // ── STEP 2: Simpan UserSession lengkap ───────────────────────────────
+        // ✅ FIXED: mirrors Kotlin SessionManager.saveUserSession()
         setSavingMessage('Menyimpan sesi...');
-        await storage.set('stc_token',    token);
-        await storage.set('stc_device_id', deviceId);
+        await saveUserSession({
+          authtoken:    token,
+          userId:       result.userId   ?? '',
+          deviceId:     deviceId,
+          email:        result.email    ?? '',
+          userTimezone: 'Asia/Bangkok',
+          userAgent:    USER_AGENT,
+          deviceType:   'web',
+          currency:     'IDR',          // default, akan diupdate setelah fetch
+          currencyIso:  'IDR',          // default, akan diupdate setelah fetch
+        });
 
-        // Step 3: Navigate ke dashboard
+        // ── STEP 3: Fetch currency — mirrors Kotlin currencyRepository.fetchUserCurrency()
+        // ✅ FIXED: Kotlin menyimpan DUA nilai: currency code ("IDR") dan unit symbol ("Rp")
+        try {
+          setSavingMessage('Memuat data akun...');
+          const currencyData = await fetchUserCurrency(token, deviceId);
+
+          // ✅ FIXED: mirrors Kotlin sessionManager.saveCurrencyWithIso(currentCurrencyCode, unitSymbol)
+          await saveCurrencyWithIso(currencyData.currency, currencyData.currencyIso);
+
+          // Update session dengan currency yang benar
+          await saveUserSession({
+            authtoken:    token,
+            userId:       result.userId   ?? '',
+            deviceId:     deviceId,
+            email:        result.email    ?? '',
+            userTimezone: 'Asia/Bangkok',
+            userAgent:    USER_AGENT,
+            deviceType:   'web',
+            currency:     currencyData.currency,
+            currencyIso:  currencyData.currencyIso,
+          });
+        } catch (e) {
+          console.warn('[Register] fetchUserCurrency failed, using default IDR:', e);
+          // Fallback default — sama dengan Kotlin: currencyData?.current ?: "IDR"
+          await saveCurrencyWithIso('IDR', 'Rp');
+        }
+
+        // ── STEP 4: Navigate ke dashboard ────────────────────────────────────
         await new Promise(r => setTimeout(r, 600));
+        setShowSavingDialog(false);
         router.replace('/dashboard');
 
       } catch (e: unknown) {
@@ -550,13 +600,11 @@ export default function RegisterPage() {
       }
 
     } else {
-      // ── Fallback: tidak ada token (web/external browser) → manual login ────
-      // Mirrors: Kotlin onBackClick() saat CookieManager tidak dapat token
+      // Fallback: tidak ada token → manual login
       router.push('/login');
     }
   };
 
-  // ── "Lanjut Trading" ──────────────────────────────────────────────────────
   const handleContinueClick = () => {
     setShowSuccessDialog(false);
     stcWebView.open({ url: registrationUrl.current }).catch(() => {
@@ -568,10 +616,8 @@ export default function RegisterPage() {
 
   return (
     <>
-      {/* 1. Loading overlay */}
       <LoadingOverlay progress={loadingProgress} visible={showLoading} />
 
-      {/* 2. Success dialog */}
       {showSuccessDialog && (
         <ModernSuccessDialog
           onLoginClick={handleLoginClick}
@@ -579,10 +625,8 @@ export default function RegisterPage() {
         />
       )}
 
-      {/* 3. Saving/processing dialog */}
       {showSavingDialog && <SavingDialog message={savingMessage} />}
 
-      {/* 4. Error dialog */}
       {saveError && (
         <ErrorDialog
           message={saveError}
