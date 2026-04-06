@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   description: 'STC AutoTrade Bot Automation',
 };
 
-// ✅ FIX: viewport-fit=cover wajib untuk safe area di iOS (notch, Dynamic Island, home bar)
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,

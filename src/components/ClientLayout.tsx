@@ -4,10 +4,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import { BottomNav } from '@/components/BottomNav';
 import { storage } from '@/lib/storage';
 
-const PUBLIC_ROUTES = ['/login'];
+const PUBLIC_ROUTES = ['/login', '/register'];
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const router   = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
 
@@ -16,7 +16,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    const timeoutId = setTimeout(() => setReady(true), 3000);
     const checkAuth = async () => {
       try {
         const token = await storage.get('stc_token');
@@ -26,7 +26,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         setReady(true);
       }
     };
-    timeoutId = setTimeout(() => setReady(true), 3000);
     checkAuth();
     return () => clearTimeout(timeoutId);
   }, [pathname, router, isPublic]);
@@ -65,9 +64,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <main
         className="flex-1 overflow-y-auto"
         style={{
-          height: isPublic
-            ? '100dvh'
-            : 'calc(100dvh - env(safe-area-inset-top, 0px))',
+          height: '100dvh',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
         } as React.CSSProperties}

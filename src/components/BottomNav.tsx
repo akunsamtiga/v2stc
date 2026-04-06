@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { LayoutDashboard, History, User } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -11,47 +11,19 @@ const NAV_ITEMS = [
 ];
 
 export function BottomNav() {
-  const pathname     = usePathname();
-  const [mounted,    setMounted]    = useState(false);
+  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const [safeBottom, setSafeBottom] = useState(0);
-  const [kbOffset,   setKbOffset]   = useState(0);
-  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     setMounted(true);
-
     const readSafeArea = () => {
       const val = getComputedStyle(document.documentElement).getPropertyValue('--sab').trim();
       setSafeBottom(parseFloat(val) || 0);
     };
     readSafeArea();
-    window.addEventListener('resize', readSafeArea);
     window.addEventListener('orientationchange', readSafeArea);
-
-    const vv = window.visualViewport;
-    if (vv) {
-      const onVVChange = () => {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-          const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-          setKbOffset(kb);
-        });
-      };
-      vv.addEventListener('resize', onVVChange);
-      vv.addEventListener('scroll', onVVChange);
-      return () => {
-        window.removeEventListener('resize', readSafeArea);
-        window.removeEventListener('orientationchange', readSafeArea);
-        vv.removeEventListener('resize', onVVChange);
-        vv.removeEventListener('scroll', onVVChange);
-        cancelAnimationFrame(rafRef.current);
-      };
-    }
-
-    return () => {
-      window.removeEventListener('resize', readSafeArea);
-      window.removeEventListener('orientationchange', readSafeArea);
-    };
+    return () => window.removeEventListener('orientationchange', readSafeArea);
   }, []);
 
   if (!mounted) return null;
@@ -106,7 +78,7 @@ export function BottomNav() {
         sepBg:          'rgba(60,60,67,0.10)',
       };
 
-  const navBottom = 16 + safeBottom - kbOffset;
+  const navBottom = 16 + safeBottom;
 
   return (
     <>
@@ -143,10 +115,7 @@ export function BottomNav() {
         }
         .bnav-item:active { transform: scale(0.91); }
 
-        .bnav-icon {
-          flex-shrink: 0;
-          transition: filter 0.25s ease;
-        }
+        .bnav-icon { flex-shrink: 0; transition: filter 0.25s ease; }
 
         .bnav-label {
           font-size: 12.5px;
@@ -166,7 +135,6 @@ export function BottomNav() {
         }
       `}</style>
 
-      {/* Nav pill — pure floating, no background overlay */}
       <div
         suppressHydrationWarning
         style={{
@@ -177,7 +145,6 @@ export function BottomNav() {
           zIndex: 50,
           pointerEvents: 'none',
           animation: 'nav-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both',
-          transition: 'bottom 0.08s linear',
         }}
       >
         <nav
@@ -218,15 +185,13 @@ export function BottomNav() {
                   className={`bnav-item${isActive ? ' active' : ''}`}
                   style={{
                     color: isActive ? theme.activeColor : theme.itemColor,
-                    ...(isActive
-                      ? {
-                          gap: '7px',
-                          padding: '9px 18px',
-                          background: theme.activeBg,
-                          borderColor: theme.activeBorder,
-                          boxShadow: theme.activeShadow,
-                        }
-                      : {}),
+                    ...(isActive ? {
+                      gap: '7px',
+                      padding: '9px 18px',
+                      background: theme.activeBg,
+                      borderColor: theme.activeBorder,
+                      boxShadow: theme.activeShadow,
+                    } : {}),
                   }}
                   onMouseEnter={e => {
                     if (!isActive) {

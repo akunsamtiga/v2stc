@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { storage } from '@/lib/storage';
 
@@ -8,17 +9,15 @@ type SplashPhase = 'hidden' | 'welcome' | 'verified' | 'out';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email,         setEmail]         = useState('');
-  const [password,      setPassword]      = useState('');
-  const [remember,      setRemember]      = useState(false);
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState('');
-  const [mounted,       setMounted]       = useState(false);
-  const [focused,       setFocused]       = useState<'email' | 'password' | null>(null);
-  const [showPass,      setShowPass]      = useState(false);
-  const [splash,        setSplash]        = useState<SplashPhase>('hidden');
-
-
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [mounted,  setMounted]  = useState(false);
+  const [focused,  setFocused]  = useState<'email' | 'password' | null>(null);
+  const [showPass, setShowPass] = useState(false);
+  const [splash,   setSplash]   = useState<SplashPhase>('hidden');
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passRef  = useRef<HTMLInputElement>(null);
@@ -48,8 +47,6 @@ export default function LoginPage() {
     const t3 = setTimeout(check, 800);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [mounted]); // eslint-disable-line
-
-
 
   const runSplash = async (token: string) => {
     await storage.set('stc_token', token);
@@ -104,40 +101,23 @@ export default function LoginPage() {
           --font:         -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
         }
 
-        /*
-          ✅ FIX UTAMA: Ganti dari flex+spacer → block + padding-top tetap
-          ─────────────────────────────────────────────────────────────────
-          MASALAH LAMA:
-            flex column + spacer flex-shrink:1
-            → Saat keyboard muncul, container mengecil → flex hitung ulang
-            → Spacer collapse + semua elemen bergeser → LOMPAT
-
-          SOLUSI BARU:
-            • display: block (bukan flex column)
-            • padding-top TETAP → konten TIDAK bergeser saat keyboard muncul
-            • overflow-y: auto → kalau keyboard menutup tombol, user tinggal scroll
-            • padding-bottom dikontrol lewat state kbPaddingBot (dari visualViewport)
-            • Keyboard muncul → hanya padding bawah bertambah → scroll area melebar
-            → Konten di atas sama sekali TIDAK bergerak
-        */
         .lr-page {
-          font-family:         var(--font);
-          min-height:          100dvh;
-          background:          var(--bg);
-          display:             block;              /* ← BUKAN flex */
-          padding-left:        20px;
-          padding-right:       20px;
-          padding-top:         max(60px, calc(env(safe-area-inset-top, 20px) + 24px));
-          /* padding-bottom dikontrol inline via style={{ paddingBottom: kbPaddingBot }} */
-          overflow-y:          auto;
-          overflow-x:          hidden;
+          font-family:    var(--font);
+          position:       fixed;
+          inset:          0;
+          background:     var(--bg);
+          display:        flex;
+          flex-direction: column;
+          align-items:    center;
+          justify-content: center;
+          padding:        24px 20px;
+          overflow-y:     auto;
+          overflow-x:     hidden;
           -webkit-overflow-scrolling: touch;
           overscroll-behavior-y: none;
-          position:            relative;
           -webkit-font-smoothing: antialiased;
         }
 
-        /* Orbs tetap fixed agar tidak ikut scroll */
         .orb { position: fixed; border-radius: 50%; pointer-events: none; animation: drift 20s ease-in-out infinite alternate; }
         .o1 {
           width: min(55vw,460px); height: min(55vw,460px);
@@ -158,7 +138,6 @@ export default function LoginPage() {
         .card {
           position: relative; z-index: 2;
           width: 100%; max-width: 380px;
-          margin: 0 auto;
           opacity: 0; transform: translateY(14px) scale(0.988);
           animation: rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.08s forwards;
         }
@@ -195,7 +174,7 @@ export default function LoginPage() {
         .fi {
           width: 100%; background: transparent; border: none; outline: none;
           padding: 26px 13px 9px;
-          font-size: 16px; /* ≥16px cegah iOS auto-zoom */
+          font-size: 16px;
           font-weight: 400;
           color: var(--text-1); font-family: var(--font); letter-spacing: -0.2px;
           -webkit-tap-highlight-color: transparent; appearance: none; -webkit-appearance: none;
@@ -285,7 +264,21 @@ export default function LoginPage() {
         .foot-lnk { color: var(--accent); font-weight: 500; cursor: pointer; transition: opacity 0.14s; }
         .foot-lnk:hover { opacity: 0.70; }
 
-        /* ══ SPLASH ══ */
+        .register-link {
+          text-align: center;
+          margin-top: 16px;
+          font-size: 14px;
+          color: var(--text-2);
+        }
+        .register-link a {
+          color: var(--accent);
+          font-weight: 600;
+          text-decoration: none;
+          transition: opacity 0.14s;
+        }
+        .register-link a:hover { opacity: 0.70; }
+
+        /* Splash */
         .splash {
           position: fixed; inset: 0; z-index: 200;
           display: flex; flex-direction: column;
@@ -317,12 +310,57 @@ export default function LoginPage() {
           box-shadow: 0 4px 22px rgba(0,122,255,0.10);
         }
         .sp-icon-verified {
-          background: #edfaf3;
+          background: #ffffff;
           border: 1px solid rgba(48,209,88,0.22);
           box-shadow: 0 4px 22px rgba(48,209,88,0.14);
           animation: icon-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
         }
         @keyframes icon-pop { from { transform: scale(0.8); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
+
+        .sp-orb {
+          position: fixed;
+          border-radius: 50%;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.5s ease;
+        }
+        .splash-verified .sp-orb,
+        .splash-out .sp-orb { opacity: 1; }
+        .sp-orb-1 {
+          width: 380px; height: 380px;
+          background: radial-gradient(circle, rgba(0,122,255,0.40) 0%, transparent 70%);
+          filter: blur(90px);
+          top: -80px; left: -120px;
+          animation: orb-drift-1 5s ease-in-out infinite alternate;
+        }
+        .sp-orb-2 {
+          width: 340px; height: 340px;
+          background: radial-gradient(circle, rgba(48,209,88,0.35) 0%, transparent 70%);
+          filter: blur(80px);
+          bottom: -80px; right: -100px;
+          animation: orb-drift-2 6s ease-in-out infinite alternate;
+        }
+        .sp-orb-3 {
+          width: 280px; height: 280px;
+          background: radial-gradient(circle, rgba(191,90,242,0.30) 0%, transparent 70%);
+          filter: blur(85px);
+          top: 30%; left: -80px;
+          animation: orb-drift-3 4.5s ease-in-out infinite alternate;
+        }
+        .sp-orb-4 {
+          width: 260px; height: 260px;
+          background: radial-gradient(circle, rgba(255,159,10,0.28) 0%, transparent 70%);
+          filter: blur(80px);
+          bottom: 20%; right: -80px;
+          animation: orb-drift-4 5.5s ease-in-out infinite alternate;
+        }
+        @keyframes orb-drift-1 { from{transform:translate(0,0)} to{transform:translate(40px,30px)} }
+        @keyframes orb-drift-2 { from{transform:translate(0,0)} to{transform:translate(-35px,-25px)} }
+        @keyframes orb-drift-3 { from{transform:translate(0,0)} to{transform:translate(30px,20px)} }
+        @keyframes orb-drift-4 { from{transform:translate(0,0)} to{transform:translate(-28px,-20px)} }
+
+        .splash-out .sp-orb { animation: orb-fade-out 0.8s ease forwards !important; }
+        @keyframes orb-fade-out { from{opacity:1} to{opacity:0} }
 
         .sp-text-area {
           position: relative; height: 80px; width: 100%;
@@ -355,7 +393,7 @@ export default function LoginPage() {
         .sp-dot.act { width: 22px; background: #007aff; }
       `}</style>
 
-      {/* ══ SPLASH ══ */}
+      {/* Splash */}
       {splash !== 'hidden' && (
         <div className={[
           'splash',
@@ -364,10 +402,16 @@ export default function LoginPage() {
           splash === 'out'      ? 'splash-out'                   : '',
         ].join(' ')}>
 
+          <div className="sp-orb sp-orb-1" />
+          <div className="sp-orb sp-orb-2" />
+          <div className="sp-orb sp-orb-3" />
+          <div className="sp-orb sp-orb-4" />
+
           <div className={`sp-icon-wrap ${splash === 'verified' || splash === 'out' ? 'sp-icon-verified' : 'sp-icon-welcome'}`}>
             {splash === 'welcome' ? (
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+                <polyline points="16 7 22 7 22 13"/>
               </svg>
             ) : (
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -385,7 +429,7 @@ export default function LoginPage() {
             {(splash === 'verified' || splash === 'out') && (
               <div className="sp-msg sp-msg-verified-in">
                 <span className="sp-title">Berhasil Masuk</span>
-                <span className="sp-sub">Akun berhasil terverifikasi,<br/>mengarahkan ke dashboard…</span>
+                <span className="sp-sub">Mengarahkan ke dashboard…</span>
               </div>
             )}
           </div>
@@ -397,18 +441,8 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/*
-        ✅ FIX: .lr-page = display:block + padding-top tetap + paddingBottom dari state
-           • padding-top: max(60px, safe-area-top + 24px) → TIDAK berubah saat keyboard muncul
-           • paddingBottom: kbPaddingBot → naik saat keyboard terbuka, turun saat keyboard tutup
-           • overflow-y:auto → user bisa scroll ke bawah kalau keyboard menutup tombol
-           • Konten di atas TIDAK PERNAH bergerak = tidak ada "lompat"
-      */}
       {mounted && splash === 'hidden' && (
-        <div
-          className="lr-page"
-          style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))' }}
-        >
+        <div className="lr-page">
           <div className="orb o1" />
           <div className="orb o2" />
 
@@ -420,7 +454,6 @@ export default function LoginPage() {
 
             <div className="panel">
               <form onSubmit={handleLogin} noValidate>
-
                 <div className={`fg ${focused ? 'active' : ''}`}>
                   <div className="field">
                     <label className="fl" htmlFor="email">Email</label>
@@ -499,7 +532,6 @@ export default function LoginPage() {
                   {loading && <div className="spin" />}
                   {loading ? 'Memverifikasi...' : 'Masuk'}
                 </button>
-
               </form>
 
               <div style={{ textAlign: 'center' }}>
@@ -511,6 +543,10 @@ export default function LoginPage() {
                   <span className="badge-txt">Terenkripsi &amp; Aman</span>
                 </div>
               </div>
+            </div>
+
+            <div className="register-link">
+              Belum punya akun? <Link href="/register">Daftar sekarang</Link>
             </div>
 
             <div className="foot">
