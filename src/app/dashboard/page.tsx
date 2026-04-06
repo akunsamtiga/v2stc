@@ -314,28 +314,12 @@ const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:
   const [q,setQ] = useState('');
   useEffect(()=>{if(open)setQ('');},[open]);
 
-  // ✅ FIX KEYBOARD: track visualViewport agar bottom-sheet tidak lompat saat keyboard muncul
-  const [vpTop,setVpTop] = useState(0);
-  const [vpH,setVpH]     = useState(0);
-  useEffect(()=>{
-    if(!open) return;
-    const vv = window.visualViewport;
-    const update = () => { setVpTop(vv?.offsetTop??0); setVpH(vv?.height??window.innerHeight); };
-    update();
-    vv?.addEventListener('resize',update);
-    vv?.addEventListener('scroll',update);
-    return ()=>{ vv?.removeEventListener('resize',update); vv?.removeEventListener('scroll',update); };
-  },[open]);
-
   if(!open) return null;
   const filtered = q.trim() ? options.filter(o=>o.label.toLowerCase().includes(q.toLowerCase())||o.value.toLowerCase().includes(q.toLowerCase())) : options;
-  const vpStyle = vpH>0 ? {top:vpTop,height:vpH} : {top:0,height:'100dvh' as const};
-  const innerMaxH = vpH>0 ? `calc(${vpH}px - 48px)` : 'calc(100dvh - 48px - 64px)';
   return (
-    <div style={{position:'fixed',left:0,right:0,...vpStyle,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',transition:'top 0.08s linear,height 0.08s linear',animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',padding:'16px',animation:'fade-in 0.15s ease'}}>
       <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)'}}/>
-      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:innerMaxH,display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:'16px 16px 0 0',border:`1px solid ${C.bdr}`,borderBottom:'none',boxShadow:'0 -8px 60px rgba(0,0,0,0.6)',overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
-        <div style={{width:32,height:3,borderRadius:99,background:'rgba(255,255,255,0.12)',margin:'12px auto 0',flexShrink:0}}/>
+      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:'80%',display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:16,border:`1px solid ${C.bdr}`,boxShadow:'0 24px 80px rgba(0,0,0,0.7)',overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 16px 12px',borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
           <span style={{fontSize:14,fontWeight:600,color:C.text}}>{title}</span>
           <button onClick={onClose} style={{width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'rgba(255,255,255,0.4)',cursor:'pointer'}}>
@@ -408,33 +392,12 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
 ({open,onClose,orders,onAdd,onDelete,onClear,loading}) => {
   const [input,setInput] = useState('');
 
-  // ✅ FIX KEYBOARD: Track visualViewport agar modal tidak lompat saat keyboard muncul.
-  // Masalah lama: inset:0 + alignItems:center → keyboard muncul → viewport mengecil →
-  // flex center hitung ulang dari ruang baru → modal terangkat (lompat).
-  // Solusi: top=vv.offsetTop, height=vv.height → container selalu pas di area visible.
-  const [vpTop,setVpTop] = useState(0);
-  const [vpH,setVpH]     = useState(0);
-  useEffect(()=>{
-    if(!open) return;
-    const vv = window.visualViewport;
-    const update = () => {
-      setVpTop(vv?.offsetTop ?? 0);
-      setVpH(vv?.height    ?? window.innerHeight);
-    };
-    update();
-    vv?.addEventListener('resize',update);
-    vv?.addEventListener('scroll',update);
-    return ()=>{ vv?.removeEventListener('resize',update); vv?.removeEventListener('scroll',update); };
-  },[open]);
-
   if(!open) return null;
-  const vpStyle = vpH>0 ? {top:vpTop,height:vpH} : {top:0,height:'100dvh' as const};
-  const innerMaxH = vpH>0 ? `calc(${vpH}px - 32px)` : 'calc(100dvh - 64px)';
 
   return (
-    <div style={{position:'fixed',left:0,right:0,...vpStyle,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',transition:'top 0.08s linear,height 0.08s linear',animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',animation:'fade-in 0.15s ease'}}>
       <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)'}}/>
-      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:innerMaxH,display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:16,border:`1px solid ${C.bdr}`,overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
+      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:'80%',display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:16,border:`1px solid ${C.bdr}`,overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
           <div>
             <h2 style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:2}}>Input Signal</h2>
@@ -491,30 +454,11 @@ const AISignalInputModal: React.FC<{open:boolean;onClose:()=>void;onSend:(trend:
   const [delayMs,setDelayMs] = useState(5000);
   const [msg,setMsg] = useState('');
 
-  // ✅ FIX KEYBOARD: sama seperti OrderInputModal — track visualViewport.
-  // Bottom sheet dengan marginBottom hardcoded tidak tahu tinggi keyboard,
-  // sehingga input bisa tertutup. Dengan vv.height, sheet selalu di atas keyboard.
-  const [vpTop,setVpTop] = useState(0);
-  const [vpH,setVpH]     = useState(0);
-  useEffect(()=>{
-    if(!open) return;
-    const vv = window.visualViewport;
-    const update = () => {
-      setVpTop(vv?.offsetTop ?? 0);
-      setVpH(vv?.height    ?? window.innerHeight);
-    };
-    update();
-    vv?.addEventListener('resize',update);
-    vv?.addEventListener('scroll',update);
-    return ()=>{ vv?.removeEventListener('resize',update); vv?.removeEventListener('scroll',update); };
-  },[open]);
-
   if(!open) return null;
   const execTime = Date.now()+delayMs;
-  const vpStyle = vpH>0 ? {top:vpTop,height:vpH} : {top:0,height:'100dvh' as const};
 
   return (
-    <div style={{position:'fixed',left:0,right:0,...vpStyle,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',transition:'top 0.08s linear,height 0.08s linear',animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',animation:'fade-in 0.15s ease'}}>
       <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)'}}/>
       <div style={{position:'relative',width:'100%',maxWidth:480,display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:'16px 16px 0 0',border:`1px solid ${C.sky}44`,borderBottom:'none',overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
         <div style={{width:32,height:3,borderRadius:99,background:`${C.sky}44`,margin:'12px auto 0'}}/>
@@ -1515,8 +1459,11 @@ export default function DashboardPage() {
   };
 
   useEffect(()=>{
-    const check=()=>{const w=window.innerWidth;setDeviceType(w<768?'mobile':w<1024?'tablet':'desktop');};
-    check(); window.addEventListener('resize',check); return()=>window.removeEventListener('resize',check);
+    // ✅ FIX: Deteksi deviceType SEKALI saat mount, jangan listen 'resize'.
+    // resize listener → setDeviceType → full re-render halaman setiap
+    // kali keyboard muncul atau app resume dari background.
+    const w = window.innerWidth;
+    setDeviceType(w < 768 ? 'mobile' : w < 1024 ? 'tablet' : 'desktop');
   },[]);
 
   const loadAll = useCallback(async(silent=false)=>{
@@ -1724,8 +1671,24 @@ export default function DashboardPage() {
   const handleResume = async()=>{setActionLoading(true);try{await api.scheduleResume();await loadAll(true);}catch(e:any){setError(e?.message??'Gagal melanjutkan');}finally{setActionLoading(false);}};
 
   const handleAddOrders = async(input:string)=>{
+    // Filter client-side: hanya baris dengan format valid HH:MM call/put (case-insensitive)
+    // Baris invalid (misal "21:32" tanpa arah, atau "21:32 B") dibuang diam-diam
+    const validLines = input
+      .split('\n')
+      .map(l => {
+        const trimmed = l.trim();
+        const match = trimmed.match(/^(\d{1,2}:\d{2})\s+(call|put|buy|sell|c|p)/i);
+        if (!match) return null;
+        const time = match[1].padStart(5, '0');
+        const raw = match[2].toLowerCase();
+        const trend = (raw === 'call' || raw === 'buy' || raw === 'c') ? 'call' : 'put';
+        return `${time} ${trend}`;
+      })
+      .filter(Boolean)
+      .join('\n');
+    if (!validLines) return;
     setAddOrderLoading(true);
-    try{const res=await api.addOrders(input);const newOrders=await api.getOrders();setScheduleOrders(newOrders);if(res.errors?.length)setError(`${res.added} ditambahkan, ${res.errors.length} error`);}
+    try{const res=await api.addOrders(validLines);const newOrders=await api.getOrders();setScheduleOrders(newOrders);}
     catch(e:any){setError(e?.message??'Gagal menambah');}
     finally{setAddOrderLoading(false);}
   };
@@ -1807,7 +1770,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div style={{minHeight:'100dvh',background:C.bg,paddingBottom:88}}>
+    <div style={{minHeight:'100%',background:C.bg,paddingBottom:88}}>
       <style>{`
         @keyframes spin        { to { transform: rotate(360deg); } }
         @keyframes shimmer     { 0%,100%{background-position:200% 0} 50%{background-position:0% 0} }

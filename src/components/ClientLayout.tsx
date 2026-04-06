@@ -70,11 +70,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             : 'calc(100dvh - env(safe-area-inset-top, 0px))',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
-          // ✅ FIX: padding cukup untuk tinggi nav pill (≈52px) + jarak bawah (16px) + safe area
-          // Tidak ada tambahan ruang ekstra yang menyebabkan area hitam kosong
-          paddingBottom: isPublic
-            ? 0
-            : 'calc(68px + env(safe-area-inset-bottom, 0px))',
         } as React.CSSProperties}
       >
         {children}
