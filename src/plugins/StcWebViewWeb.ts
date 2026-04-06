@@ -1,5 +1,4 @@
 // src/plugins/StcWebViewWeb.ts
-// Web fallback saat plugin tidak tersedia (browser/web mode)
 import { WebPlugin } from '@capacitor/core';
 import type { StcWebViewPlugin, StcWebViewOpenOptions, StcWebViewOpenResult } from './StcWebViewPlugin';
 
@@ -11,10 +10,8 @@ export class StcWebViewWeb extends WebPlugin implements StcWebViewPlugin {
     } catch {
       window.open(options.url, '_blank', 'noopener,noreferrer');
     }
-    return { url: options.url, authToken: '', deviceId: '', success: false };
+    return { url: options.url, authToken: '', deviceId: '', email: '', success: false };
   }
-
-  async close(): Promise<void> {
-    // no-op on web
-  }
+  async notifyReady(): Promise<void> { /* no-op on web */ }
+  async close(): Promise<void> { /* no-op on web */ }
 }
