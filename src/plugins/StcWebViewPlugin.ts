@@ -1,83 +1,114 @@
 // src/plugins/StcWebViewPlugin.ts
+//
+// JS/TS interface untuk StcWebViewPlugin.kt
+// Digunakan di register/page.tsx sebagai pengganti @capacitor/browser
+//
+// Usage:
+//   import { stcWebView } from '@/plugins/StcWebViewPlugin';
+//   const result = await stcWebView.open({ url: REGISTRATION_URL });
+//   if (result.authToken) { ... }
 
 import { registerPlugin } from '@capacitor/core';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 export interface StcWebViewOpenOptions {
+  /** URL yang akan dibuka di in-app WebView */
   url: string;
 }
 
 export interface StcWebViewOpenResult {
-  url:       string;
-  authToken: string;
-  deviceId:  string;
-  email:     string;
-  success:   boolean;
+  /** URL terakhir saat success terdeteksi */
+  url:        string;
+  /** Authorization token dari cookie (kosong jika tidak ditemukan) */
+  authToken:  string;
+  /** Device ID dari cookie (kosong jika tidak ditemukan) */
+  deviceId:   string;
+  /** Raw cookie string — untuk debug */
+  cookies?:   string;
+  /** true jika success URL terdeteksi */
+  success:    boolean;
+}
+
+export interface StcWebViewBrowserFinishedEvent {
+  finished:   boolean;
+  /** true jika user menutup manual tanpa registrasi selesai */
+  cancelled?: boolean;
 }
 
 export interface StcWebViewPlugin {
-  /** Buka in-app WebView. Promise resolve saat success URL terdeteksi. */
-  open(options: StcWebViewOpenOptions): Promise<StcWebViewOpenResult>;
   /**
-   * Panggil setelah loading 9s selesai — plugin akan auto-click tombol Daftar.
-   * Mirrors: LaunchedEffect(isProgressComplete, isWebFullyLoaded)
+   * Buka in-app WebView fullscreen.
+   * Promise resolve ketika success URL terdeteksi ATAU timeout.
+   * Jika resolve dengan success=false, berarti user menutup manual.
    */
-  notifyReady(): Promise<void>;
+  open(options: StcWebViewOpenOptions): Promise<StcWebViewOpenResult>;
+
+  /** Tutup WebView dari JS secara manual */
   close(): Promise<void>;
+
+  /** Listener untuk event browserFinished (user tutup manual) */
   addListener(
-    event: 'daftarClicked',
-    fn: (data: { clicked: boolean }) => void
-  ): Promise<{ remove: () => void }>;
-  addListener(
-    event: 'browserFinished',
-    fn: (data: { finished: boolean; cancelled?: boolean }) => void
+    eventName: 'browserFinished',
+    listenerFunc: (event: StcWebViewBrowserFinishedEvent) => void
   ): Promise<{ remove: () => void }>;
 }
 
+// ── Register plugin (nama harus match dengan @CapacitorPlugin(name = "StcWebView")) ──
 const StcWebViewNative = registerPlugin<StcWebViewPlugin>('StcWebView', {
+  // Web fallback — tidak ada native WebView di browser, pakai Capacitor Browser
   web: () => import('./StcWebViewWeb').then(m => new m.StcWebViewWeb()),
 });
 
+// ── Helper: deteksi apakah running di native Capacitor ───────────────────────
 function isNative(): boolean {
   return typeof window !== 'undefined' &&
     (window as any).Capacitor?.isNativePlatform?.() === true;
 }
 
+// ── stcWebView: unified API — native atau fallback ke @capacitor/browser ─────
 export const stcWebView = {
+  /**
+   * Buka WebView.
+   * - Native Android: pakai StcWebViewPlugin (in-app, bisa baca cookies)
+   * - Web/browser: fallback ke window.open atau @capacitor/browser
+   */
   async open(options: StcWebViewOpenOptions): Promise<StcWebViewOpenResult> {
-    if (isNative()) return StcWebViewNative.open(options);
-    // Web fallback
+    if (isNative()) {
+      return StcWebViewNative.open(options);
+    }
+    // Web fallback — buka external, return empty token
     try {
       const { Browser } = await import('@capacitor/browser');
       await Browser.open({ url: options.url, presentationStyle: 'fullscreen' });
     } catch {
       window.open(options.url, '_blank', 'noopener,noreferrer');
     }
-    return { url: options.url, authToken: '', deviceId: '', email: '', success: false };
-  },
-
-  async notifyReady(): Promise<void> {
-    if (isNative()) return StcWebViewNative.notifyReady();
+    return { url: options.url, authToken: '', deviceId: '', success: false };
   },
 
   async close(): Promise<void> {
-    if (isNative()) return StcWebViewNative.close();
+    if (isNative()) {
+      return StcWebViewNative.close();
+    }
   },
 
   async addListener(
-    event: 'daftarClicked' | 'browserFinished',
-    fn: (data: any) => void
+    eventName: 'browserFinished',
+    fn: (e: StcWebViewBrowserFinishedEvent) => void
   ): Promise<{ remove: () => void }> {
-    if (isNative()) return StcWebViewNative.addListener(event as any, fn);
-    // Web fallback untuk browserFinished
-    if (event === 'browserFinished') {
-      try {
-        const { Browser } = await import('@capacitor/browser');
-        const h = await Browser.addListener('browserFinished', () =>
-          fn({ finished: true, cancelled: true })
-        );
-        return h;
-      } catch { /* ignore */ }
+    if (isNative()) {
+      return StcWebViewNative.addListener(eventName, fn);
     }
-    return { remove: () => {} };
+    // Web fallback: listen ke @capacitor/browser browserFinished
+    try {
+      const { Browser } = await import('@capacitor/browser');
+      const handle = await Browser.addListener('browserFinished', () =>
+        fn({ finished: true, cancelled: true })
+      );
+      return handle;
+    } catch {
+      return { remove: () => {} };
+    }
   },
 };
