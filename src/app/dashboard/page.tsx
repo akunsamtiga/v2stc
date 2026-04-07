@@ -699,62 +699,116 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
 };
 
 // ═══════════════════════════════════════════
-// AI SIGNAL PANEL
+// AI SIGNAL PANEL (FIXED)
 // ═══════════════════════════════════════════
-const AISignalPanel: React.FC<{status:AISignalStatus|null;pendingOrders:AISignalOrder[];onOpenSendModal:()=>void;isLoading:boolean;fillHeight?:boolean}> =
-({status,pendingOrders,onOpenSendModal,isLoading,fillHeight}) => {
-  const isOn   = status?.isRunning??false;
-  const pnl    = status?.sessionPnL??0;
-  const wins   = status?.totalWins??0;
-  const losses = status?.totalLosses??0;
-  const total  = status?.totalTrades??0;
-  const wr     = total>0?Math.round((wins/total)*100):null;
-  const pnlCol = pnl>=0?C.sky:C.coral;
+const AISignalPanel: React.FC<{
+  status: AISignalStatus | null;
+  pendingOrders: AISignalOrder[];
+  onOpenSendModal: () => void;
+  isLoading: boolean;
+  fillHeight?: boolean;
+}> = ({ status, pendingOrders, onOpenSendModal, isLoading, fillHeight }) => {
+  const isOn = status?.botState === 'RUNNING' || status?.isActive === true;
+  const pnl = status?.sessionPnL ?? 0;
+  const wins = status?.totalWins ?? status?.stats?.wins ?? 0;
+  const losses = status?.totalLosses ?? status?.stats?.losses ?? 0;
+  const total = status?.totalTrades ?? status?.stats?.totalTrades ?? 0;
+  const wr = total > 0 ? Math.round((wins / total) * 100) : null;
+  const pnlCol = pnl >= 0 ? C.sky : C.coral;
+  const alwaysSignal = status?.alwaysSignalStatus;
 
-  const Row: React.FC<{label:string;right:React.ReactNode;border?:boolean}> = ({label,right,border=true}) => (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',borderBottom:border?`1px solid ${C.bdr}`:'none',minWidth:0}}>
-      <span style={{fontSize:11,color:C.muted}}>{label}</span>
-      <span style={{fontSize:11,fontWeight:600}}>{right}</span>
+  const Row: React.FC<{ label: string; right: React.ReactNode; border?: boolean }> = ({ 
+    label, right, border = true 
+  }) => (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '8px 12px', borderBottom: border ? `1px solid ${C.bdr}` : 'none', minWidth: 0
+    }}>
+      <span style={{ fontSize: 11, color: C.muted }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 600 }}>{right}</span>
     </div>
   );
 
   return (
-    <Card style={{display:'flex',flexDirection:'column'}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid rgba(90,200,245,0.2)`,flexShrink:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <Radio style={{width:14,height:14,color:C.sky}}/>
-          <span style={{fontSize:12,fontWeight:600,color:C.sub}}>AI Signal</span>
+    <Card style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '11px 14px', borderBottom: `1px solid rgba(90,200,245,0.2)`, flexShrink: 0
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Radio style={{ width: 14, height: 14, color: C.sky }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>AI Signal</span>
         </div>
-        {isOn?<StatusChip col={C.sky} label="Aktif" pulse/>:<span style={{fontSize:10,color:C.muted}}>Standby</span>}
+        {isOn ? <StatusChip col={C.sky} label="Aktif" pulse /> : <span style={{ fontSize: 10, color: C.muted }}>Standby</span>}
       </div>
 
-      {isLoading?(
-        <div style={{padding:'8px 0'}}>{[1,2,3].map(i=><div key={i} style={{padding:'8px 12px'}}><Sk w={`${i===1?70:i===2?50:60}%`} h={14}/></div>)}</div>
-      ):!isOn?(
-        <div style={{height:120,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
-          <Radio style={{width:24,height:24,color:C.muted,opacity:0.4}}/>
-          <p style={{fontSize:12,color:C.muted}}>Mode AI Signal tidak aktif</p>
+      {isLoading ? (
+        <div style={{ padding: '8px 0' }}>
+          {[1, 2, 3].map(i => <div key={i} style={{ padding: '8px 12px' }}><Sk w={`${i === 1 ? 70 : i === 2 ? 50 : 60}%`} h={14} /></div>)}
         </div>
-      ):(
-        <div style={{overflowY:'auto',maxHeight:pendingOrders.length>0?240:200}}>
-          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':''}{pnl.toLocaleString('id-ID')}</span>}/>
-          <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
-          <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?C.sky:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
-          <Row label="Status" right={<span style={{color:C.sky,fontSize:10}}>{status?.lastStatus||'Menunggu sinyal...'}</span>} border={pendingOrders.length===0}/>
-          {pendingOrders.length>0&&(
+      ) : !isOn ? (
+        <div style={{ height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Radio style={{ width: 24, height: 24, color: C.muted, opacity: 0.4 }} />
+          <p style={{ fontSize: 12, color: C.muted }}>Mode AI Signal tidak aktif</p>
+        </div>
+      ) : (
+        <div style={{ overflowY: 'auto', maxHeight: pendingOrders.length > 0 ? 280 : 240 }}>
+          <Row label="P&L" right={<span style={{ color: pnlCol, fontFamily: 'monospace' }}>{pnl >= 0 ? '+' : ''}{pnl.toLocaleString('id-ID')}</span>} />
+          <Row label="W / L" right={
+            <span style={{ fontFamily: 'monospace' }}>
+              <span style={{ color: C.cyan }}>{wins}</span>
+              <span style={{ color: C.muted }}> / </span>
+              <span style={{ color: C.coral }}>{losses}</span>
+            </span>
+          } />
+          <Row label="Win Rate" right={wr !== null ? <span style={{ color: wr >= 50 ? C.sky : C.coral }}>{wr}%</span> : <span style={{ color: C.muted }}>—</span>} />
+
+          {/* Always Signal Status */}
+          {alwaysSignal?.isActive && (
+            <Row 
+              label="Martingale" 
+              right={
+                <span style={{ color: C.sky, fontSize: 10 }}>
+                  Step {alwaysSignal.currentStep}/{alwaysSignal.maxSteps}
+                </span>
+              } 
+            />
+          )}
+
+          <Row 
+            label="Status" 
+            right={<span style={{ color: C.sky, fontSize: 10 }}>{alwaysSignal?.status || 'Menunggu sinyal...'}</span>} 
+            border={pendingOrders.length === 0} 
+          />
+
+          {pendingOrders.length > 0 && (
             <>
-              <div style={{padding:'6px 12px 4px',borderBottom:`1px solid ${C.bdr}`}}>
-                <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(90,200,245,0.45)'}}>Pending ({pendingOrders.length})</span>
+              <div style={{ padding: '6px 12px 4px', borderBottom: `1px solid ${C.bdr}` }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(90,200,245,0.45)' }}>
+                  Pending ({pendingOrders.length})
+                </span>
               </div>
-              {pendingOrders.slice(0,3).map((o,i,arr)=>{
+              {pendingOrders.slice(0, 5).map((o, i, arr) => {
                 const msLeft = o.executionTime - Date.now();
-                const secLeft = Math.max(0,Math.ceil(msLeft/1000));
-                const col = o.trend==='call'?C.cyan:C.coral;
+                const secLeft = Math.max(0, Math.ceil(msLeft / 1000));
+                const col = o.trend === 'call' ? C.cyan : C.coral;
                 return (
-                  <div key={o.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderBottom:i<arr.length-1?`1px solid ${C.bdr}`:'none',minWidth:0,overflow:'hidden'}}>
-                    <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:col,background:o.trend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)',flexShrink:0}}>{o.trend==='call'?'↑ CALL':'↓ PUT'}</span>
-                    <span style={{fontSize:10,color:C.muted,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{o.assetRic}</span>
-                    <span style={{fontSize:10,fontWeight:600,color:C.sky,fontFamily:'monospace',flexShrink:0}}>{secLeft>0?`${secLeft}s`:'Sekarang'}</span>
+                  <div key={o.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                    borderBottom: i < arr.length - 1 ? `1px solid ${C.bdr}` : 'none', minWidth: 0, overflow: 'hidden'
+                  }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
+                      color: col, background: o.trend === 'call' ? 'rgba(41,151,255,0.1)' : 'rgba(255,69,58,0.1)', flexShrink: 0
+                    }}>
+                      {o.trend === 'call' ? '↑ CALL' : '↓ PUT'}
+                    </span>
+                    <span style={{ fontSize: 10, color: C.muted, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {o.assetRic}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: C.sky, fontFamily: 'monospace', flexShrink: 0 }}>
+                      {secLeft > 0 ? `${secLeft}s` : 'Sekarang'}
+                    </span>
                   </div>
                 );
               })}
@@ -762,10 +816,14 @@ const AISignalPanel: React.FC<{status:AISignalStatus|null;pendingOrders:AISignal
           )}
         </div>
       )}
-      {isOn&&(
-        <div style={{padding:'8px 10px',borderTop:`1px solid rgba(90,200,245,0.15)`,flexShrink:0}}>
-          <button onClick={onOpenSendModal} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 0',borderRadius:8,fontSize:12,fontWeight:500,background:`${C.sky}10`,border:`1px solid ${C.sky}25`,color:C.sky,cursor:'pointer'}}>
-            <Send style={{width:12,height:12}}/>Kirim Sinyal
+      {isOn && (
+        <div style={{ padding: '8px 10px', borderTop: `1px solid rgba(90,200,245,0.15)`, flexShrink: 0 }}>
+          <button onClick={onOpenSendModal} style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '8px 0', borderRadius: 8, fontSize: 12, fontWeight: 500,
+            background: `${C.sky}10`, border: `1px solid ${C.sky}25`, color: C.sky, cursor: 'pointer'
+          }}>
+            <Send style={{ width: 12, height: 12 }} />Kirim Sinyal
           </button>
         </div>
       )}
@@ -1297,7 +1355,7 @@ const ControlCard: React.FC<{
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
   const isFtRunning = ftStatus?.isRunning??false;
-  const isAIRunning = aiStatus?.isRunning??false;
+  const isAIRunning = aiStatus?.isActive??false;
   const isIndRunning = indicatorStatus?.isRunning??false;
   const isMomRunning = momentumStatus?.isRunning??false;
   const ac = modeAccent(mode);
@@ -1424,6 +1482,7 @@ export default function DashboardPage() {
     init();
   },[]); // eslint-disable-line
 
+  
   const [assets,setAssets] = useState<StockityAsset[]>([]);
   const [balance,setBalance] = useState<ProfileBalance|null>(null);
   const [scheduleStatus,setScheduleStatus] = useState<ScheduleStatus|null>(null);
@@ -1527,7 +1586,7 @@ export default function DashboardPage() {
 
         if (ftData?.isRunning) {
           setTradingMode(ftData.mode === 'CTC' ? 'ctc' : 'fastrade');
-        } else if (aiData?.isRunning) {
+        } else if (aiData?.isActive) {
           setTradingMode('aisignal');
         } else if (indData?.isRunning) {
           setTradingMode('indicator');
@@ -1570,7 +1629,7 @@ export default function DashboardPage() {
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
   const isFtRunning = ftStatus?.isRunning??false;
-  const isAIRunning = aiStatus?.isRunning??false;
+  const isAIRunning = aiStatus?.isActive??false;
   const isIndRunning = indicatorStatus?.isRunning??false;
   const isMomRunning = momentumStatus?.isRunning??false;
 

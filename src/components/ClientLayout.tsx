@@ -6,6 +6,22 @@ import { storage } from '@/lib/storage';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
 
+// Berapa kali coba baca token sebelum memutuskan "tidak ada sesi"
+// Ini mencegah false-redirect ke login akibat race condition storage async
+const AUTH_CHECK_RETRIES = 3;
+const AUTH_CHECK_DELAY   = 250; // ms antar retry
+
+async function checkTokenWithRetry(): Promise<string | null> {
+  for (let i = 0; i < AUTH_CHECK_RETRIES; i++) {
+    const token = await storage.get('stc_token');
+    if (token) return token;
+    if (i < AUTH_CHECK_RETRIES - 1) {
+      await new Promise(r => setTimeout(r, AUTH_CHECK_DELAY));
+    }
+  }
+  return null;
+}
+
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
@@ -16,18 +32,35 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => setReady(true), 3000);
+    // Fallback timeout: jika storage terlalu lama, tetap tampilkan halaman
+    const fallback = setTimeout(() => setReady(true), 4000);
+
     const checkAuth = async () => {
       try {
-        const token = await storage.get('stc_token');
-        if (!isPublic && !token) router.replace('/login');
-        setReady(true);
+        if (isPublic) {
+          // Halaman publik: tidak perlu cek auth, langsung tampil
+          setReady(true);
+          clearTimeout(fallback);
+          return;
+        }
+
+        // Halaman protected: cek token dengan retry
+        // Retry penting untuk menangani race condition setelah saveUserSession()
+        const token = await checkTokenWithRetry();
+        if (!token) {
+          router.replace('/login');
+        }
       } catch {
+        // Jika storage error, tetap redirect ke login untuk keamanan
+        if (!isPublic) router.replace('/login');
+      } finally {
         setReady(true);
+        clearTimeout(fallback);
       }
     };
+
     checkAuth();
-    return () => clearTimeout(timeoutId);
+    return () => clearTimeout(fallback);
   }, [pathname, router, isPublic]);
 
   useEffect(() => {

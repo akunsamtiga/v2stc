@@ -1,7 +1,7 @@
 // lib/api.ts  — maps to actual NestJS backend routes
 const getBase = () => process.env.NEXT_PUBLIC_API_URL ?? '';
 
-// ✅ FIX: async getToken pakai Capacitor Preferences (sama seperti storage.ts)
+// async getToken pakai Capacitor Preferences (sama seperti storage.ts)
 async function getToken(): Promise<string | null> {
   try {
     if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
@@ -15,8 +15,7 @@ async function getToken(): Promise<string | null> {
   return typeof window !== 'undefined' ? localStorage.getItem('stc_token') : null;
 }
 
-// ✅ FIX: emit custom event untuk logout — tidak pakai window.location.href
-//         ClientLayout / komponen lain bisa listen event ini untuk redirect
+// emit custom event untuk logout — tidak pakai window.location.href
 function emitUnauthorized() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('stc:unauthorized'));
@@ -24,7 +23,7 @@ function emitUnauthorized() {
 }
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const token = await getToken(); // ✅ sekarang await async
+  const token = await getToken();
   const res = await fetch(`${getBase()}/api/v1${path}`, {
     method,
     headers: {
@@ -36,7 +35,6 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   });
 
   if (res.status === 401) {
-    // ✅ FIX: hapus token lalu emit event, jangan pakai window.location.href
     try {
       if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
         const { Preferences } = await import('@capacitor/preferences');
@@ -138,7 +136,7 @@ export interface ExecutionLog {
   executedAt?: number;
   note?: string;
   martingaleStep?: number;
-  isDemoAccount?: boolean; // true = demo, false = real (untuk filter profit hari ini)
+  isDemoAccount?: boolean;
 }
 
 export interface FastradeStatus {
@@ -172,7 +170,7 @@ export interface FastradeLog {
   note?: string;
   cycleNumber: number;
   mode?: 'FTT' | 'CTC';
-  isDemoAccount?: boolean; // true = demo, false = real (untuk filter profit hari ini)
+  isDemoAccount?: boolean;
 }
 
 export interface StartFastradePayload {
@@ -211,7 +209,7 @@ export interface UpdateConfigPayload {
 }
 
 // ─────────────────────────────────────────────
-// TYPES — AI Signal
+// TYPES — AI Signal (FIXED)
 // ─────────────────────────────────────────────
 export interface AISignalConfig {
   asset: { ric: string; name: string } | null;
@@ -227,16 +225,40 @@ export interface AISignalConfig {
   currency: string;
 }
 
+export interface AlwaysSignalStatus {
+  isActive: boolean;
+  currentStep?: number;
+  maxSteps?: number;
+  totalLoss?: number;
+  status?: string;
+}
+
+export interface AISignalStats {
+  totalTrades: number;
+  wins: number;
+  losses: number;
+  sessionPnL: number;
+}
+
 export interface AISignalStatus {
-  isRunning: boolean;
-  pendingOrders: number;
-  executedOrders: number;
+  isActive: boolean;
+  botState: string;
+  totalOrders?: number;
+  pendingOrders?: number;
+  executedOrders?: number;
+  activeMartingaleSequences?: number;
+  wsConnected?: boolean;
+  alwaysSignalStatus?: AlwaysSignalStatus;
+  monitoringStatus?: {
+    is_active: boolean;
+    active_monitoring_count: number;
+  };
+  stats?: AISignalStats;
   sessionPnL?: number;
   totalWins?: number;
   totalLosses?: number;
   totalTrades?: number;
-  lastStatus?: string;
-  [key: string]: unknown;
+  config?: AISignalConfig;
 }
 
 export interface AISignalOrder {
@@ -374,7 +396,7 @@ export interface MomentumLog {
   sessionPnL?: number;
   executedAt: number;
   note?: string;
-  isDemoAccount?: boolean; // true = demo, false = real (untuk filter profit hari ini)
+  isDemoAccount?: boolean;
 }
 
 export interface IndicatorLog {
@@ -391,7 +413,7 @@ export interface IndicatorLog {
   executedAt: number;
   note?: string;
   cycleNumber?: number;
-  isDemoAccount?: boolean; // true = demo, false = real (untuk filter profit hari ini)
+  isDemoAccount?: boolean;
 }
 
 // ─────────────────────────────────────────────
