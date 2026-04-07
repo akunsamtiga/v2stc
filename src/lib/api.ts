@@ -417,6 +417,38 @@ export interface IndicatorLog {
 }
 
 // ─────────────────────────────────────────────
+// TYPES — Combined Bot Status
+// ─────────────────────────────────────────────
+export interface CombinedBotStatus {
+  isRunning: boolean;
+  isLocked: boolean;
+  blockedModes: string[];
+  schedule?: {
+    orders: ScheduleOrder[];
+    logs: ExecutionLog[];
+  };
+  fastrade?: FastradeStatus & { logs?: FastradeLog[] };
+  aisignal?: AISignalStatus & { pendingOrders?: AISignalOrder[] };
+  indicator?: IndicatorStatus;
+  momentum?: MomentumStatus;
+}
+
+export interface StartBotPayload {
+  mode: string;
+  assetRic: string;
+  amount: number;
+  duration?: number;
+  accountType?: 'demo' | 'real';
+  martingale?: {
+    enabled: boolean;
+    maxStep: number;
+    multiplier: number;
+    alwaysSignal?: boolean;
+  };
+  timeframe?: string;
+}
+
+// ─────────────────────────────────────────────
 // API OBJECT
 // ─────────────────────────────────────────────
 export const api = {
@@ -524,4 +556,9 @@ export const api = {
   momentumStop:         () => req<{ message: string }>('POST', '/momentum/stop'),
   momentumStatus:       () => req<MomentumStatus>('GET', '/momentum/status'),
   momentumLogs:         (limit = 100) => req<MomentumLog[]>('GET', `/momentum/logs?limit=${limit}`),
+
+  // ── Combined Bot Control ──────────────────
+  getStatus: () => req<CombinedBotStatus>('GET', '/bot/status'),
+  startBot:  (payload: StartBotPayload) => req<{ message: string }>('POST', '/bot/start', payload),
+  stopBot:   (mode: string) => req<{ message: string }>('POST', '/bot/stop', { mode }),
 };

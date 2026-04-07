@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { storage } from '@/lib/storage';
+import { LanguageProvider, useLanguage, AVAILABLE_LANGUAGES, Language } from '@/lib/i18n';
 
 type SplashPhase = 'hidden' | 'welcome' | 'verified' | 'out';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const { t, language, setLanguage } = useLanguage();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
@@ -19,9 +21,11 @@ export default function LoginPage() {
   const [focused,  setFocused]  = useState<'email' | 'password' | null>(null);
   const [showPass, setShowPass] = useState(false);
   const [splash,   setSplash]   = useState<SplashPhase>('hidden');
+  const [showLangSelector, setShowLangSelector] = useState(false);
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passRef  = useRef<HTMLInputElement>(null);
+  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -33,6 +37,17 @@ export default function LoginPage() {
     };
     init();
   }, [router]);
+
+  // Close language selector when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (langRef.current && !langRef.current.contains(event.target as Node)) {
+        setShowLangSelector(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Autofill detection
   useEffect(() => {
@@ -71,7 +86,7 @@ export default function LoginPage() {
       }
       await runSplash(res.accessToken);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login gagal. Periksa email dan password.');
+      setError(err instanceof Error ? err.message : t('login.invalidCredentials'));
       setLoading(false);
     }
   };
@@ -80,6 +95,15 @@ export default function LoginPage() {
     (email || emailRef.current?.value) &&
     (password || passRef.current?.value)
   );
+
+  const getLanguageFlag = (code: Language) => {
+    const lang = AVAILABLE_LANGUAGES.find(l => l.code === code);
+    return lang?.flag || '🌐';
+  };
+
+  const getLanguageName = (code: Language) => {
+    return code.toUpperCase();
+  };
 
   return (
     <>
@@ -279,6 +303,69 @@ export default function LoginPage() {
         }
         .register-link a:hover { opacity: 0.70; }
 
+        /* Language Selector */
+        .lang-selector {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          z-index: 10;
+        }
+        .lang-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          background: rgba(255,255,255,0.7);
+          border: 1px solid rgba(0,0,0,0.08);
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--text-2);
+          backdrop-filter: blur(10px);
+          transition: all 0.15s;
+        }
+        .lang-btn:hover {
+          background: rgba(255,255,255,0.9);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .lang-dropdown {
+          position: absolute;
+          top: calc(100% + 6px);
+          right: 0;
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+          overflow: hidden;
+          min-width: 140px;
+          animation: lang-fade 0.2s ease;
+        }
+        @keyframes lang-fade {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .lang-option {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          text-align: left;
+          font-size: 14px;
+          transition: background 0.15s;
+        }
+        .lang-option:hover {
+          background: rgba(0,122,255,0.06);
+        }
+        .lang-option.active {
+          background: rgba(0,122,255,0.1);
+          color: var(--accent);
+          font-weight: 500;
+        }
+
         /* Splash */
         .splash {
           position: fixed; inset: 0; z-index: 200;
@@ -424,13 +511,13 @@ export default function LoginPage() {
           <div className="sp-text-area">
             {splash === 'welcome' && (
               <div className="sp-msg sp-msg-welcome-in">
-                <span className="sp-title">Selamat Datang</span>
+                <span className="sp-title">{t('login.welcome')}</span>
               </div>
             )}
             {(splash === 'verified' || splash === 'out') && (
               <div className="sp-msg sp-msg-verified-in">
-                <span className="sp-title">Berhasil Masuk</span>
-                <span className="sp-sub">Mengarahkan ke dashboard…</span>
+                <span className="sp-title">{t('login.loginSuccess')}</span>
+                <span className="sp-sub">{t('login.redirecting')}</span>
               </div>
             )}
           </div>
@@ -444,25 +531,56 @@ export default function LoginPage() {
 
       {mounted && splash === 'hidden' && (
         <div className="lr-page">
+          {/* Language Selector */}
+          <div className="lang-selector" ref={langRef}>
+            <button 
+              className="lang-btn" 
+              onClick={() => setShowLangSelector(!showLangSelector)}
+            >
+              <span>{getLanguageFlag(language)}</span>
+              <span>{getLanguageName(language)}</span>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {showLangSelector && (
+              <div className="lang-dropdown">
+                {AVAILABLE_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.code}
+                    className={`lang-option ${language === lang.code ? 'active' : ''}`}
+                    onClick={() => {
+                      setLanguage(lang.code as Language);
+                      setShowLangSelector(false);
+                    }}
+                  >
+                    <span>{lang.flag}</span>
+                    <span>{lang.nativeName}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="orb o1" />
           <div className="orb o2" />
 
           <div className="card">
             <div className="brand">
-              <span className="brand-title">STC AutoTrade</span>
-              <p className="brand-sub">Masuk untuk melanjutkan</p>
+              <span className="brand-title">{t('login.title')}</span>
+              <p className="brand-sub">{t('login.subtitle')}</p>
             </div>
 
             <div className="panel">
               <form onSubmit={handleLogin} noValidate>
                 <div className={`fg ${focused ? 'active' : ''}`}>
                   <div className="field">
-                    <label className="fl" htmlFor="email">Email</label>
+                    <label className="fl" htmlFor="email">{t('login.email')}</label>
                     <div className="fwrap">
                       <input
                         ref={emailRef}
                         id="email" type="email" className="fi"
-                        placeholder="nama@contoh.com"
+                        placeholder={t('login.emailPlaceholder')}
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         onFocus={() => setFocused('email')}
@@ -474,13 +592,13 @@ export default function LoginPage() {
                   </div>
 
                   <div className="field">
-                    <label className="fl" htmlFor="password">Password</label>
+                    <label className="fl" htmlFor="password">{t('login.password')}</label>
                     <div className="fwrap">
                       <input
                         ref={passRef}
                         id="password"
                         type={showPass ? 'text' : 'password'}
-                        className="fi" placeholder="••••••••"
+                        className="fi" placeholder={t('login.passwordPlaceholder')}
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                         onFocus={() => setFocused('password')}
@@ -491,7 +609,7 @@ export default function LoginPage() {
                       <button type="button" className="eye-btn"
                         onClick={() => setShowPass(p => !p)}
                         tabIndex={-1}
-                        aria-label={showPass ? 'Sembunyikan' : 'Tampilkan'}
+                        aria-label={showPass ? t('common.close') : t('common.show')}
                       >
                         {showPass ? (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -515,7 +633,7 @@ export default function LoginPage() {
                       <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
-                  <span className="cb-label">Ingat saya</span>
+                  <span className="cb-label">{t('login.rememberMe')}</span>
                 </label>
 
                 {error && (
@@ -531,7 +649,7 @@ export default function LoginPage() {
                   disabled={loading || !canSubmit}
                 >
                   {loading && <div className="spin" />}
-                  {loading ? 'Memverifikasi...' : 'Masuk'}
+                  {loading ? t('login.signingIn') : t('login.signIn')}
                 </button>
               </form>
 
@@ -541,24 +659,33 @@ export default function LoginPage() {
                     <rect x="3" y="11" width="18" height="11" rx="2"/>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
-                  <span className="badge-txt">Terenkripsi &amp; Aman</span>
+                  <span className="badge-txt">{t('common.encrypted')} & {t('common.secure')}</span>
                 </div>
               </div>
             </div>
 
             <div className="register-link">
-              Belum punya akun? <Link href="/register">Daftar sekarang</Link>
+              {t('login.noAccount')} <Link href="/register">{t('login.register')}</Link>
             </div>
 
             <div className="foot">
               © 2026 STC AutoTrade ·{' '}
-              <span className="foot-lnk">Ketentuan</span>
+              <span className="foot-lnk">{t('login.terms')}</span>
               {' '}·{' '}
-              <span className="foot-lnk">Privasi</span>
+              <span className="foot-lnk">{t('login.privacy')}</span>
             </div>
           </div>
         </div>
       )}
     </>
+  );
+}
+
+// Export with LanguageProvider
+export default function LoginPage() {
+  return (
+    <LanguageProvider>
+      <LoginPageContent />
+    </LanguageProvider>
   );
 }

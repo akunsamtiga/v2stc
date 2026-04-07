@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type ProfileBalance } from '@/lib/api';
 import { storage } from '@/lib/storage';
+import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib/i18n';
+import { LanguageSheet } from '@/components/LanguageSelector';
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -42,6 +44,7 @@ const CurrencySheet: React.FC<{
   currencies: CurrencyOption[]; current: string;
   onSelect: (iso: string) => Promise<void>; loading: boolean;
 }> = ({ open, onClose, currencies, current, onSelect, loading }) => {
+  const { t } = useLanguage();
   const [q, setQ] = useState('');
   const inputRef  = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -56,7 +59,7 @@ const CurrencySheet: React.FC<{
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', animation: 'bd-in 0.25s ease' }} />
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 400, maxHeight: '70dvh', display: 'flex', flexDirection: 'column', background: '#f2f2f7', borderRadius: 20, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', animation: 'pop-in 0.28s cubic-bezier(0.32,0.72,0,1)', overflow: 'hidden' }}>
         <div style={{ flexShrink: 0, padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid rgba(60,60,67,0.14)' }}>
-          <span style={{ fontSize: 17, fontWeight: 600, color: '#1c1c1e', letterSpacing: -0.4 }}>Pilih Mata Uang</span>
+          <span style={{ fontSize: 17, fontWeight: 600, color: '#1c1c1e', letterSpacing: -0.4 }}>{t('profile.selectCurrency')}</span>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(116,116,128,0.12)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3c3c43' }}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
           </button>
@@ -64,13 +67,13 @@ const CurrencySheet: React.FC<{
         <div style={{ flexShrink: 0, padding: '10px 16px' }}>
           <div style={{ position: 'relative' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(60,60,67,0.4)" strokeWidth="2.2" strokeLinecap="round" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} placeholder="Cari"
+            <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} placeholder={t('common.search')}
               style={{ width: '100%', padding: '8px 10px 8px 34px', borderRadius: 10, background: 'rgba(116,116,128,0.12)', border: 'none', outline: 'none', fontSize: 15, color: '#1c1c1e', fontFamily: 'inherit' }} />
           </div>
         </div>
         <div style={{ overflowY: 'auto', flex: 1, background: '#fff' }}>
           {filtered.length === 0
-            ? <div style={{ padding: '48px 0', textAlign: 'center', color: '#aeaeb2', fontSize: 14 }}>Tidak ditemukan</div>
+            ? <div style={{ padding: '48px 0', textAlign: 'center', color: '#aeaeb2', fontSize: 14 }}>{t('common.notFound')}</div>
             : filtered.map((c, i) => {
                 const sel = c.iso === current;
                 return (
@@ -95,6 +98,7 @@ const CurrencySheet: React.FC<{
 // LOGOUT CONFIRM
 // ─────────────────────────────────────────────
 const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: () => void }> = ({ open, onCancel, onConfirm }) => {
+  const { t } = useLanguage();
   if (!open) return null;
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
@@ -107,12 +111,12 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
             </div>
-            <p style={{ fontSize: 17, fontWeight: 600, color: '#1c1c1e', marginBottom: 6, letterSpacing: -0.3 }}>Keluar dari STC AutoTrade</p>
-            <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5 }}>Anda perlu login kembali untuk mengakses akun.</p>
+            <p style={{ fontSize: 17, fontWeight: 600, color: '#1c1c1e', marginBottom: 6, letterSpacing: -0.3 }}>{t('profile.logoutConfirm')}</p>
+            <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5 }}>{t('profile.logoutMessage')}</p>
           </div>
           <div style={{ borderTop: '1px solid rgba(60,60,67,0.10)', display: 'flex' }}>
-            <button onClick={onCancel} style={{ flex: 1, padding: '16px', background: 'transparent', border: 'none', borderRight: '1px solid rgba(60,60,67,0.10)', cursor: 'pointer', fontSize: 17, fontWeight: 600, color: '#007aff', fontFamily: 'inherit' }}>Batal</button>
-            <button onClick={onConfirm} style={{ flex: 1, padding: '16px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 400, color: '#ff3b30', fontFamily: 'inherit' }}>Keluar</button>
+            <button onClick={onCancel} style={{ flex: 1, padding: '16px', background: 'transparent', border: 'none', borderRight: '1px solid rgba(60,60,67,0.10)', cursor: 'pointer', fontSize: 17, fontWeight: 600, color: '#007aff', fontFamily: 'inherit' }}>{t('common.cancel')}</button>
+            <button onClick={onConfirm} style={{ flex: 1, padding: '16px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 400, color: '#ff3b30', fontFamily: 'inherit' }}>{t('profile.logout')}</button>
           </div>
         </div>
       </div>
@@ -121,15 +125,17 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
 };
 
 // ─────────────────────────────────────────────
-// MAIN PAGE
+// MAIN PAGE CONTENT
 // ─────────────────────────────────────────────
-export default function ProfilePage() {
+function ProfilePageContent() {
   const router = useRouter();
+  const { t, language, formatNumber: fmtNum } = useLanguage();
   const [isLoading, setIsLoading]             = useState(true);
   const [profile, setProfile]                 = useState<UserProfileData | null>(null);
   const [balance, setBalance]                 = useState<ProfileBalance | null>(null);
   const [currencies, setCurrencies]           = useState<CurrencyOption[]>([]);
   const [sheetOpen, setSheetOpen]             = useState(false);
+  const [langSheetOpen, setLangSheetOpen]     = useState(false);
   const [currencyLoading, setCurrencyLoading] = useState(false);
   const [showLogout, setShowLogout]           = useState(false);
   const [copied, setCopied]                   = useState(false);
@@ -161,11 +167,11 @@ export default function ProfilePage() {
       }).catch(() => {});
     } catch (err: any) {
       if (err?.status === 401) { router.push('/login'); return; }
-      setError('Gagal memuat profil. Coba lagi.');
+      setError(t('profile.loadError'));
     } finally {
       setIsLoading(false); setRefreshing(false);
     }
-  }, [router]);
+  }, [router, t]);
 
   const handleUpdateCurrency = async (iso: string) => {
     setCurrencyLoading(true);
@@ -197,7 +203,7 @@ export default function ProfilePage() {
   const fmtBalance = (n?: number) => {
     if (n == null) return '0';
     const val = n / 100;
-    return val.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+    return val.toLocaleString(language === 'en' ? 'en-US' : language === 'ru' ? 'ru-RU' : 'id-ID', { maximumFractionDigits: 0 });
   };
 
   const getInitials = () => {
@@ -229,7 +235,7 @@ export default function ProfilePage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
         {verified != null && (
           <span style={{ fontSize: 11, fontWeight: 600, color: verified ? '#34c759' : '#ff9500', background: verified ? 'rgba(52,199,89,0.10)' : 'rgba(255,149,0,0.10)', padding: '2px 7px', borderRadius: 99, flexShrink: 0 }}>
-            {verified ? 'Terverifikasi' : 'Belum'}
+            {verified ? t('profile.verified') : t('profile.notVerified')}
           </span>
         )}
         <span style={{ fontSize: 14, color: value ? '#6e6e73' : '#c7c7cc', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{value || '—'}</span>
@@ -266,7 +272,7 @@ export default function ProfilePage() {
             {profile?.docsVerified && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#34c759', background: 'rgba(52,199,89,0.12)', padding: '3px 10px', borderRadius: 99 }}>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                Terverifikasi
+                {t('profile.verified')}
               </span>
             )}
             {profile?.id && (
@@ -288,11 +294,11 @@ export default function ProfilePage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {[
         {
-          label: 'Real', color: '#34c759', bgColor: 'rgba(52,199,89,0.12)', val: balance?.real_balance, sub: currency,
+          label: t('profile.balanceReal'), color: '#34c759', bgColor: 'rgba(52,199,89,0.12)', val: balance?.real_balance, sub: currency,
           icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>,
         },
         {
-          label: 'Demo', color: '#ff9500', bgColor: 'rgba(255,149,0,0.10)', val: balance?.demo_balance, sub: 'Virtual',
+          label: t('profile.balanceDemo'), color: '#ff9500', bgColor: 'rgba(255,149,0,0.10)', val: balance?.demo_balance, sub: t('common.virtual'),
           icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff9500" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>,
         },
       ].map(({ label, color, bgColor, val, sub, icon }) => (
@@ -390,7 +396,7 @@ export default function ProfilePage() {
       {/* ── MOBILE HEADER ── */}
       <div className="pf-mob-header" style={{ position: 'sticky', top: 0, zIndex: 50, flexShrink: 0, background: 'rgba(242,242,247,0.92)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: '0.5px solid rgba(60,60,67,0.16)' }}>
         <div style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <h1 style={{ fontSize: 17, fontWeight: 600, color: '#1c1c1e', letterSpacing: -0.4 }}>Profil</h1>
+          <h1 style={{ fontSize: 17, fontWeight: 600, color: '#1c1c1e', letterSpacing: -0.4 }}>{t('profile.title')}</h1>
         </div>
       </div>
 
@@ -402,14 +408,14 @@ export default function ProfilePage() {
           <AvatarBlock />
           <div style={{ height: '0.5px', background: 'rgba(60,60,67,0.10)', margin: '0 4px' }} />
           <div>
-            <SectionLabel>Saldo</SectionLabel>
+            <SectionLabel>{t('common.balance')}</SectionLabel>
             <BalanceBlock />
           </div>
           <div style={{ marginTop: 'auto' }}>
             <Card>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>}
-                iconBg="#ff3b30" label="Keluar" danger onClick={() => setShowLogout(true)} last
+                iconBg="#ff3b30" label={t('profile.logout')} danger onClick={() => setShowLogout(true)} last
               />
             </Card>
             <p style={{ textAlign: 'center', fontSize: 11.5, color: '#c7c7cc', marginTop: 14 }}>STC AutoTrade v2.0.0</p>
@@ -420,14 +426,35 @@ export default function ProfilePage() {
         <div className="pf-right">
 
           <div className="pf-desk-header">
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.5 }}>Profil</h1>
-            <button onClick={() => loadProfile(true)} disabled={refreshing || isLoading}
-              style={{ width: 32, height: 32, background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#007aff', opacity: (refreshing || isLoading) ? 0.4 : 1, transition: 'opacity 0.15s' }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{ animation: (refreshing || isLoading) ? 'spin 0.8s linear infinite' : 'none' }}>
-                <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-              </svg>
-            </button>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.5 }}>{t('profile.title')}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* Language Selector Button */}
+              <button 
+                onClick={() => setLangSheetOpen(true)}
+                style={{ 
+                  width: 36, 
+                  height: 36, 
+                  borderRadius: 10, 
+                  background: 'rgba(0,0,0,0.05)', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 18,
+                }}
+                title={t('language.title')}
+              >
+                🌐
+              </button>
+              <button onClick={() => loadProfile(true)} disabled={refreshing || isLoading}
+                style={{ width: 32, height: 32, background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#007aff', opacity: (refreshing || isLoading) ? 0.4 : 1, transition: 'opacity 0.15s' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{ animation: (refreshing || isLoading) ? 'spin 0.8s linear infinite' : 'none' }}>
+                  <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -443,13 +470,13 @@ export default function ProfilePage() {
           <div className="pf-mob-only">
             <div style={{ marginBottom: 22 }}><AvatarBlock /></div>
             <div>
-              <SectionLabel>Saldo</SectionLabel>
+              <SectionLabel>{t('common.balance')}</SectionLabel>
               <BalanceBlock />
             </div>
           </div>
 
           <div>
-            <SectionLabel>Informasi Akun</SectionLabel>
+            <SectionLabel>{t('profile.accountInfo')}</SectionLabel>
             <Card>
               {isLoading ? (
                 <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -457,48 +484,66 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <>
-                  <InfoRow label="Email" value={profile?.email} />
-                  <InfoRow label="Verifikasi Email" verified={profile?.emailVerified} value={profile?.emailVerified ? 'Sudah' : 'Belum'} />
-                  <InfoRow label="Telepon" value={profile?.phone || null} />
-                  <InfoRow label="Verifikasi Telepon" verified={profile?.phoneVerified} value={profile?.phoneVerified ? 'Sudah' : 'Belum'} />
-                  <InfoRow label="Negara" value={profile?.country || profile?.registrationCountryIso || null} />
-                  {profile?.registeredAt && <InfoRow label="Bergabung" value={new Date(profile.registeredAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })} />}
-                  <InfoRow label="Tgl. Lahir" value={profile?.birthday ? new Date(profile.birthday).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : null} last />
+                  <InfoRow label={t('profile.email')} value={profile?.email} />
+                  <InfoRow label={t('profile.emailVerified')} verified={profile?.emailVerified} value={profile?.emailVerified ? t('common.yes') : t('common.no')} />
+                  <InfoRow label={t('profile.phone')} value={profile?.phone || null} />
+                  <InfoRow label={t('profile.phoneVerified')} verified={profile?.phoneVerified} value={profile?.phoneVerified ? t('common.yes') : t('common.no')} />
+                  <InfoRow label={t('profile.country')} value={profile?.country || profile?.registrationCountryIso || null} />
+                  {profile?.registeredAt && <InfoRow label={t('profile.joined')} value={formatDate(new Date(profile.registeredAt), language, { day: '2-digit', month: 'long', year: 'numeric' })} />}
+                  <InfoRow label={t('profile.birthday')} value={profile?.birthday ? formatDate(new Date(profile.birthday), language, { day: '2-digit', month: 'long', year: 'numeric' }) : null} last />
                 </>
               )}
             </Card>
           </div>
 
           <div>
-            <SectionLabel>Pengaturan</SectionLabel>
+            <SectionLabel>{t('profile.settings')}</SectionLabel>
             <Card>
+              {/* Language Selector */}
+              <TappableRow
+                icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
+                iconBg="linear-gradient(135deg, #007aff, #5ac8fa)" 
+                label={t('language.title')} 
+                value={t(`language.${language === 'en' ? 'english' : language === 'id' ? 'indonesian' : 'russian'}`).toLowerCase()}
+                onClick={() => setLangSheetOpen(true)} 
+              />
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                iconBg="#007aff" label="Mata Uang" value={currencyLoading ? '…' : currency}
+                iconBg="#007aff" label={t('common.currency')} value={currencyLoading ? '…' : currency}
                 onClick={() => currencies.length > 0 && setSheetOpen(true)} chevron={currencies.length > 0} last
               />
             </Card>
           </div>
 
           <div>
-            <SectionLabel>Bantuan &amp; Legalitas</SectionLabel>
+            <SectionLabel>{t('profile.help')}</SectionLabel>
             <Card>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01"/></svg>}
-                iconBg="#5ac8fa" label="Ketentuan Layanan" onClick={() => {}}
+                iconBg="#5ac8fa" label={t('profile.termsOfService')} onClick={() => {}}
               />
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
-                iconBg="#34c759" label="Kebijakan Privasi" onClick={() => {}} last
+                iconBg="#34c759" label={t('profile.privacyPolicy')} onClick={() => {}} last
               />
             </Card>
           </div>
 
           <div className="pf-mob-only">
+            {/* Mobile Language Selector */}
+            <Card mb={12}>
+              <TappableRow
+                icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
+                iconBg="linear-gradient(135deg, #007aff, #5ac8fa)" 
+                label={t('language.title')} 
+                value={t(`language.${language === 'en' ? 'english' : language === 'id' ? 'indonesian' : 'russian'}`).toLowerCase()}
+                onClick={() => setLangSheetOpen(true)} 
+              />
+            </Card>
             <Card>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>}
-                iconBg="#ff3b30" label="Keluar" danger onClick={() => setShowLogout(true)} last
+                iconBg="#ff3b30" label={t('profile.logout')} danger onClick={() => setShowLogout(true)} last
               />
             </Card>
             <p style={{ textAlign: 'center', fontSize: 12, color: '#c7c7cc', marginTop: 14 }}>STC AutoTrade v2.0.0</p>
@@ -508,7 +553,19 @@ export default function ProfilePage() {
       </div>
 
       <CurrencySheet open={sheetOpen} onClose={() => setSheetOpen(false)} currencies={currencies} current={currency} onSelect={handleUpdateCurrency} loading={currencyLoading} />
+      <LanguageSheet open={langSheetOpen} onClose={() => setLangSheetOpen(false)} />
       <LogoutAlert open={showLogout} onCancel={() => setShowLogout(false)} onConfirm={handleLogout} />
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// EXPORT WITH PROVIDER
+// ─────────────────────────────────────────────
+export default function ProfilePage() {
+  return (
+    <LanguageProvider>
+      <ProfilePageContent />
+    </LanguageProvider>
   );
 }
