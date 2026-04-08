@@ -108,6 +108,7 @@ export interface ScheduleConfig {
 export interface ScheduleOrder {
   id: string;
   time: string;
+  ric?: string;
   trend: 'call' | 'put';
   timeInMillis: number;
   isExecuted: boolean;
@@ -127,6 +128,7 @@ export interface ScheduleOrder {
 export interface ExecutionLog {
   id: string;
   orderId?: string;
+  ric?: string;
   time?: string;
   trend?: string;
   amount?: number;
@@ -159,6 +161,7 @@ export interface FastradeStatus {
 export interface FastradeLog {
   id: string;
   orderId: string;
+  ric?: string;
   trend: string;
   amount: number;
   martingaleStep: number;

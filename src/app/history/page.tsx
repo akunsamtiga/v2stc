@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { api, type ExecutionLog, type FastradeLog, type IndicatorLog, type MomentumLog } from '@/lib/api';
 import { storage } from '@/lib/storage';
 import { LanguageProvider, useLanguage, formatDate, formatTime, Language } from '@/lib/i18n';
-import { LanguageSelectorCompact } from '@/components/LanguageSelector';
 import {
   TrendingUp, TrendingDown, Filter, History, RotateCcw,
   ArrowUpRight, ArrowDownRight, BarChart3, ChevronRight,
@@ -344,7 +343,7 @@ function HistoryPageContent() {
           <h1 style={{ flex: 1, fontSize: 17, fontWeight: 600, color: '#1c1c1e', letterSpacing: -0.4 }}>{t('history.title')}</h1>
           
           {/* Language Selector */}
-          <LanguageSelectorCompact />
+          
           
           <button onClick={() => loadHistory(true)} disabled={refreshing || isLoading} className="hist-tap"
             style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,0,0,0.05)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#007aff', cursor: 'pointer', opacity: (refreshing || isLoading) ? 0.4 : 1 }}>

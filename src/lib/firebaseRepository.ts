@@ -1,13 +1,4 @@
 // lib/firebaseRepository.ts
-// ✅ FIXED — Port 1:1 dari FirebaseRepository.kt
-//
-// PERUBAHAN dari versi lama:
-//   1. Collection names: 'whitelist_users' (bukan 'whitelist'), 'app_config' (bukan 'config')
-//   2. Config document ID: 'registration_config' (bukan 'registration')
-//   3. Document ID whitelist: sanitizeDocId(userId) — sama persis dengan Kotlin
-//   4. addWhitelistUser: cek duplikat dulu sebelum set() — mirror Kotlin
-//   5. WhitelistUser fields: tambah addedAt, fcmToken, fcmTokenUpdatedAt
-//   6. updateLastLogin: query by userId field, update field 'lastLogin' langsung
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import {

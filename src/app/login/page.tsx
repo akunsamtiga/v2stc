@@ -64,8 +64,20 @@ function LoginPageContent() {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [mounted]); // eslint-disable-line
 
-  const runSplash = async (token: string) => {
-    await storage.set('stc_token', token);
+  const runSplash = async (res: { accessToken: string; userId: string; email: string; deviceId: string }) => {
+    // Simpan session lengkap untuk persistensi saat refresh
+    const { saveUserSession } = await import('@/lib/storage');
+    await saveUserSession({
+      authtoken: res.accessToken,
+      userId: res.userId,
+      deviceId: res.deviceId,
+      email: res.email,
+      userTimezone: 'Asia/Bangkok',
+      userAgent: typeof window !== 'undefined' ? navigator.userAgent : '',
+      deviceType: 'web',
+      currency: 'IDR',
+      currencyIso: 'IDR',
+    });
     setSplash('welcome');
     setTimeout(() => setSplash('verified'), 3000);
     setTimeout(() => { setSplash('out'); router.push('/dashboard'); }, 7000);
@@ -84,7 +96,7 @@ function LoginPageContent() {
       } else {
         await storage.remove('stc_remember_email');
       }
-      await runSplash(res.accessToken);
+      await runSplash(res);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('login.invalidCredentials'));
       setLoading(false);

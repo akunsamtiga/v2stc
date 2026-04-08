@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { BottomNav } from '@/components/BottomNav';
 import { storage } from '@/lib/storage';
+import { LanguageProvider } from '@/lib/i18n';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
 
@@ -85,7 +86,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             borderRadius: '50%', display: 'inline-block',
             animation: 'cl-spin 0.7s linear infinite', flexShrink: 0,
           }} />
-          Memuat...
+          Loading...
         </div>
         <style>{`@keyframes cl-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -93,7 +94,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <>
+    <LanguageProvider>
       <main
         className="flex-1 overflow-y-auto"
         style={{
@@ -105,6 +106,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       {!isPublic && <BottomNav />}
-    </>
+    </LanguageProvider>
   );
 }
