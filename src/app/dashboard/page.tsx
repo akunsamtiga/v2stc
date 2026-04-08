@@ -12,7 +12,7 @@ import {
 } from '@/lib/api';
 import { ChartCard } from '@/components/ChartCard';
 import AssetIcon from '@/components/common/AssetIcon';
-import { storage } from '@/lib/storage';
+import { storage, isSessionValid } from '@/lib/storage';
 import {
   Activity, AlertCircle, BarChart2, Calendar,
   ChevronDown, ChevronUp, Info, Plus,
@@ -1582,11 +1582,11 @@ export default function DashboardPage() {
     }finally{if(!silent&&isMounted.current)setIsLoading(false);}
   },[router]);
 
-  // ✅ FIX: Auth check menggunakan storage async (Capacitor-safe)
+  // ✅ FIX: Auth check menggunakan isSessionValid (Capacitor-safe)
   useEffect(()=>{
     const init = async () => {
-      const token = await storage.get('stc_token');
-      if(!token){ router.push('/login'); return; }
+      const sessionValid = await isSessionValid();
+      if(!sessionValid){ router.push('/login'); return; }
       loadAll();
     };
     init();

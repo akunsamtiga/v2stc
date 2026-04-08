@@ -1,18 +1,11 @@
 // lib/api.ts  — maps to actual NestJS backend routes
+import { getAuthToken, sessionLogout, storage } from './storage';
+
 const getBase = () => process.env.NEXT_PUBLIC_API_URL ?? '';
 
-// async getToken pakai Capacitor Preferences (sama seperti storage.ts)
+// ✅ FIXED: Gunakan getAuthToken yang sudah validasi session
 async function getToken(): Promise<string | null> {
-  try {
-    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
-      const { Preferences } = await import('@capacitor/preferences');
-      const { value } = await Preferences.get({ key: 'stc_token' });
-      return value;
-    }
-  } catch {
-    // fallback ke localStorage
-  }
-  return typeof window !== 'undefined' ? localStorage.getItem('stc_token') : null;
+  return getAuthToken();
 }
 
 // emit custom event untuk logout — tidak pakai window.location.href
@@ -36,12 +29,8 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 
   if (res.status === 401) {
     try {
-      if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
-        const { Preferences } = await import('@capacitor/preferences');
-        await Preferences.remove({ key: 'stc_token' });
-      } else if (typeof window !== 'undefined') {
-        localStorage.removeItem('stc_token');
-      }
+      // ✅ FIXED: Gunakan sessionLogout untuk clear semua session data
+      await sessionLogout();
     } catch { /* ignore */ }
     emitUnauthorized();
     throw new Error('Sesi habis, silakan login kembali.');

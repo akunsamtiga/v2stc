@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { storage } from '@/lib/storage';
+import { storage, isSessionValid } from '@/lib/storage';
 import { LanguageProvider, useLanguage, AVAILABLE_LANGUAGES, Language } from '@/lib/i18n';
 
 type SplashPhase = 'hidden' | 'welcome' | 'verified' | 'out';
@@ -32,8 +32,9 @@ function LoginPageContent() {
       setMounted(true);
       const savedEmail = await storage.get('stc_remember_email');
       if (savedEmail) { setEmail(savedEmail); setRemember(true); }
-      const token = await storage.get('stc_token');
-      if (token) router.push('/dashboard');
+      // ✅ FIXED: Gunakan isSessionValid untuk cek session lengkap
+      const sessionValid = await isSessionValid();
+      if (sessionValid) router.push('/dashboard');
     };
     init();
   }, [router]);

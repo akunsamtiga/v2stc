@@ -1,59 +1,90 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { BottomNav } from '@/components/BottomNav';
-import { storage } from '@/lib/storage';
+import { isSessionValid, sessionLogout } from '@/lib/storage';
 import { LanguageProvider } from '@/lib/i18n';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
 
-// Berapa kali coba baca token sebelum memutuskan "tidak ada sesi"
-// Ini mencegah false-redirect ke login akibat race condition storage async
-const AUTH_CHECK_RETRIES = 3;
-const AUTH_CHECK_DELAY   = 250; // ms antar retry
-
-async function checkTokenWithRetry(): Promise<string | null> {
-  for (let i = 0; i < AUTH_CHECK_RETRIES; i++) {
-    const token = await storage.get('stc_token');
-    if (token) return token;
-    if (i < AUTH_CHECK_RETRIES - 1) {
-      await new Promise(r => setTimeout(r, AUTH_CHECK_DELAY));
-    }
-  }
-  return null;
-}
+// ✅ CONFIGURABLE: Auth check settings
+const AUTH_CHECK_RETRIES = 5;        // Ditambah dari 3 ke 5
+const AUTH_CHECK_DELAY = 400;        // Ditambah dari 300ms ke 400ms
+const INITIAL_DELAY = 200;           // Ditambah dari 100ms ke 200ms untuk WebView init
+const CAPACITOR_EXTRA_DELAY = 300;   // Extra delay untuk Capacitor native app
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
+  const authCheckRef = useRef(false);  // Prevent double auth check
 
   const isPublic = PUBLIC_ROUTES.some(
     route => pathname === route || pathname.startsWith(`${route}/`)
   );
 
   useEffect(() => {
-    // Fallback timeout: jika storage terlalu lama, tetap tampilkan halaman
-    const fallback = setTimeout(() => setReady(true), 4000);
+    // Prevent double execution
+    if (authCheckRef.current) return;
+    authCheckRef.current = true;
+
+    // ✅ FALLBACK: Pastikan UI tidak stuck lebih dari 5 detik
+    const fallback = setTimeout(() => {
+      console.warn('[ClientLayout] Fallback timeout reached, forcing ready state');
+      setReady(true);
+    }, 5000);
 
     const checkAuth = async () => {
       try {
+        // Halaman publik: langsung tampilkan
         if (isPublic) {
-          // Halaman publik: tidak perlu cek auth, langsung tampil
           setReady(true);
           clearTimeout(fallback);
           return;
         }
 
-        // Halaman protected: cek token dengan retry
-        // Retry penting untuk menangani race condition setelah saveUserSession()
-        const token = await checkTokenWithRetry();
-        if (!token) {
+        // ✅ TUNGGU: Beri waktu WebView/DOM untuk inisialisasi
+        await new Promise(resolve => setTimeout(resolve, INITIAL_DELAY));
+
+        // ✅ EXTRA DELAY: Untuk Capacitor native app
+        const isCapacitor = typeof window !== 'undefined' && 
+          (window as any).Capacitor?.isNativePlatform?.() === true;
+        if (isCapacitor) {
+          console.log('[ClientLayout] Capacitor detected, adding extra delay');
+          await new Promise(resolve => setTimeout(resolve, CAPACITOR_EXTRA_DELAY));
+        }
+
+        // ✅ CEK SESSION: Dengan retry dan validasi lengkap
+        let sessionValid = false;
+        for (let i = 0; i < AUTH_CHECK_RETRIES; i++) {
+          sessionValid = await isSessionValid();
+          
+          if (sessionValid) {
+            console.log('[ClientLayout] Session valid on attempt', i + 1);
+            break;
+          }
+          
+          console.log(`[ClientLayout] Session check attempt ${i + 1}/${AUTH_CHECK_RETRIES} - not valid yet`);
+          
+          if (i < AUTH_CHECK_RETRIES - 1) {
+            await new Promise(r => setTimeout(r, AUTH_CHECK_DELAY));
+          }
+        }
+
+        if (!sessionValid) {
+          console.log('[ClientLayout] Session invalid after all retries, redirecting to login');
+          // Clear any stale session data
+          await sessionLogout().catch(() => {});
+          router.replace('/login');
+        } else {
+          console.log('[ClientLayout] Auth verified, rendering protected page');
+        }
+      } catch (err) {
+        console.error('[ClientLayout] Auth check error:', err);
+        if (!isPublic) {
+          await sessionLogout().catch(() => {});
           router.replace('/login');
         }
-      } catch {
-        // Jika storage error, tetap redirect ke login untuk keamanan
-        if (!isPublic) router.replace('/login');
       } finally {
         setReady(true);
         clearTimeout(fallback);
@@ -61,7 +92,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     };
 
     checkAuth();
-    return () => clearTimeout(fallback);
+    return () => {
+      clearTimeout(fallback);
+      authCheckRef.current = false;
+    };
   }, [pathname, router, isPublic]);
 
   useEffect(() => {
@@ -101,6 +135,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           height: '100dvh',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
+          paddingTop: 'var(--sat)',
         } as React.CSSProperties}
       >
         {children}

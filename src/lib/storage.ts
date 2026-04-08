@@ -1,32 +1,24 @@
 // lib/storage.ts
-// ✅ FIXED — Port 1:1 dari SessionManager.kt
-//
-// PERUBAHAN dari versi lama:
-//   1. Tambah SESSION_KEYS — semua key sama dengan Kotlin SessionManager constant
-//   2. Tambah saveUserSession() — mirrors SessionManager.saveUserSession()
-//   3. Tambah getUserSession() — mirrors SessionManager.getUserSession()
-//   4. Tambah saveCurrencyWithIso() — mirrors SessionManager.saveCurrencyWithIso()
-//   5. Tambah logout() — mirrors SessionManager.logout() (clear semua key)
+// ✅ FIXED — Hybrid Storage: localStorage primary + Capacitor Preferences backup
+// localStorage lebih reliable di Capacitor WebView, Preferences sebagai mirror
 
 'use client';
 
-// ── Session key constants — harus identik dengan Kotlin SessionManager ────────
-// Kotlin: PREF_NAME = "trading_session"
-// Keys:
+// ── Session key constants ─────────────────────────────────────────────────────
 export const SESSION_KEYS = {
-  AUTHTOKEN:     'stc_token',          // KEY_AUTHTOKEN
-  USER_ID:       'stc_user_id',        // KEY_USER_ID        ✅ FIXED: was missing
-  DEVICE_ID:     'stc_device_id',      // KEY_DEVICE_ID
-  EMAIL:         'stc_email',          // KEY_EMAIL           ✅ FIXED: was missing
-  USER_TIMEZONE: 'stc_timezone',       // KEY_USER_TIMEZONE   ✅ FIXED: was missing
-  USER_AGENT:    'stc_user_agent',     // KEY_USER_AGENT      ✅ FIXED: was missing
-  DEVICE_TYPE:   'stc_device_type',    // KEY_DEVICE_TYPE     ✅ FIXED: was missing
-  CURRENCY:      'stc_currency',       // KEY_CURRENCY
-  CURRENCY_ISO:  'stc_currency_iso',   // KEY_CURRENCY_ISO    ✅ FIXED: was missing
-  IS_LOGGED_IN:  'stc_is_logged_in',   // KEY_IS_LOGGED_IN    ✅ FIXED: was missing
+  AUTHTOKEN:     'stc_token',
+  USER_ID:       'stc_user_id',
+  DEVICE_ID:     'stc_device_id',
+  EMAIL:         'stc_email',
+  USER_TIMEZONE: 'stc_timezone',
+  USER_AGENT:    'stc_user_agent',
+  DEVICE_TYPE:   'stc_device_type',
+  CURRENCY:      'stc_currency',
+  CURRENCY_ISO:  'stc_currency_iso',
+  IS_LOGGED_IN:  'stc_is_logged_in',
 } as const;
 
-// ── UserSession type — mirrors UserSession.kt ─────────────────────────────────
+// ── UserSession type ──────────────────────────────────────────────────────────
 export interface UserSession {
   authtoken:     string;
   userId:        string;
@@ -39,42 +31,93 @@ export interface UserSession {
   currencyIso:   string;
 }
 
-// ── Raw storage get/set/remove ────────────────────────────────────────────────
+// ── Helper: Check if Capacitor is ready ──────────────────────────────────────
+function isCapacitorReady(): boolean {
+  return typeof window !== 'undefined' && 
+         (window as any).Capacitor?.isNativePlatform?.() === true;
+}
 
+// ── storageGet: localStorage primary, Capacitor fallback ────────────────────
 async function storageGet(key: string): Promise<string | null> {
-  try {
-    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+  // ✅ WAIT: Tunggu DOM ready untuk memastikan localStorage accessible
+  if (typeof window !== 'undefined' && document.readyState === 'loading') {
+    await new Promise<void>(resolve => {
+      document.addEventListener('DOMContentLoaded', () => resolve(), { once: true });
+    });
+  }
+
+  // ✅ PRIMARY: Selalu cek localStorage dulu (paling reliable di WebView)
+  if (typeof window !== 'undefined') {
+    try {
+      const localValue = localStorage.getItem(key);
+      if (localValue !== null && localValue !== '') {
+        return localValue;
+      }
+    } catch (e) {
+      console.warn(`[Storage] localStorage get error for key "${key}":`, e);
+    }
+  }
+  
+  // ✅ FALLBACK: Coba Capacitor Preferences jika tersedia
+  if (isCapacitorReady()) {
+    try {
       const { Preferences } = await import('@capacitor/preferences');
       const { value } = await Preferences.get({ key });
+      
+      // ✅ SYNC BACK: Jika ada di Preferences tapi tidak di localStorage, sync ke localStorage
+      if (value && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(key, value);
+        } catch { /* ignore */ }
+      }
+      
       return value;
+    } catch (e) {
+      console.warn(`[Storage] Capacitor Preferences get error for key "${key}":`, e);
     }
-  } catch {}
-  return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+  }
+  
+  return null;
 }
 
+// ── storageSet: Dual-write ke localStorage + Capacitor ──────────────────────
 async function storageSet(key: string, value: string): Promise<void> {
-  try {
-    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+  // ✅ ALWAYS: Simpan ke localStorage (primary)
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(key, value);
+  }
+  
+  // ✅ MIRROR: Juga simpan ke Capacitor Preferences jika tersedia
+  if (isCapacitorReady()) {
+    try {
       const { Preferences } = await import('@capacitor/preferences');
       await Preferences.set({ key, value });
-      return;
+    } catch (e) {
+      console.warn(`[Storage] Capacitor Preferences set error for key "${key}":`, e);
+      // Tidak throw error - localStorage sudah berhasil
     }
-  } catch {}
-  if (typeof window !== 'undefined') localStorage.setItem(key, value);
+  }
 }
 
+// ── storageRemove: Hapus dari both storage ───────────────────────────────────
 async function storageRemove(key: string): Promise<void> {
-  try {
-    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+  // Hapus dari localStorage
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(key);
+  }
+  
+  // Hapus dari Capacitor Preferences
+  if (isCapacitorReady()) {
+    try {
       const { Preferences } = await import('@capacitor/preferences');
       await Preferences.remove({ key });
-      return;
+    } catch (e) {
+      console.warn(`[Storage] Capacitor Preferences remove error for key "${key}":`, e);
     }
-  } catch {}
-  if (typeof window !== 'undefined') localStorage.removeItem(key);
+  }
 }
 
-// ── Exported storage object (backward compatible) ─────────────────────────────
+// ── Exported storage object ─────────────────────────────────────────────────
 export const storage = {
   get:    storageGet,
   set:    storageSet,
@@ -82,24 +125,22 @@ export const storage = {
 };
 
 // ── saveUserSession ───────────────────────────────────────────────────────────
-// Mirrors: SessionManager.saveUserSession()
-// ✅ FIXED: versi lama hanya set 2 key (stc_token, stc_device_id)
-//           Kotlin menyimpan semua field UserSession
 export async function saveUserSession(session: UserSession): Promise<void> {
-  await storageSet(SESSION_KEYS.AUTHTOKEN,     session.authtoken);
-  await storageSet(SESSION_KEYS.USER_ID,       session.userId);
-  await storageSet(SESSION_KEYS.DEVICE_ID,     session.deviceId);
-  await storageSet(SESSION_KEYS.EMAIL,         session.email);
-  await storageSet(SESSION_KEYS.USER_TIMEZONE, session.userTimezone);
-  await storageSet(SESSION_KEYS.USER_AGENT,    session.userAgent);
-  await storageSet(SESSION_KEYS.DEVICE_TYPE,   session.deviceType);
-  await storageSet(SESSION_KEYS.CURRENCY,      session.currency);
-  await storageSet(SESSION_KEYS.CURRENCY_ISO,  session.currencyIso);
-  await storageSet(SESSION_KEYS.IS_LOGGED_IN,  'true');
+  await Promise.all([
+    storageSet(SESSION_KEYS.AUTHTOKEN,     session.authtoken),
+    storageSet(SESSION_KEYS.USER_ID,       session.userId),
+    storageSet(SESSION_KEYS.DEVICE_ID,     session.deviceId),
+    storageSet(SESSION_KEYS.EMAIL,         session.email),
+    storageSet(SESSION_KEYS.USER_TIMEZONE, session.userTimezone),
+    storageSet(SESSION_KEYS.USER_AGENT,    session.userAgent),
+    storageSet(SESSION_KEYS.DEVICE_TYPE,   session.deviceType),
+    storageSet(SESSION_KEYS.CURRENCY,      session.currency),
+    storageSet(SESSION_KEYS.CURRENCY_ISO,  session.currencyIso),
+    storageSet(SESSION_KEYS.IS_LOGGED_IN,  'true'),
+  ]);
 }
 
 // ── getUserSession ────────────────────────────────────────────────────────────
-// Mirrors: SessionManager.getUserSession()
 export async function getUserSession(): Promise<UserSession | null> {
   const isLoggedIn = await storageGet(SESSION_KEYS.IS_LOGGED_IN);
   if (isLoggedIn !== 'true') return null;
@@ -118,18 +159,43 @@ export async function getUserSession(): Promise<UserSession | null> {
 }
 
 // ── saveCurrencyWithIso ───────────────────────────────────────────────────────
-// Mirrors: SessionManager.saveCurrencyWithIso()
-// ✅ FIXED: versi lama tidak ada — Kotlin simpan currency code + unit symbol "Rp"
 export async function saveCurrencyWithIso(currency: string, iso: string): Promise<void> {
   await storageSet(SESSION_KEYS.CURRENCY,     currency);
   await storageSet(SESSION_KEYS.CURRENCY_ISO, iso);
 }
 
-// ── logout ────────────────────────────────────────────────────────────────────
-// Mirrors: SessionManager.logout()
-// Bersihkan semua session keys
+// ── sessionLogout ─────────────────────────────────────────────────────────────
 export async function sessionLogout(): Promise<void> {
-  for (const key of Object.values(SESSION_KEYS)) {
-    await storageRemove(key);
+  await Promise.all(
+    Object.values(SESSION_KEYS).map(key => storageRemove(key))
+  );
+}
+
+// ── isSessionValid: Cek apakah session valid (token + isLoggedIn) ─────────────
+export async function isSessionValid(): Promise<boolean> {
+  try {
+    const [isLoggedIn, token] = await Promise.all([
+      storageGet(SESSION_KEYS.IS_LOGGED_IN),
+      storageGet(SESSION_KEYS.AUTHTOKEN),
+    ]);
+    
+    // Session valid jika IS_LOGGED_IN = 'true' DAN token ada
+    const valid = isLoggedIn === 'true' && !!token && token.length > 10;
+    
+    if (!valid) {
+      console.log('[Storage] Session invalid - isLoggedIn:', isLoggedIn, 'hasToken:', !!token);
+    }
+    
+    return valid;
+  } catch (e) {
+    console.error('[Storage] isSessionValid error:', e);
+    return false;
   }
+}
+
+// ── getAuthToken: Ambil token dengan validasi ────────────────────────────────
+export async function getAuthToken(): Promise<string | null> {
+  const isValid = await isSessionValid();
+  if (!isValid) return null;
+  return storageGet(SESSION_KEYS.AUTHTOKEN);
 }

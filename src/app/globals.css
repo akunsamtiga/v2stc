@@ -19,7 +19,6 @@ html, body {
 }
 
 body {
-  padding-top:    var(--sat);
   padding-right:  var(--sar);
   padding-left:   var(--sal);
 }

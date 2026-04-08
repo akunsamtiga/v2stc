@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type ProfileBalance } from '@/lib/api';
-import { storage } from '@/lib/storage';
+import { storage, isSessionValid, sessionLogout, getAuthToken } from '@/lib/storage';
 import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib/i18n';
 import { LanguageSheet } from '@/components/LanguageSelector';
 
@@ -144,8 +144,9 @@ function ProfilePageContent() {
 
   useEffect(() => {
     const init = async () => {
-      const token = await storage.get('stc_token');
-      if (!token) { router.push('/login'); return; }
+      // ✅ FIXED: Gunakan isSessionValid untuk cek session lengkap
+      const sessionValid = await isSessionValid();
+      if (!sessionValid) { router.push('/login'); return; }
       loadProfile();
     };
     init();
@@ -155,7 +156,12 @@ function ProfilePageContent() {
     if (!silent) setIsLoading(true); else setRefreshing(true);
     setError(null);
     try {
-      const token = await storage.get('stc_token');
+      // ✅ FIXED: Gunakan getAuthToken yang sudah validasi session
+      const token = await getAuthToken();
+      if (!token) {
+        router.push('/login');
+        return;
+      }
       const [prof, bal] = await Promise.all([api.getProfile(), api.balance().catch(() => null)]);
       setProfile(prof); setBalance(bal);
 
@@ -176,7 +182,9 @@ function ProfilePageContent() {
   const handleUpdateCurrency = async (iso: string) => {
     setCurrencyLoading(true);
     try {
-      const token = await storage.get('stc_token');
+      // ✅ FIXED: Gunakan getAuthToken
+      const token = await getAuthToken();
+      if (!token) return;
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/profile/currency`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -188,8 +196,8 @@ function ProfilePageContent() {
   };
 
   const handleLogout = async () => {
-    await storage.remove('stc_token');
-    await storage.remove('stc_user');
+    // ✅ FIXED: Gunakan sessionLogout untuk clear semua session data
+    await sessionLogout();
     router.push('/login');
   };
 
