@@ -25,7 +25,7 @@ body {
 }
 
 /* ============================================================
-   DESIGN TOKENS — Apple-like dark · blue system accent
+   DESIGN TOKENS — Apple-like dark · emerald system accent
    ============================================================ */
 :root {
   --bg:          #000000;
@@ -33,10 +33,10 @@ body {
   --s2:          #141416;
   --s3:          #0d0d0f;
 
-  --blue:        #2997FF;
-  --blue-dim:    rgba(41, 151, 255, 0.14);
-  --blue-glow:   rgba(41, 151, 255, 0.06);
-  --blue-bdr:    rgba(41, 151, 255, 0.28);
+  --blue:        #10B981;  /* emerald-500 */
+  --blue-dim:    rgba(16, 185, 129, 0.14);
+  --blue-glow:   rgba(16, 185, 129, 0.06);
+  --blue-bdr:    rgba(16, 185, 129, 0.28);
 
   --coral:       #FF453A;
   --coral-dim:   rgba(255, 69, 58, 0.12);
@@ -46,8 +46,8 @@ body {
   --violet-dim:  rgba(191, 90, 242, 0.10);
 
   --bdr:         rgba(255, 255, 255, 0.08);
-  --bdr-act:     rgba(41, 151, 255, 0.55);
-  --faint:       rgba(41, 151, 255, 0.07);
+  --bdr-act:     rgba(16, 185, 129, 0.55);
+  --faint:       rgba(16, 185, 129, 0.07);
 
   --text:        #ffffff;
   --sub:         rgba(235, 235, 245, 0.88);
@@ -128,7 +128,7 @@ body > * { position: relative; z-index: 1; }
 ::-webkit-scrollbar        { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: rgba(255, 255, 255, 0.14); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(41, 151, 255, 0.40); }
+::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.40); }
 
 input, textarea, select {
   font-size: max(16px, 1em); /* cegah iOS auto-zoom */
@@ -154,9 +154,9 @@ input, textarea, select {
   clip-path: none !important;
 }
 .ds-input:focus {
-  border-color: rgba(41, 151, 255, 0.55) !important;
-  box-shadow: 0 0 0 3px rgba(41, 151, 255, 0.12) !important;
-  background: rgba(41, 151, 255, 0.05) !important;
+  border-color: rgba(16, 185, 129, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12) !important;
+  background: rgba(16, 185, 129, 0.05) !important;
 }
 .ds-input::placeholder { color: rgba(235, 235, 245, 0.25) !important; }
 .ds-input:disabled { opacity: 0.38; cursor: not-allowed; }
@@ -164,7 +164,7 @@ input, textarea, select {
 select.ds-input {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232997FF' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2310B981' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
   background-position: right 12px center !important;
   padding-right: 36px !important;
@@ -211,20 +211,20 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 }
 .ds-card::after { display: none; }
 .ds-card:hover {
-  border-color: rgba(41, 151, 255, 0.22) !important;
+  border-color: rgba(16, 185, 129, 0.22) !important;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.07) inset,
     0 8px 32px rgba(0, 0, 0, 0.60),
-    0 0  40px rgba(41, 151, 255, 0.05),
+    0 0  40px rgba(16, 185, 129, 0.05),
     0 2px 8px  rgba(0, 0, 0, 0.40) !important;
   transform: translateY(-1px);
 }
 .ds-card.active {
-  border-color: rgba(41, 151, 255, 0.35) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.07) inset,
-    0 0 0  1px rgba(41, 151, 255, 0.12),
-    0 8px 32px rgba(41, 151, 255, 0.10) !important;
+    0 0 0  1px rgba(16, 185, 129, 0.12),
+    0 8px 32px rgba(16, 185, 129, 0.10) !important;
 }
 .ds-card.ctc {
   border-color: rgba(191, 90, 242, 0.18) !important;

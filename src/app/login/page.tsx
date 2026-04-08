@@ -81,7 +81,34 @@ function LoginPageContent() {
     });
     setSplash('welcome');
     setTimeout(() => setSplash('verified'), 3000);
-    setTimeout(() => { setSplash('out'); router.push('/dashboard'); }, 7000);
+    setTimeout(() => {
+      setSplash('out');
+
+      // ── Bridge transition: show the persistent HTML splash as an overlay ──
+      // This lives outside React tree (in layout.tsx <body>) so it survives
+      // page navigation, eliminating the flicker gap between login unmount
+      // and ClientLayout mount.
+      const htmlSplash = document.getElementById('__stc_splash');
+      if (htmlSplash) {
+        // Instant show (no transition) so it covers the login splash immediately
+        htmlSplash.style.transition = 'none';
+        htmlSplash.style.opacity = '1';
+        htmlSplash.style.pointerEvents = 'none';
+        htmlSplash.classList.remove('hide');
+        // Restore transition in next frame so ClientLayout can fade it out smoothly
+        requestAnimationFrame(() => {
+          htmlSplash.style.transition = '';
+        });
+      }
+
+      // Tell ClientLayout to skip its own dark splash and auth-check delays —
+      // session is already valid since we literally just logged in.
+      sessionStorage.setItem('stc_from_login', '1');
+
+      // Navigate after a single frame — the login page can unmount freely now
+      // because __stc_splash is covering everything above it (z-index: 99999).
+      setTimeout(() => router.push('/dashboard'), 50);
+    }, 7000);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -396,8 +423,10 @@ function LoginPageContent() {
           pointer-events: none;
         }
         @keyframes sp-fade-out { from { opacity: 1; } to { opacity: 0; } }
-        .splash-enter { animation: sp-in 0.45s ease forwards; }
-        @keyframes sp-in { from { opacity: 0; } to { opacity: 1; } }
+        /* splash-enter: NO fade-in — splash must cover the login form instantly.
+           Fading from opacity:0 exposes the body background (#0a0a0a in dark mode)
+           for the duration of the animation, causing the black flicker. */
+        .splash-enter { opacity: 1; }
 
         .sp-icon-wrap {
           width: 76px; height: 76px; border-radius: 22px;
@@ -542,8 +571,16 @@ function LoginPageContent() {
         </div>
       )}
 
-      {mounted && splash === 'hidden' && (
-        <div className="lr-page">
+      {mounted && (
+        <div
+          className="lr-page"
+          style={splash !== 'hidden' ? {
+            // Keep in DOM — avoids the unmount gap that exposes the body background.
+            // The splash overlay (z-index: 200) sits on top; this is invisible to the user.
+            visibility: 'hidden',
+            pointerEvents: 'none',
+          } : undefined}
+        >
           {/* Language Selector */}
           <div className="lang-selector" ref={langRef}>
             <button 

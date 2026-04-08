@@ -5,6 +5,7 @@ import { api, type ProfileBalance } from '@/lib/api';
 import { storage, isSessionValid, sessionLogout, getAuthToken } from '@/lib/storage';
 import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib/i18n';
 import { LanguageSheet } from '@/components/LanguageSelector';
+import { useDarkMode } from '@/lib/DarkModeContext';
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -130,6 +131,7 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
 function ProfilePageContent() {
   const router = useRouter();
   const { t, language, formatNumber: fmtNum } = useLanguage();
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [isLoading, setIsLoading]             = useState(true);
   const [profile, setProfile]                 = useState<UserProfileData | null>(null);
   const [balance, setBalance]                 = useState<ProfileBalance | null>(null);
@@ -507,17 +509,54 @@ function ProfilePageContent() {
           <div>
             <SectionLabel>{t('profile.settings')}</SectionLabel>
             <Card>
+              {/* Dark Mode Toggle for Dashboard */}
+              <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px 10px 14px', borderBottom: '1px solid rgba(60,60,67,0.07)', gap: 12 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 7, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                </div>
+                <span style={{ flex: 1, fontSize: 15, color: '#1c1c1e' }}>Dark Mode (Dashboard)</span>
+                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={isDarkMode} 
+                    onChange={toggleDarkMode}
+                    style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                  />
+                  <div style={{
+                    width: 51,
+                    height: 31,
+                    borderRadius: 31,
+                    position: 'relative',
+                    transition: 'all 0.3s',
+                    background: isDarkMode ? '#10B981' : 'rgba(120,120,128,0.16)',
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: 2,
+                      width: 27,
+                      height: 27,
+                      borderRadius: '50%',
+                      transition: 'left 0.3s',
+                      left: isDarkMode ? 22 : 2,
+                      background: '#fff',
+                      boxShadow: '0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06)',
+                    }}/>
+                  </div>
+                </label>
+              </div>
               {/* Language Selector */}
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                iconBg="linear-gradient(135deg, #007aff, #5ac8fa)" 
+                iconBg="linear-gradient(135deg, #10B981, #34D399)" 
                 label={t('language.title')} 
                 value={t(`language.${language === 'en' ? 'english' : language === 'id' ? 'indonesian' : 'russian'}`).toLowerCase()}
                 onClick={() => setLangSheetOpen(true)} 
               />
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                iconBg="#007aff" label={t('common.currency')} value={currencyLoading ? '…' : currency}
+                iconBg="#10B981" label={t('common.currency')} value={currencyLoading ? '…' : currency}
                 onClick={() => currencies.length > 0 && setSheetOpen(true)} chevron={currencies.length > 0} last
               />
             </Card>
@@ -538,14 +577,52 @@ function ProfilePageContent() {
           </div>
 
           <div className="pf-mob-only">
-            {/* Mobile Language Selector */}
+            {/* Mobile Dark Mode + Language */}
             <Card mb={12}>
+              {/* Dark Mode Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px 10px 14px', borderBottom: '1px solid rgba(60,60,67,0.07)', gap: 12 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 7, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                </div>
+                <span style={{ flex: 1, fontSize: 15, color: '#1c1c1e' }}>Dark Mode</span>
+                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={isDarkMode} 
+                    onChange={toggleDarkMode}
+                    style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                  />
+                  <div style={{
+                    width: 51,
+                    height: 31,
+                    borderRadius: 31,
+                    position: 'relative',
+                    transition: 'all 0.3s',
+                    background: isDarkMode ? '#10B981' : 'rgba(120,120,128,0.16)',
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: 2,
+                      width: 27,
+                      height: 27,
+                      borderRadius: '50%',
+                      transition: 'left 0.3s',
+                      left: isDarkMode ? 22 : 2,
+                      background: '#fff',
+                      boxShadow: '0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06)',
+                    }}/>
+                  </div>
+                </label>
+              </div>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                iconBg="linear-gradient(135deg, #007aff, #5ac8fa)" 
+                iconBg="linear-gradient(135deg, #10B981, #34D399)" 
                 label={t('language.title')} 
                 value={t(`language.${language === 'en' ? 'english' : language === 'id' ? 'indonesian' : 'russian'}`).toLowerCase()}
                 onClick={() => setLangSheetOpen(true)} 
+                last
               />
             </Card>
             <Card>
@@ -570,10 +647,14 @@ function ProfilePageContent() {
 // ─────────────────────────────────────────────
 // EXPORT WITH PROVIDER
 // ─────────────────────────────────────────────
+import { DarkModeProvider } from '@/lib/DarkModeContext';
+
 export default function ProfilePage() {
   return (
-    <LanguageProvider>
-      <ProfilePageContent />
-    </LanguageProvider>
+    <DarkModeProvider>
+      <LanguageProvider>
+        <ProfilePageContent />
+      </LanguageProvider>
+    </DarkModeProvider>
   );
 }

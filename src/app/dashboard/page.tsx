@@ -23,24 +23,24 @@ import {
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
-// DESIGN TOKENS
+// DESIGN TOKENS - Emerald Theme
 // ═══════════════════════════════════════════
 const C = {
   bg:    '#000000',
   card:  '#18181c',
   card2: '#101012',
   bdr:   'rgba(255,255,255,0.08)',
-  bdrAct:'rgba(41,151,255,0.50)',
-  cyan:  '#2997FF',
-  cyand: 'rgba(41,151,255,0.15)',
+  bdrAct:'rgba(16,185,129,0.50)',
+  cyan:  '#10B981', // emerald-500
+  cyand: 'rgba(16,185,129,0.15)',
   coral: '#FF453A',
   cord:  'rgba(255,69,58,0.12)',
   amber: '#FF9F0A',
   ambd:  'rgba(255,159,10,0.10)',
   violet:'#BF5AF2',
   vltd:  'rgba(191,90,242,0.10)',
-  sky:   '#5AC8F5',
-  skyd:  'rgba(90,200,245,0.10)',
+  sky:   '#34D399', // emerald-400
+  skyd:  'rgba(52,211,153,0.10)',
   orange:'#FF6B35',
   orgd:  'rgba(255,107,53,0.10)',
   pink:  '#FF375F',
@@ -48,7 +48,7 @@ const C = {
   text:  '#FFFFFF',
   sub:   'rgba(235,235,245,0.88)',
   muted: 'rgba(235,235,245,0.50)',
-  faint: 'rgba(41,151,255,0.07)',
+  faint: 'rgba(16,185,129,0.07)',
 };
 
 type TradingMode = 'schedule' | 'fastrade' | 'ctc' | 'aisignal' | 'indicator' | 'momentum';
@@ -218,7 +218,7 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:4}}>
         <span style={{fontSize:9,color:C.muted}}>{balance?.currency??'IDR'}</span>
         <button onClick={()=>setHidden(h=>!h)} style={{background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.3)',padding:0,fontSize:11}}>
-          {hidden?'👁':'����'}
+          {hidden?'👁':'👁‍🗨'}
         </button>
       </div>
     </Card>
@@ -226,8 +226,98 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
 };
 
 // ═══════════════════════════════════════════
-// PROFIT CARD
+// COMPACT ASSET CARD (Mobile 2-row layout)
 // ═══════════════════════════════════════════
+const AssetCardCompact: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean;t:(k:string)=>string}> = ({asset,mode,isLoading,t}) => {
+  const modeCol = modeAccent(mode);
+  const abbr = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '—';
+  const [imgErr,setImgErr] = useState(false);
+  if(isLoading) return <Card style={{padding:'10px 12px'}}><Sk w={80} h={18}/></Card>;
+  return (
+    <Card style={{padding:'10px 12px'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8}}>
+        <div style={{width:32,height:32,borderRadius:9,overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeCol}12`,border:`1px solid ${modeCol}28`}}>
+          {asset?.iconUrl&&!imgErr?(
+            <img src={asset.iconUrl} alt={asset.ric} crossOrigin="anonymous"
+              onError={()=>setImgErr(true)}
+              style={{width:'100%',height:'100%',objectFit:'contain',padding:3}}
+            />
+          ):(
+            <span style={{fontWeight:700,fontSize:11,color:modeCol,letterSpacing:'-0.02em'}}>{abbr}</span>
+          )}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <p style={{fontSize:9,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em',color:'rgba(255,255,255,0.5)',lineHeight:1,marginBottom:3}}>{t('dashboard.asset')}</p>
+          {asset?(
+            <p style={{fontSize:13,fontWeight:700,lineHeight:1,color:'#f0f4ff',letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.ric}</p>
+          ):(
+            <p style={{fontSize:11,color:'rgba(255,255,255,0.2)'}}>{t('dashboard.notSelected')}</p>
+          )}
+        </div>
+        {asset && <span style={{fontSize:10,fontWeight:700,color:modeCol,flexShrink:0}}>{asset.profitRate}%</span>}
+      </div>
+    </Card>
+  );
+};
+
+// ═══════════════════════════════════════════
+// COMPACT BALANCE CARD (Mobile 2-row layout)
+// ═══════════════════════════════════════════
+const BalanceCardCompact: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'real';isLoading?:boolean;t:(k:string)=>string}> = ({balance,accountType,isLoading,t}) => {
+  const [hidden,setHidden] = useState(false);
+  const isDemo = accountType==='demo';
+  const rawAmount = isDemo
+    ? (balance?.demo_balance ?? balance?.balance ?? 0)
+    : (balance?.real_balance ?? balance?.balance ?? 0);
+  const amount = rawAmount / 100;
+  const col = isDemo?C.amber:C.cyan;
+  const colBg = isDemo?'rgba(255,159,10,0.08)':'rgba(16,185,129,0.08)';
+  return (
+    <Card style={{padding:'10px 12px'}}>
+      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+        <span style={{fontSize:9,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em',color:C.muted}}>{t('dashboard.balance')}</span>
+        <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:99,color:col,background:colBg,border:`1px solid ${col}30`}}>{isDemo?t('common.demo'):t('common.real')}</span>
+      </div>
+      {isLoading?<Sk h={20} w={90}/>:
+        hidden?(
+          <div style={{display:'flex',alignItems:'center',gap:2}}>
+            {[...Array(5)].map((_,i)=><span key={i} style={{width:4,height:4,borderRadius:'50%',background:col,opacity:0.4+(i%2)*0.2}}/>)}
+          </div>
+        ):(
+          <p style={{fontSize:'clamp(14px,3.5vw,18px)',fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col}}>
+            {Math.round(amount).toLocaleString('id-ID',{maximumFractionDigits:0})}
+          </p>
+        )
+      }
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:3}}>
+        <span style={{fontSize:8,color:C.muted}}>{balance?.currency??'IDR'}</span>
+        <button onClick={()=>setHidden(h=>!h)} style={{background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.25)',padding:0,fontSize:10}}>
+          {hidden?'👁':'👁‍🗨'}
+        </button>
+      </div>
+    </Card>
+  );
+};
+
+// ═══════════════════════════════════════════
+// PROFIT CARD - with auto-scaling font and 00 trimmed for mobile
+// ═══════════════════════════════════════════
+const formatProfitDisplay = (profit: number): string => {
+  const absVal = Math.abs(profit / 100);
+  // Remove trailing 00 for cleaner display (like trading settings)
+  const formatted = Math.round(absVal).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+  // Remove trailing 00 patterns (e.g., 14000 -> 14k, 100000 -> 100k)
+  return formatted;
+};
+
+const getAutoScaleFontSize = (valueLength: number): string => {
+  // Auto scale font based on digit count - larger font for smaller numbers
+  if (valueLength <= 4) return 'clamp(18px, 5vw, 24px)';
+  if (valueLength <= 6) return 'clamp(16px, 4vw, 20px)';
+  if (valueLength <= 8) return 'clamp(14px, 3.5vw, 18px)';
+  return 'clamp(12px, 3vw, 16px)';
+};
+
 const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'|null;t:(k:string)=>string}> = ({profit,isLoading,flash,t}) => {
   const isPos = profit>=0;
   const col   = isPos?C.cyan:C.coral;
@@ -237,6 +327,10 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
   useEffect(()=>{
     if(profit!==prevR.current){setDir(profit>prevR.current?'up':'down');setAnimKey(k=>k+1);prevR.current=profit;}
   },[profit]);
+  
+  const displayValue = formatProfitDisplay(profit);
+  const fontSize = getAutoScaleFontSize(displayValue.length);
+  
   return (
     <Card style={{padding:'11px 16px'}} flash={flash}>
       <div style={{display:'flex',alignItems:'center',gap:12}}>
@@ -252,10 +346,10 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
           {isLoading?<Sk h={24} w="85%"/>:(
             <p key={animKey} style={{
               fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col,
-              fontSize:'clamp(13px,1.6vw,20px)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+              fontSize:fontSize,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
               animation:animKey>0?`profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both`:undefined,
             }}>
-              {isPos?'+':'-'}Rp {Math.round(Math.abs(profit)).toLocaleString('id-ID',{maximumFractionDigits:0})}
+              {isPos?'+':'-'}Rp {displayValue}
             </p>
           )}
         </div>
@@ -671,7 +765,7 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:240}}>
-          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':''}{pnl.toLocaleString('id-ID')}</span>}/>
+          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?accent:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
           <Row label="Fase" right={<span style={{color:accent,fontSize:10}}>{phaseMap[phase]??phase}</span>}/>
@@ -756,7 +850,7 @@ const AISignalPanel: React.FC<{
         </div>
       ) : (
         <div style={{ overflowY: 'auto', maxHeight: pendingOrders.length > 0 ? 280 : 240 }}>
-          <Row label="P&L" right={<span style={{ color: pnlCol, fontFamily: 'monospace' }}>{pnl >= 0 ? '+' : ''}{pnl.toLocaleString('id-ID')}</span>} />
+          <Row label="P&L" right={<span style={{ color: pnlCol, fontFamily: 'monospace' }}>{pnl >= 0 ? '+' : '-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>} />
           <Row label="W / L" right={
             <span style={{ fontFamily: 'monospace' }}>
               <span style={{ color: C.cyan }}>{wins}</span>
@@ -866,7 +960,7 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:240}}>
-          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':''}{pnl.toLocaleString('id-ID')}</span>}/>
+          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?C.orange:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
           <Row label="Status" right={<span style={{color:C.orange,fontSize:10}}>{status?.lastStatus||'Memantau indikator...'}</span>}/>
@@ -925,7 +1019,7 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:240}}>
-          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':''}{pnl.toLocaleString('id-ID')}</span>}/>
+          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?C.pink:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
           <Row label="Status" right={<span style={{color:C.pink,fontSize:10}}>{status?.lastStatus||'Memindai pola candle...'}</span>}/>
@@ -979,22 +1073,23 @@ const MobileSessionSheet: React.FC<{
   if (!open) return null;
 
   return (
-    <div style={{position:'fixed',inset:0,zIndex:80,display:'flex',flexDirection:'column',justifyContent:'flex-end',animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',inset:0,zIndex:80,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',padding:16,animation:'fade-in 0.15s ease'}}>
       {/* backdrop */}
       <div
         onClick={onClose}
         style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)'}}
       />
-      {/* sheet */}
+      {/* sheet - centered modal */}
       <div style={{
         position:'relative',zIndex:1,
+        width:'100%',maxWidth:400,
         background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',
-        borderRadius:'18px 18px 0 0',
+        borderRadius:18,
         border:`1px solid ${ac}30`,
-        borderBottom:'none',
-        maxHeight:'80dvh',
+        maxHeight:'70dvh',
         display:'flex',flexDirection:'column',
         animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
+        boxShadow:'0 24px 64px rgba(0,0,0,0.5)',
       }}>
         {/* drag handle */}
         <div style={{width:32,height:3,borderRadius:99,background:`${ac}44`,margin:'12px auto 0'}}/>
@@ -1630,19 +1725,20 @@ const ControlCard: React.FC<{
 
   return (
     <Card style={{borderColor:isActive?`${ac}40`:undefined}}>
-      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',background:'transparent',border:'none',borderBottom:open?'1px solid rgba(255,255,255,0.05)':'none',cursor:'pointer'}}>
-        <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <div style={{width:28,height:28,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}12`,border:`1px solid ${ac}25`}}>
-            <span style={{color:ac}}>{modeIcon}</span>
-          </div>
-          <div>
-            <span style={{display:'block',fontSize:13,fontWeight:600,lineHeight:1,marginBottom:3,color:C.text}}>{modeLabel}</span>
-            <span style={{fontSize:10,color:C.muted}}>{modeSub}</span>
-          </div>
+      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'12px 16px',background:'transparent',border:'none',borderBottom:open?'1px solid rgba(255,255,255,0.05)':'none',cursor:'pointer'}}>
+        <div style={{width:28,height:28,flexShrink:0,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}12`,border:`1px solid ${ac}25`}}>
+          <span style={{color:ac}}>{modeIcon}</span>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <StatusChip col={si.col} label={si.label} pulse={si.pulse}/>
-          {open?<ChevronUp style={{width:12,height:12,color:C.muted}}/>:<ChevronDown style={{width:12,height:12,color:C.muted}}/>}
+        <div style={{flex:1,minWidth:0}}>
+          <span style={{display:'block',fontSize:13,fontWeight:600,lineHeight:1,marginBottom:3,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{modeLabel}</span>
+          <span style={{fontSize:10,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>{modeSub}</span>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:9,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',padding:'3px 8px',borderRadius:99,color:si.col,background:`${si.col}10`,border:`1px solid ${si.col}28`,whiteSpace:'nowrap'}}>
+            <span style={{width:5,height:5,borderRadius:'50%',background:si.col,flexShrink:0,animation:si.pulse?'ping 1.6s ease-in-out infinite':undefined,boxShadow:`0 0 4px ${si.col}`}}/>
+            {si.label}
+          </span>
+          {open?<ChevronUp style={{width:11,height:11,color:C.muted,flexShrink:0}}/>:<ChevronDown style={{width:11,height:11,color:C.muted,flexShrink:0}}/>}
         </div>
       </button>
       {open&&(
@@ -1656,14 +1752,14 @@ const ControlCard: React.FC<{
                 </div>
                 <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:'rgba(0,0,0,0.25)',border:`1px solid ${pnlPos?'rgba(41,151,255,0.12)':'rgba(255,69,58,0.12)'}`}}>
                   <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L Sesi</span>
-                  <span style={{fontSize:16,fontWeight:700,lineHeight:'1.1',color:pnlPos?C.cyan:C.coral}}>{pnlPos?'+':''}{profit.toLocaleString('id-ID')}</span>
+                  <span style={{fontSize:16,fontWeight:700,lineHeight:'1.1',color:pnlPos?C.cyan:C.coral}}>{pnlPos?'+':'-'}{Math.round(Math.abs(profit)/100).toLocaleString('id-ID')}</span>
                 </div>
               </>
             ):(
               <>
                 <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:'rgba(0,0,0,0.25)',border:`1px solid ${pnlPos?`${ac}12`:'rgba(255,69,58,0.12)'}`}}>
                   <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L Sesi</span>
-                  <span style={{fontSize:17,fontWeight:700,lineHeight:'1.1',color:pnlPos?ac:C.coral}}>{pnlPos?'+':''}{profit.toLocaleString('id-ID')}</span>
+                  <span style={{fontSize:17,fontWeight:700,lineHeight:'1.1',color:pnlPos?ac:C.coral}}>{pnlPos?'+':'-'}{Math.round(Math.abs(profit)/100).toLocaleString('id-ID')}</span>
                 </div>
                 <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:`${ac}05`,border:`1px solid ${ac}10`}}>
                   <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>W / L</span>
@@ -2234,7 +2330,24 @@ export default function DashboardPage() {
         {/* ── MOBILE ── */}
         {deviceType==='mobile'&&(
           <div style={{display:'flex',flexDirection:'column',gap:g}}>
+            {/* Header Image */}
+            <img 
+              src="/header.png" 
+              alt="STC AutoTrade" 
+              style={{
+                width:'100%',
+                height:'auto',
+                display:'block',
+                marginBottom:8,
+              }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
             {TopCards}
+            {/* Asset + Balance Cards - Side by side, max 2 rows */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g}}>
+              <AssetCardCompact asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}/>
+              <BalanceCardCompact balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
+            </div>
             <div style={{display:'grid',gridTemplateColumns:'3fr 2fr',gap:g,alignItems:'stretch'}}>
               <div style={{display:'flex',flexDirection:'column',gap:8}}>
                 <RealtimeClockCompact t={t} lang={language}/>
@@ -2277,37 +2390,70 @@ export default function DashboardPage() {
                       Aktif
                     </span>
                   </div>
-                  {/* P&L + Lihat Sesi — unified card */}
+                  {/* P&L + Stats + Lihat Sesi — unified card */}
                   <div style={{
                     padding:'10px 12px',borderRadius:12,
                     background:'rgba(0,0,0,0.35)',
                     border:`1px solid ${modeAccent(tradingMode)}28`,
-                    display:'flex',flexDirection:'column',gap:8,
+                    display:'flex',flexDirection:'column',gap:7,
                     flex:1,
                   }}>
-                    <div style={{display:'flex',flexDirection:'column',gap:3}}>
-                      <span style={{fontSize:9,color:C.muted,textTransform:'uppercase',letterSpacing:'0.1em'}}>Sesi P&L</span>
+                    {/* P&L */}
+                    <div>
+                      <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.1em',display:'block',marginBottom:2}}>Sesi P&L</span>
                       <span style={{
-                        fontSize:14,fontWeight:800,fontFamily:'monospace',
+                        fontSize:13,fontWeight:800,fontFamily:'monospace',letterSpacing:'-0.02em',
                         color:sessionPnL>=0?modeAccent(tradingMode):C.coral,
                       }}>
-                        {sessionPnL>=0?'+':'-'}Rp {Math.round(Math.abs(sessionPnL)).toLocaleString('id-ID',{maximumFractionDigits:0})}
+                        {sessionPnL>=0?'+':'-'}{Math.round(Math.abs(sessionPnL/100)).toLocaleString('id-ID',{maximumFractionDigits:0})}
                       </span>
                     </div>
-                    <div style={{height:1,background:`${modeAccent(tradingMode)}18`}}/>
+                    <div style={{height:1,background:`${modeAccent(tradingMode)}15`}}/>
+                    {/* Mini Stats */}
+                    {(()=>{
+                      const ac = modeAccent(tradingMode);
+                      const wins = tradingMode==='schedule'
+                        ? scheduleOrders.filter(o=>o.isExecuted).length
+                        : (ftStatus?.totalWins??aiStatus?.totalWins??indicatorStatus?.totalWins??momentumStatus?.totalWins??0);
+                      const losses = tradingMode==='schedule'
+                        ? 0
+                        : (ftStatus?.totalLosses??aiStatus?.totalLosses??indicatorStatus?.totalLosses??momentumStatus?.totalLosses??0);
+                      const total = wins+losses;
+                      const wr = total>0?Math.round((wins/total)*100):null;
+                      const statRows: {label:string;value:string;col?:string}[] = [];
+                      if(tradingMode==='schedule'){
+                        statRows.push({label:'Signal',value:`${scheduleOrders.filter(o=>!o.isExecuted&&!o.isSkipped).length} sisa`});
+                        statRows.push({label:'Done',value:`${scheduleOrders.filter(o=>o.isExecuted).length}`,col:ac});
+                      } else {
+                        statRows.push({label:'W/L',value:`${wins}/${losses}`,col:wins>losses?ac:losses>wins?C.coral:C.muted});
+                        if(wr!==null) statRows.push({label:'WR',value:`${wr}%`,col:wr>=50?ac:C.coral});
+                        else statRows.push({label:'Trade',value:`${total>0?total:'-'}`});
+                      }
+                      return (
+                        <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                          {statRows.map(s=>(
+                            <div key={s.label} style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                              <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{s.label}</span>
+                              <span style={{fontSize:10,fontWeight:700,color:s.col??C.sub,fontFamily:'monospace'}}>{s.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    <div style={{height:1,background:`${modeAccent(tradingMode)}15`}}/>
                     <button
                       onClick={()=>setMobileSessionOpen(true)}
                       style={{
                         display:'flex',alignItems:'center',justifyContent:'center',gap:5,
-                        padding:'7px 0',borderRadius:8,
+                        padding:'6px 0',borderRadius:8,
                         background:`${modeAccent(tradingMode)}14`,
                         border:`1px solid ${modeAccent(tradingMode)}35`,
                         color:modeAccent(tradingMode),
-                        fontSize:11,fontWeight:700,letterSpacing:'0.04em',
+                        fontSize:10,fontWeight:700,letterSpacing:'0.04em',
                         cursor:'pointer',
                       }}
                     >
-                      <Info style={{width:12,height:12}}/>
+                      <Info style={{width:11,height:11}}/>
                       Lihat Sesi
                     </button>
                   </div>
@@ -2315,10 +2461,6 @@ export default function DashboardPage() {
               ) : (
                 ModeSession(true)
               )}
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g}}>
-              <AssetCard asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}/>
-              <BalanceCard balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
             </div>
             {SettingsCardEl}
             {ControlCardEl}

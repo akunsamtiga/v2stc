@@ -666,7 +666,7 @@ const translations: Record<Language, Translations> = {
       localTime: 'Waktu Lokal',
       live: 'Live',
       balance: 'Saldo',
-      profitToday: 'Profit Hari Ini',
+      profitToday: 'Profit Harian',
       asset: 'Aset',
       notSelected: 'Belum dipilih',
       selectAsset: 'Pilih Aset',
