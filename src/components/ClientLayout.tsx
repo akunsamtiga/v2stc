@@ -8,16 +8,19 @@ import { LanguageProvider } from '@/lib/i18n';
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 // ✅ CONFIGURABLE: Auth check settings
-const AUTH_CHECK_RETRIES = 5;        // Ditambah dari 3 ke 5
-const AUTH_CHECK_DELAY = 400;        // Ditambah dari 300ms ke 400ms
-const INITIAL_DELAY = 200;           // Ditambah dari 100ms ke 200ms untuk WebView init
-const CAPACITOR_EXTRA_DELAY = 300;   // Extra delay untuk Capacitor native app
+const AUTH_CHECK_RETRIES = 5;
+const AUTH_CHECK_DELAY = 400;
+const INITIAL_DELAY = 200;
+const CAPACITOR_EXTRA_DELAY = 300;
+const SPLASH_MIN_DURATION = 800;     // Minimum splash screen duration untuk smooth UX
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
-  const authCheckRef = useRef(false);  // Prevent double auth check
+  const [fadeOut, setFadeOut] = useState(false);  // State untuk fade animation
+  const authCheckRef = useRef(false);
+  const splashStartRef = useRef(Date.now());
 
   const isPublic = PUBLIC_ROUTES.some(
     route => pathname === route || pathname.startsWith(`${route}/`)
@@ -36,9 +39,17 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     const checkAuth = async () => {
       try {
-        // Halaman publik: langsung tampilkan
+        // Halaman publik: tampilkan dengan smooth transition
         if (isPublic) {
-          setReady(true);
+          // Minimal delay untuk smooth UX
+          const elapsed = Date.now() - splashStartRef.current;
+          const remaining = Math.max(0, 500 - elapsed); // Shorter delay untuk public pages
+          
+          setTimeout(() => {
+            setFadeOut(true);
+            setTimeout(() => setReady(true), 300);
+          }, remaining);
+          
           clearTimeout(fallback);
           return;
         }
@@ -86,7 +97,16 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           router.replace('/login');
         }
       } finally {
-        setReady(true);
+        // Ensure minimum splash duration for smooth UX
+        const elapsed = Date.now() - splashStartRef.current;
+        const remaining = Math.max(0, SPLASH_MIN_DURATION - elapsed);
+        
+        setTimeout(() => {
+          setFadeOut(true);
+          // Wait for fade animation before showing content
+          setTimeout(() => setReady(true), 300);
+        }, remaining);
+        
         clearTimeout(fallback);
       }
     };
@@ -104,25 +124,119 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('stc:unauthorized', handleUnauthorized);
   }, [router]);
 
+  // Hide initial HTML splash screen when React is ready
+  useEffect(() => {
+    if (ready) {
+      const htmlSplash = document.getElementById('__stc_splash');
+      if (htmlSplash) {
+        htmlSplash.classList.add('hide');
+        // Remove from DOM after fade
+        setTimeout(() => htmlSplash.remove(), 350);
+      }
+    }
+  }, [ready]);
+
   if (!ready) {
     return (
-      <div style={{
-        display: 'flex', height: '100dvh',
-        alignItems: 'center', justifyContent: 'center',
-        background: '#f2f2f7',
-        fontFamily: "-apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif",
-        WebkitFontSmoothing: 'antialiased',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6e6e73', fontSize: 14 }}>
-          <span style={{
-            width: 20, height: 20,
-            border: '2px solid rgba(0,0,0,0.10)', borderTopColor: '#007aff',
-            borderRadius: '50%', display: 'inline-block',
-            animation: 'cl-spin 0.7s linear infinite', flexShrink: 0,
-          }} />
-          Loading...
+      <div 
+        className="stc-splash"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%)',
+          fontFamily: "-apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif",
+          WebkitFontSmoothing: 'antialiased',
+          zIndex: 9999,
+          opacity: fadeOut ? 0 : 1,
+          transition: 'opacity 0.3s ease-out',
+        }}
+      >
+        {/* Logo / Brand */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 24,
+        }}>
+          {/* App Icon */}
+          <div style={{
+            width: 80,
+            height: 80,
+            borderRadius: 20,
+            background: 'linear-gradient(135deg, #00d4aa 0%, #00a080 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(0, 212, 170, 0.3)',
+            animation: 'stc-pulse 2s ease-in-out infinite',
+          }}>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+              <polyline points="16 7 22 7 22 13" />
+            </svg>
+          </div>
+          
+          {/* App Name */}
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{
+              fontSize: 28,
+              fontWeight: 700,
+              color: '#ffffff',
+              margin: 0,
+              letterSpacing: '-0.5px',
+            }}>
+              STC AutoTrade
+            </h1>
+            <p style={{
+              fontSize: 14,
+              color: 'rgba(255,255,255,0.5)',
+              margin: '8px 0 0 0',
+            }}>
+              Smart Trading Automation
+            </p>
+          </div>
         </div>
-        <style>{`@keyframes cl-spin { to { transform: rotate(360deg); } }`}</style>
+
+        {/* Loading Indicator */}
+        <div style={{
+          position: 'absolute',
+          bottom: 80,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 16,
+        }}>
+          {/* Spinner */}
+          <div style={{
+            width: 32,
+            height: 32,
+            border: '3px solid rgba(255,255,255,0.1)',
+            borderTopColor: '#00d4aa',
+            borderRadius: '50%',
+            animation: 'stc-spin 0.8s linear infinite',
+          }} />
+          <span style={{
+            fontSize: 13,
+            color: 'rgba(255,255,255,0.4)',
+            letterSpacing: '0.5px',
+          }}>
+            Memuat...
+          </span>
+        </div>
+
+        <style>{`
+          @keyframes stc-spin {
+            to { transform: rotate(360deg); }
+          }
+          @keyframes stc-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -135,7 +249,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           height: '100dvh',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
-          paddingTop: 'var(--sat)',
         } as React.CSSProperties}
       >
         {children}

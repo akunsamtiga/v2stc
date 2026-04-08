@@ -2,7 +2,72 @@
 3:I[6600,["338","static/chunks/338-d0b6602b1cbd418c.js","178","static/chunks/app/profile/page-73728b2d48bb168b.js"],"default"]
 4:I[9275,[],""]
 5:I[1343,[],""]
-6:I[9617,["291","static/chunks/291-3c475ca474fd72f7.js","338","static/chunks/338-d0b6602b1cbd418c.js","185","static/chunks/app/layout-ea1b72aeb93e02c6.js"],"ClientLayout"]
-0:["C-UrVLXsfI6pULiJCS-LH",[[["",{"children":["profile",{"children":["__PAGE__",{}]}]},"$undefined","$undefined",true],["",{"children":["profile",{"children":["__PAGE__",{},[["$L1",["$","$L2",null,{"props":{"params":{},"searchParams":{}},"Component":"$3"}]],null],null]},["$","$L4",null,{"parallelRouterKey":"children","segmentPath":["children","profile","children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined","styles":null}],null]},[["$","html",null,{"lang":"id","suppressHydrationWarning":true,"children":[["$","head",null,{"children":[["$","meta",null,{"name":"mobile-web-app-capable","content":"yes"}],["$","meta",null,{"name":"apple-mobile-web-app-capable","content":"yes"}],["$","meta",null,{"name":"apple-mobile-web-app-status-bar-style","content":"default"}]]}],["$","body",null,{"suppressHydrationWarning":true,"children":["$","$L6",null,{"children":["$","$L4",null,{"parallelRouterKey":"children","segmentPath":["children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":"404"}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],"notFoundStyles":[],"styles":null}]}]}]]}],null],null],[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/83f6ac5a186611eb.css","precedence":"next","crossOrigin":"$undefined"}]],"$L7"]]]]
-7:[["$","meta","0",{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"}],["$","meta","1",{"charSet":"utf-8"}],["$","title","2",{"children":"STC AutoTrade"}],["$","meta","3",{"name":"description","content":"STC AutoTrade Bot Automation"}]]
+7:I[9617,["291","static/chunks/291-3c475ca474fd72f7.js","338","static/chunks/338-d0b6602b1cbd418c.js","185","static/chunks/app/layout-5f078f944e4c536a.js"],"ClientLayout"]
+6:T76f,
+  html, body { margin: 0; padding: 0; }
+
+  @media (prefers-color-scheme: light) {
+    html, body           { background: #ffffff !important; }
+    #__stc_splash        { background: #ffffff; }
+    #__stc_splash .splash-text { color: #000000; }
+    #__stc_splash .splash-dot  { background: #000000; }
+  }
+  @media (prefers-color-scheme: dark) {
+    html, body           { background: #0a0a0a !important; }
+    #__stc_splash        { background: #0a0a0a; }
+    #__stc_splash .splash-text { color: #ffffff; }
+    #__stc_splash .splash-dot  { background: #ffffff; }
+  }
+
+  #__stc_splash {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 99999;
+    transition: opacity 0.4s ease-out;
+  }
+  #__stc_splash.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #__stc_splash .splash-text {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: __stc_fadein 0.5s ease 0.1s forwards;
+  }
+
+  #__stc_splash .splash-dots {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  #__stc_splash .splash-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    animation: __stc_dot 1.4s ease-in-out infinite;
+  }
+  #__stc_splash .splash-dot:nth-child(1) { animation-delay: 0s;   }
+  #__stc_splash .splash-dot:nth-child(2) { animation-delay: 0.2s; }
+  #__stc_splash .splash-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes __stc_fadein {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 0.45; transform: translateY(0); }
+  }
+  @keyframes __stc_dot {
+    0%, 80%, 100% { opacity: 0.15; transform: scale(0.8); }
+    40%           { opacity: 1;    transform: scale(1.2); }
+  }
+0:["wSVNIzXwjtEj22Kss0f0G",[[["",{"children":["profile",{"children":["__PAGE__",{}]}]},"$undefined","$undefined",true],["",{"children":["profile",{"children":["__PAGE__",{},[["$L1",["$","$L2",null,{"props":{"params":{},"searchParams":{}},"Component":"$3"}]],null],null]},["$","$L4",null,{"parallelRouterKey":"children","segmentPath":["children","profile","children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined","styles":null}],null]},[["$","html",null,{"lang":"en","children":[["$","head",null,{"children":["$","style",null,{"dangerouslySetInnerHTML":{"__html":"$6"}}]}],["$","body",null,{"className":"font-sans antialiased","children":[["$","div",null,{"id":"__stc_splash","children":[["$","span",null,{"className":"splash-text","children":"Loading"}],["$","div",null,{"className":"splash-dots","children":[["$","span",null,{"className":"splash-dot"}],["$","span",null,{"className":"splash-dot"}],["$","span",null,{"className":"splash-dot"}]]}]]}],["$","$L7",null,{"children":["$","$L4",null,{"parallelRouterKey":"children","segmentPath":["children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":"404"}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],"notFoundStyles":[],"styles":null}]}]]}]]}],null],null],[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/acb51006011f2ec1.css","precedence":"next","crossOrigin":"$undefined"}]],"$L8"]]]]
+8:[["$","meta","0",{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"}],["$","meta","1",{"name":"theme-color","media":"(prefers-color-scheme: light)","content":"#ffffff"}],["$","meta","2",{"name":"theme-color","media":"(prefers-color-scheme: dark)","content":"#0a0a0a"}],["$","meta","3",{"charSet":"utf-8"}],["$","title","4",{"children":"STC AutoTrade"}],["$","meta","5",{"name":"description","content":"Trading Bot Automation System"}],["$","meta","6",{"name":"generator","content":"v0.app"}],["$","link","7",{"rel":"icon","href":"/icon-light-32x32.png","media":"(prefers-color-scheme: light)"}],["$","link","8",{"rel":"icon","href":"/icon-dark-32x32.png","media":"(prefers-color-scheme: dark)"}],["$","link","9",{"rel":"icon","href":"/icon.svg","type":"image/svg+xml"}],["$","link","10",{"rel":"apple-touch-icon","href":"/apple-icon.png"}]]
 1:null

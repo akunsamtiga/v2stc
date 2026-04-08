@@ -19,6 +19,7 @@ html, body {
 }
 
 body {
+  /* Hanya gunakan padding samping, tidak atas/bawah untuk full-screen */
   padding-right:  var(--sar);
   padding-left:   var(--sal);
 }

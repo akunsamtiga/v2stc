@@ -13,6 +13,7 @@ import {
 import { ChartCard } from '@/components/ChartCard';
 import AssetIcon from '@/components/common/AssetIcon';
 import { storage, isSessionValid } from '@/lib/storage';
+import { useLanguage } from '@/lib/i18n';
 import {
   Activity, AlertCircle, BarChart2, Calendar,
   ChevronDown, ChevronUp, Info, Plus,
@@ -131,52 +132,55 @@ const CtrlBtn: React.FC<{onClick:()=>void;disabled?:boolean;loading?:boolean;acc
 // ═══════════════════════════════════════════
 // CLOCK
 // ═══════════════════════════════════════════
-const RealtimeClock: React.FC = () => {
-  const [t,setT] = useState<Date|null>(null);
-  useEffect(()=>{setT(new Date());const id=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(id);},[]);
-  const fmt  = (d:Date) => d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-  const fmtD = (d:Date) => d.toLocaleDateString('id-ID',{weekday:'short',day:'2-digit',month:'short'});
-  const tz   = () => {if(!t)return'';const o=-t.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
+const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string}> = ({t:tr,lang}) => {
+  const [time,setTime] = useState<Date|null>(null);
+  useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
+  const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
+  const fmt  = (d:Date) => d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const fmtD = (d:Date) => d.toLocaleDateString(locale,{weekday:'short',day:'2-digit',month:'short'});
+  const tz   = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
   return (
     <Card style={{padding:'14px 16px',height:'100%'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-        <span style={{fontSize:11,fontWeight:500,color:C.muted}}>Waktu Lokal</span>
+        <span style={{fontSize:11,fontWeight:500,color:C.muted}}>{tr('dashboard.localTime')}</span>
         <span style={{display:'flex',alignItems:'center',gap:5}}>
           <span style={{width:6,height:6,borderRadius:'50%',background:C.coral}}/>
-          <span style={{fontSize:10,fontWeight:600,color:C.coral}}>Live</span>
+          <span style={{fontSize:10,fontWeight:600,color:C.coral}}>{tr('dashboard.live')}</span>
         </span>
       </div>
       <p suppressHydrationWarning style={{fontSize:26,fontWeight:600,letterSpacing:'-0.01em',lineHeight:1,color:C.text,marginBottom:8}}>
-        {t?fmt(t):'--:--:--'}
+        {time?fmt(time):'--:--:--'}
       </p>
       <div style={{display:'flex',justifyContent:'space-between'}}>
-        <span suppressHydrationWarning style={{fontSize:11,color:C.sub}}>{t?fmtD(t):''}</span>
+        <span suppressHydrationWarning style={{fontSize:11,color:C.sub}}>{time?fmtD(time):''}</span>
         <span suppressHydrationWarning style={{fontSize:10,color:C.muted}}>{tz()}</span>
       </div>
     </Card>
   );
 };
 
-const RealtimeClockCompact: React.FC = () => {
-  const [t,setT] = useState<Date|null>(null);
-  useEffect(()=>{setT(new Date());const id=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(id);},[]);
-  const fmt = (d:Date) => d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-  const tz  = () => {if(!t)return'';const o=-t.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
-  const fmtDay  = (d:Date) => d.toLocaleDateString('id-ID',{weekday:'short'}).toUpperCase();
-  const fmtDate = (d:Date) => d.toLocaleDateString('id-ID',{day:'2-digit',month:'short'});
+const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string}> = ({t:tr,lang}) => {
+  const [time,setTime] = useState<Date|null>(null);
+  useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
+  const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
+  const fmt = (d:Date) => d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const tz  = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
+  const fmtDay  = (d:Date) => d.toLocaleDateString(locale,{weekday:'short'}).toUpperCase();
+  const fmtDate = (d:Date) => d.toLocaleDateString(locale,{day:'2-digit',month:'short'});
+  const timeLabel = lang==='ru'?'ВРЕМЯ':lang==='en'?'TIME':'WAKTU';
   return (
     <div style={{borderRadius:8,background:'rgba(0,0,0,0.4)',border:'1px solid rgba(41,151,255,0.22)',boxShadow:'0 0 10px rgba(41,151,255,0.06)'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 10px',borderBottom:'1px solid rgba(41,151,255,0.1)'}}>
-        <span style={{fontSize:9,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>WAKTU</span>
+        <span style={{fontSize:9,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>{timeLabel}</span>
         <span style={{width:5,height:5,borderRadius:'50%',background:C.coral}}/>
       </div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 10px'}}>
-        <span suppressHydrationWarning style={{fontSize:10,fontWeight:600,color:C.muted}}>{t?fmtDay(t):'—'}</span>
+        <span suppressHydrationWarning style={{fontSize:10,fontWeight:600,color:C.muted}}>{time?fmtDay(time):'—'}</span>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <p suppressHydrationWarning style={{fontSize:16,fontWeight:600,lineHeight:1,color:C.text}}>{t?fmt(t):'--:--:--'}</p>
+          <p suppressHydrationWarning style={{fontSize:16,fontWeight:600,lineHeight:1,color:C.text}}>{time?fmt(time):'--:--:--'}</p>
           <p suppressHydrationWarning style={{fontSize:9,marginTop:3,color:C.muted}}>{tz()}</p>
         </div>
-        <span suppressHydrationWarning style={{fontSize:10,fontWeight:600,color:C.muted}}>{t?fmtDate(t):'—'}</span>
+        <span suppressHydrationWarning style={{fontSize:10,fontWeight:600,color:C.muted}}>{time?fmtDate(time):'—'}</span>
       </div>
     </div>
   );
@@ -185,7 +189,7 @@ const RealtimeClockCompact: React.FC = () => {
 // ═══════════════════════════════════════════
 // BALANCE CARD
 // ═══════════════════════════════════════════
-const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'real';isLoading?:boolean}> = ({balance,accountType,isLoading}) => {
+const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'real';isLoading?:boolean;t:(k:string)=>string}> = ({balance,accountType,isLoading,t}) => {
   const [hidden,setHidden] = useState(false);
   const isDemo = accountType==='demo';
   const rawAmount = isDemo
@@ -197,8 +201,8 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
   return (
     <Card style={{padding:'11px 14px'}}>
       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
-        <span style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted}}>Saldo</span>
-        <span style={{fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:99,color:col,background:colBg,border:`1px solid ${col}30`}}>{isDemo?'Demo':'Real'}</span>
+        <span style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted}}>{t('dashboard.balance')}</span>
+        <span style={{fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:99,color:col,background:colBg,border:`1px solid ${col}30`}}>{isDemo?t('common.demo'):t('common.real')}</span>
       </div>
       {isLoading?<Sk h={26} w={110}/>:
         hidden?(
@@ -207,14 +211,14 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
           </div>
         ):(
           <p style={{fontSize:'clamp(16px,4vw,24px)',fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col}}>
-            {amount.toLocaleString('id-ID')}
+            {Math.round(amount).toLocaleString('id-ID',{maximumFractionDigits:0})}
           </p>
         )
       }
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:4}}>
         <span style={{fontSize:9,color:C.muted}}>{balance?.currency??'IDR'}</span>
         <button onClick={()=>setHidden(h=>!h)} style={{background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.3)',padding:0,fontSize:11}}>
-          {hidden?'👁':'🙈'}
+          {hidden?'👁':'����'}
         </button>
       </div>
     </Card>
@@ -224,7 +228,7 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
 // ═══════════════════════════════════════════
 // PROFIT CARD
 // ═══════════════════════════════════════════
-const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'|null}> = ({profit,isLoading,flash}) => {
+const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'|null;t:(k:string)=>string}> = ({profit,isLoading,flash,t}) => {
   const isPos = profit>=0;
   const col   = isPos?C.cyan:C.coral;
   const prevR = useRef(profit);
@@ -237,7 +241,7 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
     <Card style={{padding:'11px 16px'}} flash={flash}>
       <div style={{display:'flex',alignItems:'center',gap:12}}>
         <div style={{display:'flex',flexDirection:'column',gap:4,flexShrink:0}}>
-          <span style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>Profit Hari Ini</span>
+          <span style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>{t('dashboard.profitToday')}</span>
           <span style={{display:'flex',alignItems:'center',gap:5,padding:'2px 7px',borderRadius:99,background:`${col}10`,border:`1px solid ${col}22`,width:'fit-content'}}>
             <span style={{width:5,height:5,borderRadius:'50%',background:col,boxShadow:`0 0 5px ${col}`,animation:'pulse 1.8s ease-in-out infinite'}}/>
             <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:col}}>24j</span>
@@ -251,7 +255,7 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
               fontSize:'clamp(13px,1.6vw,20px)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
               animation:animKey>0?`profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both`:undefined,
             }}>
-              {isPos?'+':'-'}Rp {Math.abs(profit).toLocaleString('id-ID')}
+              {isPos?'+':'-'}Rp {Math.round(Math.abs(profit)).toLocaleString('id-ID',{maximumFractionDigits:0})}
             </p>
           )}
         </div>
@@ -270,7 +274,7 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
 // ═══════════════════════════════════════════
 // ASSET CARD
 // ═══════════════════════════════════════════
-const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean}> = ({asset,mode,isLoading}) => {
+const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean;t:(k:string)=>string}> = ({asset,mode,isLoading,t}) => {
   const modeCol = modeAccent(mode);
   const abbr    = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '—';
   const [imgErr,setImgErr] = useState(false);
@@ -289,14 +293,14 @@ const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?
           )}
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <p style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:'rgba(255,255,255,0.65)',lineHeight:1,marginBottom:5}}>Aset</p>
+          <p style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:'rgba(255,255,255,0.65)',lineHeight:1,marginBottom:5}}>{t('dashboard.asset')}</p>
           {asset?(
             <>
               <p style={{fontSize:15,fontWeight:700,lineHeight:1,color:'#f0f4ff',letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.ric}</p>
               <p style={{fontSize:10,marginTop:3,color:'rgba(255,255,255,0.68)',lineHeight:1.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.name}</p>
             </>
           ):(
-            <p style={{fontSize:12,color:'rgba(255,255,255,0.2)'}}>Belum dipilih</p>
+            <p style={{fontSize:12,color:'rgba(255,255,255,0.2)'}}>{t('dashboard.notSelected')}</p>
           )}
         </div>
         {asset && <span style={{fontSize:11,fontWeight:700,color:modeCol,flexShrink:0}}>{asset.profitRate}%</span>}
@@ -944,89 +948,335 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
 };
 
 // ═══════════════════════════════════════════
-// MODE SESSION PANEL
+// MOBILE SESSION SHEET
 // ═══════════════════════════════════════════
+const MobileSessionSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  mode: TradingMode;
+  ftStatus: FastradeStatus | null;
+  ftLogs: FastradeLog[];
+  aiStatus: AISignalStatus | null;
+  aiPending: AISignalOrder[];
+  onOpenAIModal: () => void;
+  indicatorStatus: IndicatorStatus | null;
+  momentumStatus: MomentumStatus | null;
+  orders: ScheduleOrder[];
+  logs: ExecutionLog[];
+  onOpenModal: () => void;
+  isRunning: boolean;
+}> = ({
+  open, onClose, mode,
+  ftStatus, ftLogs, aiStatus, aiPending, onOpenAIModal,
+  indicatorStatus, momentumStatus, orders, logs, onOpenModal, isRunning,
+}) => {
+  const ac = modeAccent(mode);
+  const modeLabel: Record<TradingMode,string> = {
+    schedule:'Signal', fastrade:'Sesi FTT', ctc:'Sesi CTC',
+    aisignal:'AI Signal', indicator:'Indicator', momentum:'Momentum',
+  };
+
+  if (!open) return null;
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:80,display:'flex',flexDirection:'column',justifyContent:'flex-end',animation:'fade-in 0.15s ease'}}>
+      {/* backdrop */}
+      <div
+        onClick={onClose}
+        style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)'}}
+      />
+      {/* sheet */}
+      <div style={{
+        position:'relative',zIndex:1,
+        background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',
+        borderRadius:'18px 18px 0 0',
+        border:`1px solid ${ac}30`,
+        borderBottom:'none',
+        maxHeight:'80dvh',
+        display:'flex',flexDirection:'column',
+        animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
+      }}>
+        {/* drag handle */}
+        <div style={{width:32,height:3,borderRadius:99,background:`${ac}44`,margin:'12px auto 0'}}/>
+        {/* header */}
+        <div style={{
+          display:'flex',alignItems:'center',justifyContent:'space-between',
+          padding:'12px 16px',borderBottom:`1px solid ${ac}18`,flexShrink:0,
+        }}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{width:8,height:8,borderRadius:'50%',background:ac,boxShadow:`0 0 6px ${ac}`,animation:'pulse 1.6s ease-in-out infinite'}}/>
+            <span style={{fontSize:14,fontWeight:700,color:C.text}}>{modeLabel[mode]}</span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8,border:`1px solid ${ac}20`,background:`${ac}0a`,color:C.muted,cursor:'pointer'}}
+          >
+            <X style={{width:13,height:13}}/>
+          </button>
+        </div>
+        {/* content */}
+        <div style={{overflowY:'auto',flex:1,WebkitOverflowScrolling:'touch' as any}}>
+          {(mode==='fastrade'||mode==='ctc')&&(
+            <FastradePanel status={ftStatus} logs={ftLogs} isLoading={false} fillHeight={false}/>
+          )}
+          {mode==='aisignal'&&(
+            <AISignalPanel status={aiStatus} pendingOrders={aiPending} onOpenSendModal={()=>{onOpenAIModal();onClose();}} isLoading={false} fillHeight={false}/>
+          )}
+          {mode==='indicator'&&(
+            <IndicatorPanel status={indicatorStatus} isLoading={false} fillHeight={false}/>
+          )}
+          {mode==='momentum'&&(
+            <MomentumPanel status={momentumStatus} isLoading={false} fillHeight={false}/>
+          )}
+          {mode==='schedule'&&(
+            <SchedulePanel orders={orders} logs={logs} onOpenModal={()=>{onOpenModal();onClose();}} isRunning={isRunning} isLoading={false} fillHeight={false}/>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════
+// MODE SESSION PANEL — FIXED
+// ═══════════════════════════════════════════
+//
+// BUG 1 — Dropdown terpotong:
+//   Parent wrapper punya `overflow:'hidden'` → dropdown `position:absolute`
+//   ikut terpotong sehingga hanya beberapa item terlihat dan tidak bisa discroll.
+//   FIX: hapus overflow:'hidden' dari wrapper; ubah dropdown ke position:'fixed'
+//        dengan koordinat dihitung dari ref tombol agar lolos dari semua ancestor overflow.
+//
+// BUG 2 — Halaman hang saat scroll:
+//   Backdrop `position:fixed, inset:0` yang aktif saat dropdown terbuka "menelan"
+//   semua touch events termasuk scroll halaman. Perlu ditambah overscroll protection.
+//   FIX: tambah `pointer-events:'none'` pada backdrop kecuali area dropdown, dan
+//        pastikan dropdown wrapper tidak menghalangi scroll saat tertutup.
+//
+// CARA PAKAI:
+//   Ganti seluruh blok komponen ModeSessionPanel di page.tsx dengan kode di bawah.
+// ═══════════════════════════════════════════
+
+// Tambahkan useRef ke import React di baris atas page.tsx jika belum ada:
+// import React, { useState, useEffect, useCallback, useRef } from 'react';
+
 const ModeSessionPanel: React.FC<{
-  mode:TradingMode; onModeChange:(m:TradingMode)=>void; locked:boolean;
-  blockedModes:TradingMode[];
-  orders:ScheduleOrder[]; logs:ExecutionLog[]; onOpenModal:()=>void; isRunning:boolean;
-  ftStatus:FastradeStatus|null; ftLogs:FastradeLog[]; ftLoading:boolean;
-  aiStatus:AISignalStatus|null; aiPending:AISignalOrder[]; onOpenAIModal:()=>void;
-  indicatorStatus:IndicatorStatus|null;
-  momentumStatus:MomentumStatus|null;
-  fillHeight?:boolean;
-}> = ({mode,onModeChange,locked,blockedModes,orders,logs,onOpenModal,isRunning,ftStatus,ftLogs,ftLoading,aiStatus,aiPending,onOpenAIModal,indicatorStatus,momentumStatus,fillHeight}) => {
-  const [dropOpen,setDropOpen] = useState(false);
+  mode: TradingMode; onModeChange: (m: TradingMode) => void; locked: boolean;
+  blockedModes: TradingMode[];
+  orders: ScheduleOrder[]; logs: ExecutionLog[]; onOpenModal: () => void; isRunning: boolean;
+  ftStatus: FastradeStatus | null; ftLogs: FastradeLog[]; ftLoading: boolean;
+  aiStatus: AISignalStatus | null; aiPending: AISignalOrder[]; onOpenAIModal: () => void;
+  indicatorStatus: IndicatorStatus | null;
+  momentumStatus: MomentumStatus | null;
+  fillHeight?: boolean;
+}> = ({
+  mode, onModeChange, locked, blockedModes,
+  orders, logs, onOpenModal, isRunning,
+  ftStatus, ftLogs, ftLoading,
+  aiStatus, aiPending, onOpenAIModal,
+  indicatorStatus, momentumStatus, fillHeight,
+}) => {
+  const [dropOpen, setDropOpen] = useState(false);
+
+  // ✅ FIX: ref ke tombol agar posisi dropdown bisa dihitung
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
+
+  const openDrop = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setDropPos({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+    setDropOpen(v => !v);
+  };
+
+  // Tutup dropdown saat scroll atau resize agar tidak "melayang"
+  useEffect(() => {
+    if (!dropOpen) return;
+    const close = () => setDropOpen(false);
+    window.addEventListener('scroll', close, { passive: true, capture: true });
+    window.addEventListener('resize', close, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', close, { capture: true });
+      window.removeEventListener('resize', close);
+    };
+  }, [dropOpen]);
 
   const MODES = [
-    {v:'schedule' as TradingMode,label:'Signal',icon:<Calendar style={{width:12,height:12}}/>,accent:C.cyan,desc:'Order terjadwal'},
-    {v:'fastrade' as TradingMode,label:'FastTrade',icon:<Zap style={{width:12,height:12}}/>,accent:C.cyan,desc:'Auto per candle (FTT)'},
-    {v:'ctc' as TradingMode,label:'CTC',icon:<Copy style={{width:12,height:12}}/>,accent:C.violet,desc:'Copy candle 1m'},
-    {v:'aisignal' as TradingMode,label:'AI Signal',icon:<Radio style={{width:12,height:12}}/>,accent:C.sky,desc:'Sinyal dari AI/Telegram'},
-    {v:'indicator' as TradingMode,label:'Indicator',icon:<BarChart style={{width:12,height:12}}/>,accent:C.orange,desc:'SMA / EMA / RSI'},
-    {v:'momentum' as TradingMode,label:'Momentum',icon:<Waves style={{width:12,height:12}}/>,accent:C.pink,desc:'Pola candle otomatis'},
+    { v: 'schedule'  as TradingMode, label: 'Signal',    icon: <Calendar  style={{ width: 12, height: 12 }} />, accent: C.cyan,   desc: 'Order terjadwal' },
+    { v: 'fastrade'  as TradingMode, label: 'FastTrade', icon: <Zap       style={{ width: 12, height: 12 }} />, accent: C.cyan,   desc: 'Auto per candle (FTT)' },
+    { v: 'ctc'       as TradingMode, label: 'CTC',       icon: <Copy      style={{ width: 12, height: 12 }} />, accent: C.violet, desc: 'Copy candle 1m' },
+    { v: 'aisignal'  as TradingMode, label: 'AI Signal', icon: <Radio     style={{ width: 12, height: 12 }} />, accent: C.sky,    desc: 'Sinyal dari AI/Telegram' },
+    { v: 'indicator' as TradingMode, label: 'Indicator', icon: <BarChart  style={{ width: 12, height: 12 }} />, accent: C.orange, desc: 'SMA / EMA / RSI' },
+    { v: 'momentum'  as TradingMode, label: 'Momentum',  icon: <Waves     style={{ width: 12, height: 12 }} />, accent: C.pink,   desc: 'Pola candle otomatis' },
   ];
-  const active = MODES.find(m=>m.v===mode)!;
+
+  const active = MODES.find(m => m.v === mode)!;
   const ac = modeAccent(mode);
 
   return (
-    <div style={{display:'flex',flexDirection:'column',height:fillHeight?'100%':undefined,gap:6,minWidth:0,width:'100%',overflow:'hidden'}}>
-      <div style={{position:'relative',flexShrink:0}}>
-        <button type="button" onClick={()=>setDropOpen(v=>!v)} style={{
-          width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
-          padding:'8px 12px',borderRadius:12,cursor:'pointer',
-          background:dropOpen?`${ac}14`:'rgba(0,0,0,0.4)',
-          border:`1px solid ${dropOpen?`${ac}40`:'rgba(255,255,255,0.08)'}`,
-        }}>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <span style={{width:20,height:20,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}18`,color:ac}}>{active.icon}</span>
-            <span style={{fontSize:12,fontWeight:600,color:ac}}>{active.label}</span>
+    // ✅ FIX: hapus overflow:'hidden' — ini penyebab dropdown terpotong
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      height: fillHeight ? '100%' : undefined,
+      gap: 6, minWidth: 0, width: '100%',
+      // overflow:'hidden' ← DIHAPUS
+    }}>
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        {/* ✅ FIX: tambah ref ke tombol */}
+        <button
+          ref={btnRef}
+          type="button"
+          onClick={openDrop}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', padding: '8px 12px',
+            borderRadius: 12, cursor: 'pointer',
+            background: dropOpen ? `${ac}14` : 'rgba(0,0,0,0.4)',
+            border: `1px solid ${dropOpen ? `${ac}40` : 'rgba(255,255,255,0.08)'}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              width: 20, height: 20, borderRadius: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: `${ac}18`, color: ac,
+            }}>
+              {active.icon}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: ac }}>{active.label}</span>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            {locked&&<span style={{fontSize:9,padding:'1px 6px',borderRadius:99,color:ac,background:`${ac}14`,border:`1px solid ${ac}30`}}>Aktif</span>}
-            <ChevronDown style={{width:11,height:11,color:C.muted,transform:dropOpen?'rotate(180deg)':'none',transition:'transform 0.2s'}}/>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {locked && (
+              <span style={{
+                fontSize: 9, padding: '1px 6px', borderRadius: 99,
+                color: ac, background: `${ac}14`, border: `1px solid ${ac}30`,
+              }}>
+                Aktif
+              </span>
+            )}
+            <ChevronDown style={{
+              width: 11, height: 11, color: C.muted,
+              transform: dropOpen ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.2s',
+            }} />
           </div>
         </button>
-        {dropOpen&&(
+
+        {dropOpen && (
           <>
-            <div style={{position:'fixed',inset:0,zIndex:9}} onClick={()=>setDropOpen(false)}/>
-            <div style={{position:'absolute',left:0,right:0,marginTop:4,zIndex:10,borderRadius:12,overflow:'hidden',background:'linear-gradient(160deg,#161618 0%,#0e0e10 100%)',border:`1px solid rgba(41,151,255,0.18)`,boxShadow:'0 8px 32px rgba(0,0,0,0.55)',animation:'slide-up 0.15s ease'}}>
-              {MODES.map(({v,label,icon,accent,desc},idx)=>{
-                const isAct=mode===v, isLock=blockedModes.includes(v);
+            {/* ✅ FIX: backdrop hanya tutup dropdown, tidak blokir scroll halaman */}
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 49 }}
+              onClick={() => setDropOpen(false)}
+            />
+
+            {/* ✅ FIX: position:'fixed' dengan koordinat dari ref → lolos dari overflow:hidden manapun */}
+            <div style={{
+              position: 'fixed',
+              top: dropPos.top,
+              left: dropPos.left,
+              width: dropPos.width,
+              zIndex: 50,
+              borderRadius: 12,
+              // ✅ FIX: overflow:'hidden' diganti dengan overflowY:'auto' + maxHeight
+              //         agar semua opsi bisa discroll jika tidak cukup ruang layar
+              overflowY: 'auto',
+              maxHeight: `calc(100dvh - ${dropPos.top}px - 16px)`,
+              background: 'linear-gradient(160deg,#161618 0%,#0e0e10 100%)',
+              border: `1px solid rgba(41,151,255,0.18)`,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
+              animation: 'slide-up 0.15s ease',
+            }}>
+              {MODES.map(({ v, label, icon, accent, desc }, idx) => {
+                const isAct = mode === v;
+                const isLock = blockedModes.includes(v);
                 return (
-                  <button key={v} type="button" onClick={()=>{onModeChange(v);if(!isLock)setDropOpen(false);}} style={{
-                    width:'100%',display:'flex',alignItems:'center',gap:10,padding:'11px 16px',cursor:isLock?'not-allowed':'pointer',
-                    background:isAct?`${accent}10`:'transparent',
-                    borderBottom:idx<MODES.length-1?'1px solid rgba(255,255,255,0.04)':'none',
-                    borderLeft:isAct?`2px solid ${accent}`:'2px solid transparent',
-                    borderTop:'none',borderRight:'none',opacity:isLock?0.5:1,
-                  }}>
-                    <span style={{width:24,height:24,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:`${accent}15`,color:accent,flexShrink:0}}>{icon}</span>
-                    <div style={{flex:1,textAlign:'left'}}>
-                      <span style={{display:'block',fontSize:12,fontWeight:600,color:isAct?accent:C.sub}}>{label}</span>
-                      <span style={{display:'block',fontSize:10,color:C.muted}}>{desc}</span>
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => {
+                      onModeChange(v);
+                      if (!isLock) setDropOpen(false);
+                    }}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center',
+                      gap: 10, padding: '11px 16px',
+                      cursor: isLock ? 'not-allowed' : 'pointer',
+                      background: isAct ? `${accent}10` : 'transparent',
+                      borderBottom: idx < MODES.length - 1
+                        ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                      borderLeft: isAct ? `2px solid ${accent}` : '2px solid transparent',
+                      borderTop: 'none', borderRight: 'none',
+                      opacity: isLock ? 0.5 : 1,
+                    }}
+                  >
+                    <span style={{
+                      width: 24, height: 24, borderRadius: 8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `${accent}15`, color: accent, flexShrink: 0,
+                    }}>
+                      {icon}
+                    </span>
+                    <div style={{ flex: 1, textAlign: 'left' }}>
+                      <span style={{
+                        display: 'block', fontSize: 12, fontWeight: 600,
+                        color: isAct ? accent : C.sub,
+                      }}>
+                        {label}
+                      </span>
+                      <span style={{ display: 'block', fontSize: 10, color: C.muted }}>{desc}</span>
                     </div>
-                    {isAct&&<span style={{color:accent,fontSize:12}}>✓</span>}
-                    {isLock&&!isAct&&<span style={{fontSize:10,color:C.coral}}>🔒</span>}
+                    {isAct && <span style={{ color: accent, fontSize: 12 }}>✓</span>}
+                    {isLock && !isAct && <span style={{ fontSize: 10, color: C.coral }}>🔒</span>}
                   </button>
                 );
               })}
-              {blockedModes.length>0&&(
-                <div style={{padding:'8px 16px',borderTop:'1px solid rgba(255,255,255,0.04)',background:'rgba(255,69,58,0.04)',display:'flex',alignItems:'center',gap:6}}>
-                  <AlertCircle style={{width:10,height:10,color:'rgba(255,69,58,0.75)',flexShrink:0}}/>
-                  <span style={{fontSize:10,color:'rgba(255,69,58,0.75)'}}>Hentikan mode aktif untuk berpindah</span>
+
+              {blockedModes.length > 0 && (
+                <div style={{
+                  padding: '8px 16px',
+                  borderTop: '1px solid rgba(255,255,255,0.04)',
+                  background: 'rgba(255,69,58,0.04)',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <AlertCircle style={{ width: 10, height: 10, color: 'rgba(255,69,58,0.75)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, color: 'rgba(255,69,58,0.75)' }}>
+                    Hentikan mode aktif untuk berpindah
+                  </span>
                 </div>
               )}
             </div>
           </>
         )}
       </div>
-      <div style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
-        {mode==='schedule'&&<SchedulePanel orders={orders} logs={logs} onOpenModal={onOpenModal} isRunning={isRunning} isLoading={false} fillHeight={fillHeight}/>}
-        {(mode==='fastrade'||mode==='ctc')&&<FastradePanel status={ftStatus} logs={ftLogs} isLoading={ftLoading} fillHeight={fillHeight}/>}
-        {mode==='aisignal'&&<AISignalPanel status={aiStatus} pendingOrders={aiPending} onOpenSendModal={onOpenAIModal} isLoading={false} fillHeight={fillHeight}/>}
-        {mode==='indicator'&&<IndicatorPanel status={indicatorStatus} isLoading={false} fillHeight={fillHeight}/>}
-        {mode==='momentum'&&<MomentumPanel status={momentumStatus} isLoading={false} fillHeight={fillHeight}/>}
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {mode === 'schedule' && (
+          <SchedulePanel
+            orders={orders} logs={logs} onOpenModal={onOpenModal}
+            isRunning={isRunning} isLoading={false} fillHeight={fillHeight}
+          />
+        )}
+        {(mode === 'fastrade' || mode === 'ctc') && (
+          <FastradePanel status={ftStatus} logs={ftLogs} isLoading={ftLoading} fillHeight={fillHeight} />
+        )}
+        {mode === 'aisignal' && (
+          <AISignalPanel
+            status={aiStatus} pendingOrders={aiPending}
+            onOpenSendModal={onOpenAIModal} isLoading={false} fillHeight={fillHeight}
+          />
+        )}
+        {mode === 'indicator' && (
+          <IndicatorPanel status={indicatorStatus} isLoading={false} fillHeight={fillHeight} />
+        )}
+        {mode === 'momentum' && (
+          <MomentumPanel status={momentumStatus} isLoading={false} fillHeight={fillHeight} />
+        )}
       </div>
     </div>
   );
@@ -1458,6 +1708,7 @@ const ControlCard: React.FC<{
 // ═══════════════════════════════════════════
 export default function DashboardPage() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
 
@@ -1504,6 +1755,7 @@ export default function DashboardPage() {
 
   const [momentumPatterns,setMomentumPatterns] = useState({candleSabit:true,dojiTerjepit:true,dojiPembatalan:true,bbSarBreak:true});
 
+  const [mobileSessionOpen,setMobileSessionOpen] = useState(false);
   const [flash,setFlash] = useState<'win'|'lose'|null>(null);
   const prevWRef = useRef(0), prevLRef = useRef(0);
   const flashTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1784,21 +2036,21 @@ export default function DashboardPage() {
   const g = deviceType==='desktop'?20:deviceType==='tablet'?18:16;
   const px = 16;
 
-  const TopCards = <ProfitCard profit={profitToday} isLoading={isLoading} flash={flash}/>;
+  const TopCards = <ProfitCard profit={profitToday} isLoading={isLoading} flash={flash} t={t}/>;
 
   const InfoRow = (
     <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(4,1fr)':deviceType==='tablet'?'repeat(3,1fr)':'1fr 1fr',gap:g}}>
-      <AssetCard asset={selectedAsset} mode={tradingMode} isLoading={isLoading}/>
-      <BalanceCard balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading}/>
-      {deviceType!=='mobile'&&<RealtimeClock/>}
+      <AssetCard asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}/>
+      <BalanceCard balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
+      {deviceType!=='mobile'&&<RealtimeClock t={t} lang={language}/>}
       {deviceType==='desktop'&&(
         <Card style={{padding:'11px 14px'}}>
-          <p style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,marginBottom:5}}>Mode Aktif</p>
+          <p style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,marginBottom:5}}>{t('dashboard.tradingMode')}</p>
           <p style={{fontSize:16,fontWeight:700,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
             {{schedule:'Signal',fastrade:'FastTrade',ctc:'CTC',aisignal:'AI Signal',indicator:'Indicator',momentum:'Momentum'}[tradingMode]}
           </p>
           <div style={{marginTop:6}}>
-            <StatusChip col={isActiveMode?modeAccent(tradingMode):C.muted} label={isActiveMode?'Running':'Standby'}/>
+            <StatusChip col={isActiveMode?modeAccent(tradingMode):C.muted} label={isActiveMode?t('dashboard.running'):t('common.standby')}/>
           </div>
         </Card>
       )}
@@ -1907,6 +2159,21 @@ export default function DashboardPage() {
         onSend={handleSendAISignal}
         loading={aiSendLoading}
       />
+      {deviceType==='mobile'&&(
+        <MobileSessionSheet
+          open={mobileSessionOpen}
+          onClose={()=>setMobileSessionOpen(false)}
+          mode={tradingMode}
+          ftStatus={ftStatus} ftLogs={ftLogs}
+          aiStatus={aiStatus} aiPending={aiPendingOrders}
+          onOpenAIModal={()=>setAiSignalModalOpen(true)}
+          indicatorStatus={indicatorStatus}
+          momentumStatus={momentumStatus}
+          orders={scheduleOrders} logs={scheduleLogs}
+          onOpenModal={()=>setOrderModalOpen(true)}
+          isRunning={isSchedRunning}
+        />
+      )}
 
       <div style={{maxWidth:1280,margin:'0 auto',padding:`16px ${px}px 0`}}>
         {error&&(
@@ -1970,7 +2237,7 @@ export default function DashboardPage() {
             {TopCards}
             <div style={{display:'grid',gridTemplateColumns:'3fr 2fr',gap:g,alignItems:'stretch'}}>
               <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                <RealtimeClockCompact/>
+                <RealtimeClockCompact t={t} lang={language}/>
                 <Card style={{padding:10,flex:1,display:'flex',flexDirection:'column'}}>
                   <ChartCard assetSymbol={selectedRic} height={110}/>
                   <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:5,marginTop:8}}>
@@ -1984,17 +2251,74 @@ export default function DashboardPage() {
                       <span style={{fontSize:9,color:C.muted}}>Status</span>
                       <span style={{display:'flex',alignItems:'center',gap:4,fontSize:9,fontWeight:600,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
                         <span style={{width:5,height:5,borderRadius:'50%',background:isActiveMode?modeAccent(tradingMode):'rgba(255,255,255,0.2)'}}/>
-                        {isActiveMode?'Aktif':'Off'}
+                        {isActiveMode?t('common.active'):'Off'}
                       </span>
                     </div>
                   </div>
                 </Card>
               </div>
-              {ModeSession(true)}
+              {/* Mode panel — compact when active, full when idle */}
+              {isActiveMode ? (
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {/* mode selector button (read-only style) */}
+                  <div style={{
+                    display:'flex',alignItems:'center',justifyContent:'space-between',
+                    padding:'8px 12px',borderRadius:12,
+                    background:`${modeAccent(tradingMode)}0a`,
+                    border:`1px solid ${modeAccent(tradingMode)}30`,
+                  }}>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{width:6,height:6,borderRadius:'50%',background:modeAccent(tradingMode),animation:'pulse 1.6s ease-in-out infinite',boxShadow:`0 0 5px ${modeAccent(tradingMode)}`}}/>
+                      <span style={{fontSize:11,fontWeight:700,color:modeAccent(tradingMode)}}>
+                        {{schedule:'Signal',fastrade:'FTT',ctc:'CTC',aisignal:'AI',indicator:'Indikator',momentum:'Momentum'}[tradingMode]}
+                      </span>
+                    </div>
+                    <span style={{fontSize:9,padding:'1px 6px',borderRadius:99,color:modeAccent(tradingMode),background:`${modeAccent(tradingMode)}14`,border:`1px solid ${modeAccent(tradingMode)}28`}}>
+                      Aktif
+                    </span>
+                  </div>
+                  {/* P&L + Lihat Sesi — unified card */}
+                  <div style={{
+                    padding:'10px 12px',borderRadius:12,
+                    background:'rgba(0,0,0,0.35)',
+                    border:`1px solid ${modeAccent(tradingMode)}28`,
+                    display:'flex',flexDirection:'column',gap:8,
+                    flex:1,
+                  }}>
+                    <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                      <span style={{fontSize:9,color:C.muted,textTransform:'uppercase',letterSpacing:'0.1em'}}>Sesi P&L</span>
+                      <span style={{
+                        fontSize:14,fontWeight:800,fontFamily:'monospace',
+                        color:sessionPnL>=0?modeAccent(tradingMode):C.coral,
+                      }}>
+                        {sessionPnL>=0?'+':'-'}Rp {Math.round(Math.abs(sessionPnL)).toLocaleString('id-ID',{maximumFractionDigits:0})}
+                      </span>
+                    </div>
+                    <div style={{height:1,background:`${modeAccent(tradingMode)}18`}}/>
+                    <button
+                      onClick={()=>setMobileSessionOpen(true)}
+                      style={{
+                        display:'flex',alignItems:'center',justifyContent:'center',gap:5,
+                        padding:'7px 0',borderRadius:8,
+                        background:`${modeAccent(tradingMode)}14`,
+                        border:`1px solid ${modeAccent(tradingMode)}35`,
+                        color:modeAccent(tradingMode),
+                        fontSize:11,fontWeight:700,letterSpacing:'0.04em',
+                        cursor:'pointer',
+                      }}
+                    >
+                      <Info style={{width:12,height:12}}/>
+                      Lihat Sesi
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                ModeSession(true)
+              )}
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g}}>
-              <AssetCard asset={selectedAsset} mode={tradingMode} isLoading={isLoading}/>
-              <BalanceCard balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading}/>
+              <AssetCard asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}/>
+              <BalanceCard balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
             </div>
             {SettingsCardEl}
             {ControlCardEl}
