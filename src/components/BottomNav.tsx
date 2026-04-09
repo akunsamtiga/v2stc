@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { LayoutDashboard, History, User } from 'lucide-react';
+import { useDarkMode } from '@/lib/DarkModeContext';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -12,6 +13,7 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { isDarkMode } = useDarkMode();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [safeBottom, setSafeBottom] = useState(0);
@@ -36,7 +38,11 @@ export function BottomNav() {
 
   const isDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
 
-  const theme = isDashboard
+  // Dark nav only when on dashboard AND dark mode is active.
+  // On other pages always use the light nav regardless of dark mode setting.
+  const useDarkNav = isDashboard && isDarkMode;
+
+  const theme = useDarkNav
     ? {
         navBg:         'rgb(18,18,20)',
         navBorder:     '1px solid rgba(255,255,255,0.08)',

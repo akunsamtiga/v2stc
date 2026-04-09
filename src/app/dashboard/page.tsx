@@ -20,7 +20,7 @@ import {
   ChevronDown, ChevronUp, Info, Plus,
   Settings, Trash2, X, Zap, TrendingUp, TrendingDown,
   PlayCircle, StopCircle, PauseCircle, RefreshCw, Timer, Copy,
-  ArrowRight, Radio, BarChart, Waves, Send,
+  ArrowRight, Radio, BarChart, Waves,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
@@ -572,66 +572,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   );
 };
 
-// ═══════════════════════════════════════════
-// AI SIGNAL INPUT MODAL
-// ═══════════════════════════════════════════
-const AISignalInputModal: React.FC<{open:boolean;onClose:()=>void;onSend:(trend:string,ms:number,msg:string)=>Promise<void>;loading:boolean}> =
-({open,onClose,onSend,loading}) => {
-  const [trend,setTrend] = useState<'call'|'put'>('call');
-  const [delayMs,setDelayMs] = useState(5000);
-  const [msg,setMsg] = useState('');
 
-  if(!open) return null;
-  const execTime = Date.now()+delayMs;
-
-  return (
-    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',animation:'fade-in 0.15s ease'}}>
-      <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)'}}/>
-      <div style={{position:'relative',width:'100%',maxWidth:480,display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:'16px 16px 0 0',border:`1px solid ${C.sky}44`,borderBottom:'none',overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
-        <div style={{width:32,height:3,borderRadius:99,background:`${C.sky}44`,margin:'12px auto 0'}}/>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:`1px solid ${C.sky}20`}}>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <Send style={{width:14,height:14,color:C.sky}}/>
-            <span style={{fontSize:14,fontWeight:600,color:C.text}}>Kirim Sinyal Manual</span>
-          </div>
-          <button onClick={onClose} style={{width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'rgba(255,255,255,0.4)',cursor:'pointer'}}>
-            <X style={{width:13,height:13}}/>
-          </button>
-        </div>
-        <div style={{padding:'16px'}}>
-          <div style={{marginBottom:14}}>
-            <FL>Arah Sinyal</FL>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-              {(['call','put'] as const).map(t=>(
-                <button key={t} onClick={()=>setTrend(t)} style={{padding:'12px 0',borderRadius:10,fontWeight:700,fontSize:13,textTransform:'uppercase',letterSpacing:'0.08em',cursor:'pointer',background:trend===t?(t==='call'?'rgba(41,151,255,0.15)':'rgba(255,69,58,0.15)'):'rgba(255,255,255,0.04)',border:`1px solid ${trend===t?(t==='call'?C.cyan:C.coral):'rgba(255,255,255,0.1)'}`,color:trend===t?(t==='call'?C.cyan:C.coral):'rgba(255,255,255,0.4)'}}>
-                  {t==='call'?'↑ CALL':'↓ PUT'}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div style={{marginBottom:14}}>
-            <FL>Eksekusi Dalam (detik)</FL>
-            <div style={{display:'flex',gap:6}}>
-              {[3,5,10,30,60].map(s=>(
-                <button key={s} onClick={()=>setDelayMs(s*1000)} style={{flex:1,padding:'7px 0',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',background:delayMs===s*1000?`${C.sky}18`:'rgba(255,255,255,0.04)',border:`1px solid ${delayMs===s*1000?`${C.sky}55`:'rgba(255,255,255,0.08)'}`,color:delayMs===s*1000?C.sky:'rgba(255,255,255,0.5)'}}>
-                  {s}s
-                </button>
-              ))}
-            </div>
-          </div>
-          <div style={{marginBottom:16}}>
-            <FL>Pesan (opsional)</FL>
-            <input className="ds-input" value={msg} onChange={e=>setMsg(e.target.value)} placeholder="Keterangan sinyal..."/>
-          </div>
-          <button onClick={()=>onSend(trend,execTime,msg).then(()=>onClose())} disabled={loading} style={{width:'100%',padding:'13px 0',borderRadius:12,fontSize:13,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',background:C.sky,color:'#000',border:'none',cursor:loading?'not-allowed':'pointer',opacity:loading?0.7:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-            {loading?<RefreshCw style={{width:14,height:14,animation:'spin 0.7s linear infinite'}}/>:<Send style={{width:14,height:14}}/>}
-            {loading?'Mengirim...':'Kirim Sinyal'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ═══════════════════════════════════════════
 // GENERIC STAT GRID
@@ -817,10 +758,9 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
 const AISignalPanel: React.FC<{
   status: AISignalStatus | null;
   pendingOrders: AISignalOrder[];
-  onOpenSendModal: () => void;
   isLoading: boolean;
   fillHeight?: boolean;
-}> = ({ status, pendingOrders, onOpenSendModal, isLoading }) => {
+}> = ({ status, pendingOrders, isLoading }) => {
   const isOn   = status?.botState === 'RUNNING' || status?.isActive === true;
   const pnl    = status?.sessionPnL ?? status?.stats?.sessionPnL ?? 0;
   const wins   = status?.totalWins  ?? status?.stats?.wins   ?? 0;
@@ -1166,24 +1106,6 @@ const AISignalPanel: React.FC<{
         </div>
       )}
  
-      {/* ── Footer: Kirim Sinyal ── */}
-      {isOn && (
-        <div style={{ padding: '8px 10px', borderTop: `1px solid rgba(52,211,153,0.12)`, flexShrink: 0 }}>
-          <button
-            onClick={onOpenSendModal}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '8px 0', borderRadius: 8, fontSize: 12, fontWeight: 600,
-              background: `${C.sky}10`, border: `1px solid ${C.sky}28`,
-              color: C.sky, cursor: 'pointer', letterSpacing: '0.03em',
-              transition: 'all 0.15s',
-            }}
-          >
-            <Send style={{ width: 12, height: 12 }} />
-            Kirim Sinyal Manual
-          </button>
-        </div>
-      )}
     </Card>
   );
 };
@@ -1320,7 +1242,6 @@ const MobileSessionSheet: React.FC<{
   ftLogs: FastradeLog[];
   aiStatus: AISignalStatus | null;
   aiPending: AISignalOrder[];
-  onOpenAIModal: () => void;
   indicatorStatus: IndicatorStatus | null;
   momentumStatus: MomentumStatus | null;
   orders: ScheduleOrder[];
@@ -1329,7 +1250,7 @@ const MobileSessionSheet: React.FC<{
   isRunning: boolean;
 }> = ({
   open, onClose, mode,
-  ftStatus, ftLogs, aiStatus, aiPending, onOpenAIModal,
+  ftStatus, ftLogs, aiStatus, aiPending,
   indicatorStatus, momentumStatus, orders, logs, onOpenModal, isRunning,
 }) => {
   const ac = modeAccent(mode);
@@ -1383,7 +1304,7 @@ const MobileSessionSheet: React.FC<{
             <FastradePanel status={ftStatus} logs={ftLogs} isLoading={false} fillHeight={false}/>
           )}
           {mode==='aisignal'&&(
-            <AISignalPanel status={aiStatus} pendingOrders={aiPending} onOpenSendModal={()=>{onOpenAIModal();onClose();}} isLoading={false} fillHeight={false}/>
+            <AISignalPanel status={aiStatus} pendingOrders={aiPending} isLoading={false} fillHeight={false}/>
           )}
           {mode==='indicator'&&(
             <IndicatorPanel status={indicatorStatus} isLoading={false} fillHeight={false}/>
@@ -1428,7 +1349,7 @@ const ModeSessionPanel: React.FC<{
   blockedModes: TradingMode[];
   orders: ScheduleOrder[]; logs: ExecutionLog[]; onOpenModal: () => void; isRunning: boolean;
   ftStatus: FastradeStatus | null; ftLogs: FastradeLog[]; ftLoading: boolean;
-  aiStatus: AISignalStatus | null; aiPending: AISignalOrder[]; onOpenAIModal: () => void;
+  aiStatus: AISignalStatus | null; aiPending: AISignalOrder[];
   indicatorStatus: IndicatorStatus | null;
   momentumStatus: MomentumStatus | null;
   fillHeight?: boolean;
@@ -1436,7 +1357,7 @@ const ModeSessionPanel: React.FC<{
   mode, onModeChange, locked, blockedModes,
   orders, logs, onOpenModal, isRunning,
   ftStatus, ftLogs, ftLoading,
-  aiStatus, aiPending, onOpenAIModal,
+  aiStatus, aiPending,
   indicatorStatus, momentumStatus, fillHeight,
 }) => {
   const [dropOpen, setDropOpen] = useState(false);
@@ -1631,7 +1552,7 @@ const ModeSessionPanel: React.FC<{
         {mode === 'aisignal' && (
           <AISignalPanel
             status={aiStatus} pendingOrders={aiPending}
-            onOpenSendModal={onOpenAIModal} isLoading={false} fillHeight={fillHeight}
+            isLoading={false} fillHeight={fillHeight}
           />
         )}
         {mode === 'indicator' && (
@@ -2099,9 +2020,7 @@ export default function DashboardPage() {
   const [error,setError] = useState<string|null>(null);
   const [actionLoading,setActionLoading] = useState(false);
   const [orderModalOpen,setOrderModalOpen] = useState(false);
-  const [aiSignalModalOpen,setAiSignalModalOpen] = useState(false);
   const [addOrderLoading,setAddOrderLoading] = useState(false);
-  const [aiSendLoading,setAiSendLoading] = useState(false);
   // ✅ FIX: Deteksi device SEKALI saat mount, tidak pakai resize listener
   // (resize listener → re-render saat keyboard muncul di mobile)
   const [deviceType,setDeviceType] = useState<'mobile'|'tablet'|'desktop'>('mobile');
@@ -2392,15 +2311,6 @@ export default function DashboardPage() {
     finally{setAddOrderLoading(false);}
   };
 
-  const handleSendAISignal = async(trend:string,ms:number,msg:string)=>{
-    setAiSendLoading(true);
-    try{
-      await api.aiSignalReceive(trend,ms,msg);
-      await loadAll(true);
-    }catch(e:any){setError(e?.message??'Gagal kirim sinyal');}
-    finally{setAiSendLoading(false);}
-  };
-
   const g = deviceType==='desktop'?20:deviceType==='tablet'?18:16;
   const px = 16;
 
@@ -2430,7 +2340,7 @@ export default function DashboardPage() {
       mode={tradingMode} onModeChange={handleModeChange} locked={isActiveMode} blockedModes={blockedModes}
       orders={scheduleOrders} logs={scheduleLogs} onOpenModal={()=>setOrderModalOpen(true)} isRunning={isSchedRunning}
       ftStatus={ftStatus} ftLogs={ftLogs} ftLoading={false}
-      aiStatus={aiStatus} aiPending={aiPendingOrders} onOpenAIModal={()=>setAiSignalModalOpen(true)}
+      aiStatus={aiStatus} aiPending={aiPendingOrders}
       indicatorStatus={indicatorStatus}
       momentumStatus={momentumStatus}
       fillHeight={fillH}
@@ -2534,12 +2444,6 @@ export default function DashboardPage() {
         onClear={async()=>{await api.clearOrders();setScheduleOrders([]);}}
         loading={addOrderLoading}
       />
-      <AISignalInputModal
-        open={aiSignalModalOpen}
-        onClose={()=>setAiSignalModalOpen(false)}
-        onSend={handleSendAISignal}
-        loading={aiSendLoading}
-      />
       {deviceType==='mobile'&&(
         <MobileSessionSheet
           open={mobileSessionOpen}
@@ -2547,7 +2451,6 @@ export default function DashboardPage() {
           mode={tradingMode}
           ftStatus={ftStatus} ftLogs={ftLogs}
           aiStatus={aiStatus} aiPending={aiPendingOrders}
-          onOpenAIModal={()=>setAiSignalModalOpen(true)}
           indicatorStatus={indicatorStatus}
           momentumStatus={momentumStatus}
           orders={scheduleOrders} logs={scheduleLogs}

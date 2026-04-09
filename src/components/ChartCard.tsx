@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useDarkMode } from '@/lib/DarkModeContext';
 
 interface ChartCardProps {
   assetSymbol?: string;
@@ -35,6 +36,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   const updateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastPriceRef = useRef<number>(0);
   const initializedRef = useRef<boolean>(false);
+  const { isDarkMode } = useDarkMode();
 
   // Detect screen size
   useEffect(() => {
@@ -125,7 +127,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     const height = canvas.height / (window.devicePixelRatio || 1);
 
     // Clear canvas
-    ctx.fillStyle = '#0a0a0a';
+    const bgColor = isDarkMode ? '#0a0a0a' : '#F8F9FA';
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, width, height);
 
     // Responsive settings based on device
@@ -183,10 +186,10 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     };
 
     // Draw grid lines with labels
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.strokeStyle = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.07)';
     ctx.lineWidth = 0.5;
     ctx.font = `${fontSize}px monospace`;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillStyle = isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(60, 60, 67, 0.55)';
     
     // Horizontal grid lines (price levels)
     for (let i = 0; i <= priceSteps; i++) {
@@ -358,7 +361,9 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     }
 
     // Draw crosshair line
-    ctx.strokeStyle = isPositive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+    ctx.strokeStyle = isPositive
+      ? isDarkMode ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.35)'
+      : isDarkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.35)';
     ctx.lineWidth = 0.5;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
@@ -385,7 +390,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, currentPrice, priceChange, deviceType]);
+  }, [data, currentPrice, priceChange, deviceType, isDarkMode]);
 
   // Handle canvas resize
   useEffect(() => {
@@ -418,16 +423,19 @@ export const ChartCard: React.FC<ChartCardProps> = ({
       window.removeEventListener('orientationchange', updateSize);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [height, data.length, deviceType]);
+  }, [height, data.length, deviceType, isDarkMode]);
 
   const responsiveHeight = deviceType === 'mobile' ? 100 : deviceType === 'tablet' ? 300 : height;
 
+  const wrapperBg = isDarkMode ? '#0a0a0a' : '#F8F9FA';
+
   return (
-    <div className="bg-[#0a0a0a] rounded-xl border border-gray-800 overflow-hidden w-full h-full" style={{ minHeight: responsiveHeight }}>
+    <div
+      style={{ background: wrapperBg, borderRadius: 12, overflow: 'hidden', width: '100%', height: '100%', minHeight: responsiveHeight, border: isDarkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)', transition: 'background 0.3s, border-color 0.3s' }}
+    >
       <div
         ref={containerRef}
-        className="bg-[#0a0a0a] w-full h-full"
-        style={{ minHeight: responsiveHeight }}
+        style={{ background: wrapperBg, width: '100%', height: '100%', minHeight: responsiveHeight }}
       >
         <canvas
           ref={canvasRef}
