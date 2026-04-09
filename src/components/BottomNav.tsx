@@ -13,17 +13,23 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [safeBottom, setSafeBottom] = useState(0);
 
   useEffect(() => {
     setMounted(true);
+    // Trigger scale-in after mount
+    const t = setTimeout(() => setVisible(true), 30);
     const readSafeArea = () => {
       const val = getComputedStyle(document.documentElement).getPropertyValue('--sab').trim();
       setSafeBottom(parseFloat(val) || 0);
     };
     readSafeArea();
     window.addEventListener('orientationchange', readSafeArea);
-    return () => window.removeEventListener('orientationchange', readSafeArea);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('orientationchange', readSafeArea);
+    };
   }, []);
 
   if (!mounted) return null;
@@ -32,7 +38,7 @@ export function BottomNav() {
 
   const theme = isDashboard
     ? {
-        navBg:         'rgba(18,18,20,0.82)',
+        navBg:         'rgb(18,18,20)',
         navBorder:     '1px solid rgba(255,255,255,0.08)',
         navShadow:     [
           '0 8px 32px rgba(0,0,0,0.40)',
@@ -55,7 +61,7 @@ export function BottomNav() {
         sepBg:          'rgba(255,255,255,0.08)',
       }
     : {
-        navBg:         'rgba(255,255,255,0.88)',
+        navBg:         'rgb(255,255,255)',
         navBorder:     '1px solid rgba(60,60,67,0.10)',
         navShadow:     [
           '0 8px 24px rgba(0,0,0,0.08)',
@@ -83,10 +89,6 @@ export function BottomNav() {
   return (
     <>
       <style>{`
-        @keyframes nav-in {
-          from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.95); }
-          to   { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);    }
-        }
         @keyframes theme-fade {
           from { opacity: 0.6; }
           to   { opacity: 1; }
@@ -141,10 +143,12 @@ export function BottomNav() {
           position: 'fixed',
           bottom: navBottom,
           left: '50%',
-          transform: 'translateX(-50%)',
           zIndex: 50,
           pointerEvents: 'none',
-          animation: 'nav-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both',
+          transform: `translateX(-50%) scale(${visible ? 1 : 0.6})`,
+          opacity: visible ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease',
+          transformOrigin: 'center bottom',
         }}
       >
         <nav
@@ -155,8 +159,6 @@ export function BottomNav() {
             padding: '5px 6px',
             borderRadius: 9999,
             background: theme.navBg,
-            backdropFilter: 'blur(28px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
             border: theme.navBorder,
             boxShadow: theme.navShadow,
             transition: 'background 0.35s ease, border 0.35s ease, box-shadow 0.35s ease',

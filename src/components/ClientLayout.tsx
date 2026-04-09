@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { BottomNav } from '@/components/BottomNav';
 import { isSessionValid, sessionLogout } from '@/lib/storage';
 import { LanguageProvider } from '@/lib/i18n';
+import { DarkModeProvider, useDarkMode } from '@/lib/DarkModeContext';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
 
@@ -242,18 +243,41 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <LanguageProvider>
-      <main
-        className="flex-1 overflow-y-auto"
-        style={{
-          height: '100dvh',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-        } as React.CSSProperties}
-      >
-        {children}
-      </main>
-      {!isPublic && <BottomNav />}
-    </LanguageProvider>
+    <DarkModeProvider>
+      <LanguageProvider>
+        <ThemeWrapper>
+          <main
+            style={{
+              display: 'block',
+              margin: 0,
+              padding: 0,
+              height: '100dvh',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+            } as React.CSSProperties}>
+            {children}
+          </main>
+          {!isPublic && <BottomNav />}
+        </ThemeWrapper>
+      </LanguageProvider>
+    </DarkModeProvider>
   );
+}
+
+// Wrapper untuk apply theme attribute ke body
+function ThemeWrapper({ children }: { children: React.ReactNode }) {
+  const { isDarkMode } = useDarkMode();
+  
+  useEffect(() => {
+    // Apply theme attribute ke body
+    if (typeof document !== 'undefined') {
+      if (isDarkMode) {
+        document.body.removeAttribute('data-theme');
+      } else {
+        document.body.setAttribute('data-theme', 'light');
+      }
+    }
+  }, [isDarkMode]);
+  
+  return <>{children}</>;
 }

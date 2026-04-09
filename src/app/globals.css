@@ -3,6 +3,16 @@
 @tailwind utilities;
 
 /* ============================================================
+   ANIMATED BORDER PROPERTY REGISTRATION
+   ============================================================ */
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+
+/* ============================================================
    SAFE AREA — Capacitor / iOS / Android
    env(safe-area-inset-*) hanya aktif saat viewport-fit=cover
    ============================================================ */
@@ -16,17 +26,23 @@
 html, body {
   height: 100%;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  /* Hanya gunakan padding samping, tidak atas/bawah untuk full-screen */
+  /* Safe area Capacitor/iOS — kanan & kiri saja, bukan atas/bawah */
+  padding-top:    0 !important;
+  padding-bottom: 0 !important;
   padding-right:  var(--sar);
   padding-left:   var(--sal);
 }
 
 /* ============================================================
-   DESIGN TOKENS — Apple-like dark · emerald system accent
+   DESIGN TOKENS — Dark & Light Mode dengan tema warna menarik
    ============================================================ */
+
+/* DARK MODE (Default) */
 :root {
   --bg:          #000000;
   --s1:          #0a0a0c;
@@ -57,6 +73,34 @@ body {
   --font-mono:   ui-monospace, 'SF Mono', 'Courier New', monospace;
 }
 
+/* LIGHT MODE - Tema warna cerah dengan aksen hijau emerald */
+[data-theme="light"] {
+  --bg:          #ffffff;
+  --s1:          #f8f9fa;
+  --s2:          #f1f3f5;
+  --s3:          #e9ecef;
+
+  --blue:        #059669;  /* emerald-600 untuk kontras lebih baik di light */
+  --blue-dim:    rgba(5, 150, 105, 0.10);
+  --blue-glow:   rgba(5, 150, 105, 0.04);
+  --blue-bdr:    rgba(5, 150, 105, 0.25);
+
+  --coral:       #dc2626;  /* red-600 */
+  --coral-dim:   rgba(220, 38, 38, 0.08);
+  --amber:       #ea580c;  /* orange-600 */
+  --amber-dim:   rgba(234, 88, 12, 0.08);
+  --violet:      #9333ea;  /* purple-600 */
+  --violet-dim:  rgba(147, 51, 234, 0.08);
+
+  --bdr:         rgba(0, 0, 0, 0.08);
+  --bdr-act:     rgba(5, 150, 105, 0.40);
+  --faint:       rgba(5, 150, 105, 0.05);
+
+  --text:        #1a1a1a;
+  --sub:         rgba(0, 0, 0, 0.70);
+  --muted:       rgba(0, 0, 0, 0.45);
+}
+
 /* ============================================================
    RESET & BASE
    ============================================================ */
@@ -76,7 +120,7 @@ body {
 }
 
 /* ============================================================
-   BACKGROUND
+   BACKGROUND PATTERNS
    ============================================================ */
 body::before {
   content: '';
@@ -86,17 +130,18 @@ body::before {
     repeating-linear-gradient(
       90deg,
       transparent 0px,
-      rgba(255, 255, 255, 0.018) 1px,
+      var(--bdr) 1px,
       transparent 2px,
       transparent 44px
     ),
     repeating-linear-gradient(
       0deg,
       transparent 0px,
-      rgba(255, 255, 255, 0.012) 1px,
+      var(--bdr) 1px,
       transparent 2px,
       transparent 44px
     );
+  opacity: 0.3;
   pointer-events: none;
   z-index: 0;
 }
@@ -105,19 +150,48 @@ body::after {
   content: '';
   position: fixed;
   inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Dark mode gradient */
+body:not([data-theme="light"])::after {
   background:
+    linear-gradient(
+      105deg,
+      transparent 0%,
+      rgba(255,255,255,0.0)   25%,
+      rgba(180,255,220,0.055) 50%,
+      rgba(255,255,255,0.0)   75%,
+      transparent 100%
+    ),
     radial-gradient(
       ellipse 70% 40% at 50% -5%,
-      rgba(41, 151, 255, 0.10) 0%,
+      rgba(16, 185, 129, 0.10) 0%,
       transparent 65%
     ),
     radial-gradient(
       ellipse 40% 30% at 90% 100%,
-      rgba(41, 151, 255, 0.04) 0%,
+      rgba(16, 185, 129, 0.04) 0%,
       transparent 60%
     );
-  pointer-events: none;
-  z-index: 0;
+  background-size: 200% 100%, 100% 100%, 100% 100%;
+  animation: shimmer-h 18s ease-in-out infinite;
+}
+
+/* Light mode gradient */
+[data-theme="light"]::after {
+  background:
+    radial-gradient(
+      ellipse 70% 40% at 50% -5%,
+      rgba(5, 150, 105, 0.08) 0%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 40% 30% at 90% 100%,
+      rgba(5, 150, 105, 0.03) 0%,
+      transparent 60%
+    );
 }
 
 body > * { position: relative; z-index: 1; }
@@ -127,8 +201,12 @@ body > * { position: relative; z-index: 1; }
    ============================================================ */
 ::-webkit-scrollbar        { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: rgba(255, 255, 255, 0.14); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.40); }
+::-webkit-scrollbar-thumb  { background: var(--bdr); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--bdr-act); }
+
+/* Hide scrollbar on main layout container — scroll tetap berfungsi */
+main::-webkit-scrollbar { display: none; }
+main { scrollbar-width: none; -ms-overflow-style: none; }
 
 input, textarea, select {
   font-size: max(16px, 1em); /* cegah iOS auto-zoom */
@@ -141,12 +219,12 @@ input, textarea, select {
   display: block;
   width: 100%;
   padding: 10px 13px;
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  background: var(--s1) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--bdr) !important;
   border-radius: 10px !important;
   font-family: var(--font-exo) !important;
-  font-size: 16px !important; /* ✅ min 16px cegah iOS zoom */
+  font-size: 16px !important;
   outline: none !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   line-height: 1.4;
@@ -154,11 +232,11 @@ input, textarea, select {
   clip-path: none !important;
 }
 .ds-input:focus {
-  border-color: rgba(16, 185, 129, 0.55) !important;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12) !important;
-  background: rgba(16, 185, 129, 0.05) !important;
+  border-color: var(--bdr-act) !important;
+  box-shadow: 0 0 0 3px var(--blue-glow) !important;
+  background: var(--faint) !important;
 }
-.ds-input::placeholder { color: rgba(235, 235, 245, 0.25) !important; }
+.ds-input::placeholder { color: var(--muted) !important; }
 .ds-input:disabled { opacity: 0.38; cursor: not-allowed; }
 
 select.ds-input {
@@ -169,8 +247,14 @@ select.ds-input {
   background-position: right 12px center !important;
   padding-right: 36px !important;
 }
-select.ds-input option { background: #141416; color: #ffffff; }
-select.ds-input option:checked { background: #1a2535; color: #2997FF; font-weight: 700; }
+
+/* Light mode select icon */
+[data-theme="light"] select.ds-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23059669' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+}
+
+select.ds-input option { background: var(--s2); color: var(--text); }
+select.ds-input option:checked { background: var(--blue-dim); color: var(--blue); font-weight: 700; }
 
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -180,64 +264,166 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 /* ============================================================
    DS-CARD
    ============================================================ */
+/* ============================================================
+   CARD BORDER SPIN ANIMATION
+   ============================================================ */
+/* Menggunakan transform rotate — tidak butuh @property/Houdini, kompatibel di semua WebView */
+@keyframes ds-border-rotate {
+  from { transform: translate(-50%, -50%) rotate(0deg);   }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
 .ds-card {
-  background: linear-gradient(
-    145deg,
-    rgba(26, 26, 30, 0.95) 0%,
-    rgba(18, 18, 22, 0.98) 100%
-  ) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 16px !important;
+  /* Solid gray background — tidak ada gradient/shimmer di dalam card */
+  background: #1a1d24;
+  border: none;
+  border-radius: 12px !important;
   clip-path: none !important;
   position: relative;
-  overflow: hidden;
-  transition:
-    border-color 0.28s ease,
-    box-shadow   0.28s ease,
-    transform    0.22s ease;
+  /* overflow: hidden ditambahkan oleh Card className — clips ::before spinning element */
+
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.05) inset,
-    0 4px 24px rgba(0, 0, 0, 0.55),
-    0 1px 4px  rgba(0, 0, 0, 0.40);
+    0 4px 20px rgba(0, 0, 0, 0.50),
+    0 1px 4px  rgba(0, 0, 0, 0.30);
+
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
+
+/*
+ * ::before — spinning conic-gradient, menciptakan efek kilauan border berputar.
+ * Ukuran 300%×300% agar saat rotate tidak ada sudut yang "kosong".
+ * Dikliping oleh overflow:hidden pada .ds-card.
+ */
 .ds-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 20%; right: 20%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  top: 50%;
+  left: 50%;
+  width: 300%;
+  height: 300%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  background: conic-gradient(
+    from 0deg,
+    transparent                   0deg,
+    transparent                 265deg,
+    rgba(52, 211, 153, 0.05)    275deg,
+    rgba(52, 211, 153, 0.18)    295deg,
+    rgba(52, 211, 153, 0.50)    318deg,
+    rgba(52, 211, 153, 0.85)    338deg,
+    rgba(52, 211, 153, 1.00)    352deg,
+    rgba(52, 211, 153, 0.55)    357deg,
+    rgba(52, 211, 153, 0.12)    360deg
+  );
+  animation: ds-border-rotate 8s linear infinite;
   pointer-events: none;
+  z-index: 0;
+}
+
+/*
+ * ::after — menutup interior card dengan background solid,
+ * menyisakan hanya 1.5px tepi (border area) yang memperlihatkan kilauan ::before.
+ */
+.ds-card::after {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  border-radius: 10.5px; /* 12px - 1.5px */
+  background: #1a1d24;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/*
+ * Semua direct children harus berada di atas ::after (z-index: 1)
+ * agar konten card terlihat dengan benar.
+ */
+.ds-card > * {
+  position: relative;
   z-index: 2;
 }
-.ds-card::after { display: none; }
+
+/* Speed variasi per kartu agar terlihat organik */
+.ds-card:nth-child(1)::before  { animation-duration: 7.5s;  animation-delay: -1.2s;  }
+.ds-card:nth-child(2)::before  { animation-duration: 10.0s; animation-delay: -4.0s;  }
+.ds-card:nth-child(3)::before  { animation-duration: 8.5s;  animation-delay: -2.1s;  }
+.ds-card:nth-child(4)::before  { animation-duration: 11.5s; animation-delay: -5.5s;  }
+.ds-card:nth-child(5)::before  { animation-duration: 9.0s;  animation-delay: -3.0s;  }
+.ds-card:nth-child(6)::before  { animation-duration: 13.0s; animation-delay: -7.0s;  }
+.ds-card:nth-child(7)::before  { animation-duration: 8.0s;  animation-delay: -0.5s;  }
+.ds-card:nth-child(8)::before  { animation-duration: 11.0s; animation-delay: -8.5s;  }
+
 .ds-card:hover {
-  border-color: rgba(16, 185, 129, 0.22) !important;
+  transform: translateY(-2px);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.07) inset,
-    0 8px 32px rgba(0, 0, 0, 0.60),
-    0 0  40px rgba(16, 185, 129, 0.05),
-    0 2px 8px  rgba(0, 0, 0, 0.40) !important;
-  transform: translateY(-1px);
+    0 8px 32px rgba(0, 0, 0, 0.55),
+    0 2px 8px  rgba(0, 0, 0, 0.35),
+    0 0 24px rgba(16, 185, 129, 0.08);
 }
+
+/* Kilauan lebih terang saat hover */
+.ds-card:hover::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent                   0deg,
+    transparent                 262deg,
+    rgba(52, 211, 153, 0.07)    273deg,
+    rgba(52, 211, 153, 0.25)    293deg,
+    rgba(52, 211, 153, 0.65)    316deg,
+    rgba(52, 211, 153, 0.95)    336deg,
+    rgba(52, 211, 153, 1.00)    352deg,
+    rgba(52, 211, 153, 0.65)    357deg,
+    rgba(52, 211, 153, 0.15)    360deg
+  );
+}
+
 .ds-card.active {
-  border-color: rgba(16, 185, 129, 0.35) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.07) inset,
-    0 0 0  1px rgba(16, 185, 129, 0.12),
-    0 8px 32px rgba(16, 185, 129, 0.10) !important;
+    0 0 0 1px rgba(52, 211, 153, 0.45),
+    0 8px 32px rgba(52, 211, 153, 0.12);
 }
-.ds-card.ctc {
-  border-color: rgba(191, 90, 242, 0.18) !important;
-}
+
+/* CTC variant — shimmer violet */
 .ds-card.ctc::before {
-  background: linear-gradient(90deg, transparent, rgba(191, 90, 242, 0.28), transparent);
+  background: conic-gradient(
+    from 0deg,
+    transparent                   0deg,
+    transparent                 265deg,
+    rgba(167, 139, 250, 0.05)   275deg,
+    rgba(167, 139, 250, 0.18)   295deg,
+    rgba(167, 139, 250, 0.50)   318deg,
+    rgba(167, 139, 250, 0.85)   338deg,
+    rgba(196, 181, 253, 1.00)   352deg,
+    rgba(167, 139, 250, 0.55)   357deg,
+    rgba(167, 139, 250, 0.12)   360deg
+  );
 }
-.ds-card.ctc:hover {
-  border-color: rgba(191, 90, 242, 0.32) !important;
+.ds-card.ctc::after {
+  background: #1a1820;
+}
+
+/* Light mode card */
+[data-theme="light"] .ds-card {
+  background: #ffffff;
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.06) inset,
-    0 8px 32px rgba(0,0,0,0.60),
-    0 0   40px rgba(191,90,242,0.06) !important;
+    0 4px 20px rgba(0, 0, 0, 0.06),
+    0 1px 4px  rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] .ds-card::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent                  0deg,
+    transparent                265deg,
+    rgba(16, 185, 129, 0.04)   275deg,
+    rgba(16, 185, 129, 0.15)   295deg,
+    rgba(16, 185, 129, 0.45)   318deg,
+    rgba(16, 185, 129, 0.75)   338deg,
+    rgba(52, 211, 153, 0.88)   352deg,
+    rgba(16, 185, 129, 0.45)   357deg,
+    rgba(16, 185, 129, 0.10)   360deg
+  );
+}
+[data-theme="light"] .ds-card::after {
+  background: #ffffff;
 }
 
 /* ============================================================
@@ -247,7 +433,7 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   transition: background 0.15s ease, transform 0.15s ease;
 }
 .schedule-item:hover {
-  background: rgba(41, 151, 255, 0.05) !important;
+  background: var(--faint) !important;
   transform: translateX(2px);
 }
 
@@ -262,12 +448,24 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 @keyframes float          { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @keyframes countUp        { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes shimmer        { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+@keyframes shimmer-h {
+  0%   { background-position:  200% center; }
+  100% { background-position: -200% center; }
+}
+@keyframes shimmer-v {
+  0%   { background-position: 0   0%; }
+  100% { background-position: 0 200%; }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; filter: blur(0px); }
+  50%       { opacity: 1.0; filter: blur(1px); }
+}
 @keyframes skeleton-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.85; } }
 @keyframes ticker         { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 @keyframes win-flash {
-  0%   { box-shadow: 0 0 0 0 rgba(41, 151, 255, 0); }
-  18%  { box-shadow: 0 0 0 4px rgba(41, 151, 255, 0.55), 0 0 40px rgba(41, 151, 255, 0.18); }
-  100% { box-shadow: 0 0 0 0 rgba(41, 151, 255, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  18%  { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.55), 0 0 40px rgba(16, 185, 129, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 @keyframes lose-flash {
   0%   { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0); }
@@ -276,6 +474,9 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 }
 @keyframes profit-slide-up   { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes profit-slide-down { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes skel-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes bd-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
 
 /* ============================================================
    UTILITY
@@ -294,9 +495,9 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.10) 50%,
-    rgba(255, 255, 255, 0.05) 100%
+    var(--s1) 0%,
+    var(--s2) 50%,
+    var(--s1) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease infinite;
@@ -319,23 +520,28 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 .ds-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.82);
+  background: rgba(0, 0, 0, 0.50);
   backdrop-filter: blur(16px) saturate(160%);
 }
+
+/* Light mode backdrop */
+[data-theme="light"] .ds-modal-backdrop {
+  background: rgba(0, 0, 0, 0.30);
+}
+
 .ds-modal-sheet {
   position: relative;
   width: 100%;
   max-width: 480px;
-  background: linear-gradient(160deg, #18181c 0%, #101014 100%);
+  background: var(--s1);
   border-radius: 20px 20px 0 0;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--bdr);
   border-bottom: none;
   box-shadow:
-    0 -1px 0 rgba(255,255,255,0.06) inset,
-    0 -24px 80px rgba(0, 0, 0, 0.70);
+    0 -1px 0 var(--bdr) inset,
+    0 -24px 80px rgba(0, 0, 0, 0.20);
   animation: slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1);
   overflow: hidden;
-  /* ✅ FIX: beri ruang untuk home bar di bagian bawah sheet */
   padding-bottom: var(--sab);
 }
 .ds-modal-sheet::before {
@@ -343,14 +549,14 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   position: absolute;
   top: 0; left: 20%; right: 20%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(41, 151, 255, 0.40), transparent);
+  background: linear-gradient(90deg, transparent, var(--blue-bdr), transparent);
   pointer-events: none;
 }
 .ds-modal-handle {
   width: 36px;
   height: 4px;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--bdr);
   margin: 10px auto 0;
 }
 
@@ -360,8 +566,8 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 .ds-stat-tile {
   border-radius: 12px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--s1);
+  border: 1px solid var(--bdr);
 }
 .ds-stat-tile .label {
   display: block;
@@ -369,7 +575,7 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(235, 235, 245, 0.50);
+  color: var(--muted);
   margin-bottom: 4px;
 }
 .ds-stat-tile .value {
@@ -377,6 +583,7 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   font-weight: 800;
   line-height: 1.1;
   font-family: var(--font-mono);
+  color: var(--text);
 }
 
 /* ============================================================
@@ -389,14 +596,14 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   justify-content: space-between;
   padding: 9px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: var(--s1);
+  border: 1px solid var(--bdr);
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 .ds-picker-btn:hover {
-  border-color: rgba(41, 151, 255, 0.32);
-  background: rgba(41, 151, 255, 0.06);
+  border-color: var(--bdr-act);
+  background: var(--faint);
 }
 .ds-picker-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -415,13 +622,13 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(41, 151, 255, 0.65);
+  color: var(--blue);
 }
 .section-label::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(to right, rgba(41, 151, 255, 0.20), transparent);
+  background: linear-gradient(to right, var(--blue-dim), transparent);
 }
 
 /* ============================================================
@@ -433,12 +640,12 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   border-radius: 22px;
   position: relative;
   transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--s2);
+  border: 1px solid var(--bdr);
 }
 .ds-toggle-track.checked {
-  background: rgba(41, 151, 255, 0.22);
-  border-color: rgba(41, 151, 255, 0.55);
+  background: var(--blue-dim);
+  border-color: var(--blue-bdr);
 }
 .ds-toggle-thumb {
   position: absolute;
@@ -447,11 +654,11 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   height: 16px;
   border-radius: 50%;
   transition: left 0.2s;
-  background: rgba(255, 255, 255, 0.50);
+  background: var(--muted);
 }
 .ds-toggle-thumb.checked {
   left: 23px;
-  background: #2997FF;
+  background: var(--blue);
 }
 
 /* ============================================================
@@ -503,12 +710,34 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 .ticker-track  { display: flex; animation: ticker 32s linear infinite; }
 
 /* ============================================================
+   PROFILE PAGE SPECIFIC STYLES
+   ============================================================ */
+.pf-card {
+  background: var(--s1);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 var(--bdr), 0 2px 10px rgba(0,0,0,0.04);
+}
+
+[data-theme="light"] .pf-card {
+  background: #ffffff;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.pf-tap-row:active {
+  background: var(--faint);
+}
+
+.pf-copy-btn:active {
+  opacity: 0.6;
+}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 @media (max-width: 767px) {
   .badge-text-hide-mobile { display: none; }
   .ds-modal-sheet {
-    /* ✅ FIX: gunakan sab (safe area bottom) bukan nilai hardcoded */
     padding-bottom: max(var(--sab), 16px);
     max-height: calc(100dvh - 112px - var(--sat));
     display: flex;

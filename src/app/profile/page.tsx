@@ -232,7 +232,7 @@ function ProfilePageContent() {
   const currency = balance?.currency || 'IDR';
 
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-    <p className="pf-section-label">{children}</p>
+    <p style={{ fontSize: 13, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>{children}</p>
   );
 
   const Card = ({ children, mb }: { children: React.ReactNode; mb?: number }) => (
@@ -248,7 +248,7 @@ function ProfilePageContent() {
             {verified ? t('profile.verified') : t('profile.notVerified')}
           </span>
         )}
-        <span style={{ fontSize: 14, color: value ? '#6e6e73' : '#c7c7cc', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{value || '—'}</span>
+        <span style={{ fontSize: 14, color: value ? '#8e8e93' : '#c7c7cc', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{value || '—'}</span>
       </div>
     </div>
   );
@@ -260,8 +260,8 @@ function ProfilePageContent() {
     <button onClick={onClick} className="pf-tap-row" style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '10px 16px 10px 14px', borderBottom: last ? 'none' : '1px solid rgba(60,60,67,0.07)', gap: 12, textAlign: 'left', WebkitTapHighlightColor: 'transparent' }}>
       <div style={{ width: 30, height: 30, borderRadius: 7, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
       <span style={{ flex: 1, fontSize: 15, color: danger ? '#ff3b30' : '#1c1c1e' }}>{label}</span>
-      {value && <span style={{ fontSize: 14, color: '#aeaeb2', marginRight: 4 }}>{value}</span>}
-      {chevron && <svg width="6" height="11" viewBox="0 0 7 12" fill="none"><path d="M1 1l5 5-5 5" stroke={danger ? '#ff3b30' : '#c7c7cc'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+      {value && <span style={{ fontSize: 14, color: '#8e8e93', marginRight: 4 }}>{value}</span>}
+      {chevron && <svg width="6" height="11" viewBox="0 0 7 12" fill="none"><path d="M1 1l5 5-5 5" stroke={danger ? '#ff3b30' : '#8e8e93'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
     </button>
   );
 
@@ -301,7 +301,7 @@ function ProfilePageContent() {
   );
 
   const BalanceBlock = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
       {[
         {
           label: t('profile.balanceReal'), color: '#34c759', bgColor: 'rgba(52,199,89,0.12)', val: balance?.real_balance, sub: currency,
@@ -312,17 +312,19 @@ function ProfilePageContent() {
           icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff9500" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>,
         },
       ].map(({ label, color, bgColor, val, sub, icon }) => (
-        <div key={label} style={{ background: '#fff', borderRadius: 12, padding: '11px 14px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 10px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {icon}
+        <div key={label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 12, padding: '11px 12px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 10px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {icon}
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 600, color, textTransform: 'uppercase' as const, letterSpacing: '0.04em', lineHeight: 1.2 }}>{label}</span>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color, textTransform: 'uppercase' as const, letterSpacing: '0.04em', display: 'block', marginBottom: 3 }}>{label}</span>
+          <div style={{ minWidth: 0 }}>
             {isLoading
-              ? <Skel w="75%" h={16} r={4} />
-              : <p className="balance-num" style={{ fontSize: 16, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.4, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fmtBalance(val)}</p>
+              ? <Skel w="85%" h={16} r={4} />
+              : <p className="balance-num" style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.4, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fmtBalance(val)}</p>
             }
-            <p style={{ fontSize: 10, color: '#aeaeb2', marginTop: 2 }}>{sub}</p>
+            <p style={{ fontSize: 10, color: '#aeaeb2', marginTop: 3 }}>{sub}</p>
           </div>
         </div>
       ))}
@@ -509,7 +511,7 @@ function ProfilePageContent() {
           <div>
             <SectionLabel>{t('profile.settings')}</SectionLabel>
             <Card>
-              {/* Dark Mode Toggle for Dashboard */}
+              {/* Dark Mode Toggle */}
               <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px 10px 14px', borderBottom: '1px solid rgba(60,60,67,0.07)', gap: 12 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 7, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
@@ -577,54 +579,7 @@ function ProfilePageContent() {
           </div>
 
           <div className="pf-mob-only">
-            {/* Mobile Dark Mode + Language */}
-            <Card mb={12}>
-              {/* Dark Mode Toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px 10px 14px', borderBottom: '1px solid rgba(60,60,67,0.07)', gap: 12 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 7, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                  </svg>
-                </div>
-                <span style={{ flex: 1, fontSize: 15, color: '#1c1c1e' }}>Dark Mode</span>
-                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={isDarkMode} 
-                    onChange={toggleDarkMode}
-                    style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
-                  />
-                  <div style={{
-                    width: 51,
-                    height: 31,
-                    borderRadius: 31,
-                    position: 'relative',
-                    transition: 'all 0.3s',
-                    background: isDarkMode ? '#10B981' : 'rgba(120,120,128,0.16)',
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      top: 2,
-                      width: 27,
-                      height: 27,
-                      borderRadius: '50%',
-                      transition: 'left 0.3s',
-                      left: isDarkMode ? 22 : 2,
-                      background: '#fff',
-                      boxShadow: '0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06)',
-                    }}/>
-                  </div>
-                </label>
-              </div>
-              <TappableRow
-                icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                iconBg="linear-gradient(135deg, #10B981, #34D399)" 
-                label={t('language.title')} 
-                value={t(`language.${language === 'en' ? 'english' : language === 'id' ? 'indonesian' : 'russian'}`).toLowerCase()}
-                onClick={() => setLangSheetOpen(true)} 
-                last
-              />
-            </Card>
+            {/* Mobile Logout Button */}
             <Card>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>}
@@ -645,16 +600,12 @@ function ProfilePageContent() {
 }
 
 // ─────────────────────────────────────────────
-// EXPORT WITH PROVIDER
+// EXPORT
 // ─────────────────────────────────────────────
-import { DarkModeProvider } from '@/lib/DarkModeContext';
-
 export default function ProfilePage() {
   return (
-    <DarkModeProvider>
-      <LanguageProvider>
-        <ProfilePageContent />
-      </LanguageProvider>
-    </DarkModeProvider>
+    <LanguageProvider>
+      <ProfilePageContent />
+    </LanguageProvider>
   );
 }

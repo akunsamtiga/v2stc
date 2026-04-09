@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   api,
@@ -14,6 +14,7 @@ import { ChartCard } from '@/components/ChartCard';
 import AssetIcon from '@/components/common/AssetIcon';
 import { storage, isSessionValid } from '@/lib/storage';
 import { useLanguage } from '@/lib/i18n';
+import { useDarkMode } from '@/lib/DarkModeContext';
 import {
   Activity, AlertCircle, BarChart2, Calendar,
   ChevronDown, ChevronUp, Info, Plus,
@@ -23,33 +24,39 @@ import {
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
-// DESIGN TOKENS - Emerald Theme
+// DESIGN TOKENS - Emerald Theme (Dark/Light)
 // ═══════════════════════════════════════════
-const C = {
-  bg:    '#000000',
-  card:  '#18181c',
-  card2: '#101012',
-  bdr:   'rgba(255,255,255,0.08)',
-  bdrAct:'rgba(16,185,129,0.50)',
-  cyan:  '#10B981', // emerald-500
-  cyand: 'rgba(16,185,129,0.15)',
-  coral: '#FF453A',
-  cord:  'rgba(255,69,58,0.12)',
-  amber: '#FF9F0A',
-  ambd:  'rgba(255,159,10,0.10)',
-  violet:'#BF5AF2',
-  vltd:  'rgba(191,90,242,0.10)',
-  sky:   '#34D399', // emerald-400
-  skyd:  'rgba(52,211,153,0.10)',
-  orange:'#FF6B35',
-  orgd:  'rgba(255,107,53,0.10)',
-  pink:  '#FF375F',
-  pinkd: 'rgba(255,55,95,0.10)',
-  text:  '#FFFFFF',
-  sub:   'rgba(235,235,245,0.88)',
-  muted: 'rgba(235,235,245,0.50)',
-  faint: 'rgba(16,185,129,0.07)',
-};
+function getColors(isDark: boolean) {
+  return {
+    bg:    isDark ? '#000000' : '#F8F9FA',
+    card:  isDark ? '#18181c' : '#FFFFFF',
+    card2: isDark ? '#101012' : '#F3F4F6',
+    bdr:   isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+    bdrAct:'rgba(16,185,129,0.50)',
+    cyan:  '#10B981', // emerald-500
+    cyand: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.08)',
+    coral: '#FF453A',
+    cord:  isDark ? 'rgba(255,69,58,0.12)' : 'rgba(255,69,58,0.08)',
+    amber: '#FF9F0A',
+    ambd:  isDark ? 'rgba(255,159,10,0.10)' : 'rgba(255,159,10,0.08)',
+    violet:'#BF5AF2',
+    vltd:  isDark ? 'rgba(191,90,242,0.10)' : 'rgba(191,90,242,0.08)',
+    sky:   '#34D399', // emerald-400
+    skyd:  isDark ? 'rgba(52,211,153,0.10)' : 'rgba(52,211,153,0.08)',
+    orange:'#FF6B35',
+    orgd:  isDark ? 'rgba(255,107,53,0.10)' : 'rgba(255,107,53,0.08)',
+    pink:  '#FF375F',
+    pinkd: isDark ? 'rgba(255,55,95,0.10)' : 'rgba(255,55,95,0.08)',
+    text:  isDark ? '#FFFFFF' : '#1C1C1E',
+    sub:   isDark ? 'rgba(235,235,245,0.88)' : 'rgba(60,60,67,0.78)',
+    muted: isDark ? 'rgba(235,235,245,0.50)' : 'rgba(60,60,67,0.45)',
+    faint: isDark ? 'rgba(16,185,129,0.07)' : 'rgba(16,185,129,0.05)',
+  };
+}
+
+// Module-level colors — updated each render by DashboardPage via C = colors
+// Must be `let` so sub-components always get the current theme on re-render
+let C = getColors(true);
 
 type TradingMode = 'schedule' | 'fastrade' | 'ctc' | 'aisignal' | 'indicator' | 'momentum';
 type FastTradeTimeframe = '1m' | '5m' | '15m' | '30m' | '1h';
@@ -82,8 +89,15 @@ const Sk: React.FC<{w?:string|number;h?:number;style?:React.CSSProperties}> = ({
 const Card: React.FC<{children:React.ReactNode;style?:React.CSSProperties;className?:string;flash?:'win'|'lose'|null}> =
 ({children,style,className='',flash}) => (
   <div className={`ds-card overflow-hidden ${className}`} style={{
-    animation:flash==='win'?'win-flash 2s ease forwards':flash==='lose'?'lose-flash 2s ease forwards':undefined,
-    boxShadow:'0 4px 18px rgba(41,151,255,0.05), 0 2px 8px rgba(0,0,0,0.3)',...style,
+    // Flash animation hanya berjalan pada .ds-card (box-shadow pulse)
+    // Border rotation tetap berjalan pada ::before — tidak terpengaruh
+    animation: flash==='win'
+      ? 'win-flash 2s ease forwards'
+      : flash==='lose'
+      ? 'lose-flash 2s ease forwards'
+      : undefined,
+    // boxShadow TIDAK di-override inline — biarkan globals.css yang mengontrol
+    ...style,
   }}>{children}</div>
 );
 
@@ -95,14 +109,14 @@ const SL: React.FC<{children:React.ReactNode;accent?:string}> = ({children,accen
   </div>
 );
 const FL: React.FC<{children:React.ReactNode}> = ({children}) => (
-  <label style={{display:'block',fontSize:10,fontWeight:600,marginBottom:6,letterSpacing:'0.06em',textTransform:'uppercase',color:'rgba(255,255,255,0.65)'}}>{children}</label>
+  <label style={{display:'block',fontSize:10,fontWeight:600,marginBottom:6,letterSpacing:'0.06em',textTransform:'uppercase',color:C.muted}}>{children}</label>
 );
 
 const Toggle: React.FC<{checked:boolean;onChange:(v:boolean)=>void;disabled?:boolean;accent?:string}> = ({checked,onChange,disabled,accent=C.cyan}) => (
   <label style={{display:'inline-flex',alignItems:'center',cursor:disabled?'not-allowed':'pointer',opacity:disabled?0.4:1}}>
     <input type="checkbox" checked={checked} onChange={e=>onChange(e.target.checked)} disabled={disabled} style={{position:'absolute',opacity:0,width:0,height:0}}/>
-    <div style={{width:44,height:22,borderRadius:22,position:'relative',transition:'all 0.2s',background:checked?`${accent}28`:'rgba(255,255,255,0.06)',border:`1px solid ${checked?`${accent}55`:'rgba(255,255,255,0.12)'}`}}>
-      <div style={{position:'absolute',top:2,width:16,height:16,borderRadius:'50%',transition:'left 0.2s',left:checked?23:2,background:checked?accent:'rgba(255,255,255,0.5)'}}/>
+    <div style={{width:44,height:22,borderRadius:22,position:'relative',transition:'all 0.2s',background:checked?`${accent}28`:C.bdr,border:`1px solid ${checked?`${accent}55`:C.bdr}`}}>
+      <div style={{position:'absolute',top:2,width:16,height:16,borderRadius:'50%',transition:'left 0.2s',left:checked?23:2,background:checked?accent:C.muted}}/>
     </div>
   </label>
 );
@@ -169,7 +183,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string}> = ({t:t
   const fmtDate = (d:Date) => d.toLocaleDateString(locale,{day:'2-digit',month:'short'});
   const timeLabel = lang==='ru'?'ВРЕМЯ':lang==='en'?'TIME':'WAKTU';
   return (
-    <div style={{borderRadius:8,background:'rgba(0,0,0,0.4)',border:'1px solid rgba(41,151,255,0.22)',boxShadow:'0 0 10px rgba(41,151,255,0.06)'}}>
+    <div style={{borderRadius:8,background:C.card2,border:`1px solid ${C.bdr}`,boxShadow:'0 0 10px rgba(41,151,255,0.06)'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 10px',borderBottom:'1px solid rgba(41,151,255,0.1)'}}>
         <span style={{fontSize:9,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>{timeLabel}</span>
         <span style={{width:5,height:5,borderRadius:'50%',background:C.coral}}/>
@@ -217,7 +231,7 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
       }
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:4}}>
         <span style={{fontSize:9,color:C.muted}}>{balance?.currency??'IDR'}</span>
-        <button onClick={()=>setHidden(h=>!h)} style={{background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.3)',padding:0,fontSize:11}}>
+        <button onClick={()=>setHidden(h=>!h)} style={{background:'transparent',border:'none',cursor:'pointer',color:C.muted,padding:0,fontSize:11}}>
           {hidden?'👁':'👁‍🗨'}
         </button>
       </div>
@@ -247,11 +261,11 @@ const AssetCardCompact: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isL
           )}
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <p style={{fontSize:9,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em',color:'rgba(255,255,255,0.5)',lineHeight:1,marginBottom:3}}>{t('dashboard.asset')}</p>
+          <p style={{fontSize:9,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em',color:C.muted,lineHeight:1,marginBottom:3}}>{t('dashboard.asset')}</p>
           {asset?(
-            <p style={{fontSize:13,fontWeight:700,lineHeight:1,color:'#f0f4ff',letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.ric}</p>
+            <p style={{fontSize:13,fontWeight:700,lineHeight:1,color:C.text,letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.ric}</p>
           ):(
-            <p style={{fontSize:11,color:'rgba(255,255,255,0.2)'}}>{t('dashboard.notSelected')}</p>
+            <p style={{fontSize:11,color:C.muted}}>{t('dashboard.notSelected')}</p>
           )}
         </div>
         {asset && <span style={{fontSize:10,fontWeight:700,color:modeCol,flexShrink:0}}>{asset.profitRate}%</span>}
@@ -262,7 +276,7 @@ const AssetCardCompact: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isL
 
 // ═══════════════════════════════════════════
 // COMPACT BALANCE CARD (Mobile 2-row layout)
-// ═══════════════════════════════════════════
+// ════════════════════��══════════════════════
 const BalanceCardCompact: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'real';isLoading?:boolean;t:(k:string)=>string}> = ({balance,accountType,isLoading,t}) => {
   const [hidden,setHidden] = useState(false);
   const isDemo = accountType==='demo';
@@ -274,26 +288,28 @@ const BalanceCardCompact: React.FC<{balance:ProfileBalance|null;accountType:'dem
   const colBg = isDemo?'rgba(255,159,10,0.08)':'rgba(16,185,129,0.08)';
   return (
     <Card style={{padding:'10px 12px'}}>
-      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-        <span style={{fontSize:9,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em',color:C.muted}}>{t('dashboard.balance')}</span>
+      {/* Baris 1: label + badge + eye */}
+      <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:5}}>
+        <span style={{fontSize:9,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em',color:C.muted,flex:1}}>{t('dashboard.balance')}</span>
         <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:99,color:col,background:colBg,border:`1px solid ${col}30`}}>{isDemo?t('common.demo'):t('common.real')}</span>
-      </div>
-      {isLoading?<Sk h={20} w={90}/>:
-        hidden?(
-          <div style={{display:'flex',alignItems:'center',gap:2}}>
-            {[...Array(5)].map((_,i)=><span key={i} style={{width:4,height:4,borderRadius:'50%',background:col,opacity:0.4+(i%2)*0.2}}/>)}
-          </div>
-        ):(
-          <p style={{fontSize:'clamp(14px,3.5vw,18px)',fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col}}>
-            {Math.round(amount).toLocaleString('id-ID',{maximumFractionDigits:0})}
-          </p>
-        )
-      }
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:3}}>
-        <span style={{fontSize:8,color:C.muted}}>{balance?.currency??'IDR'}</span>
-        <button onClick={()=>setHidden(h=>!h)} style={{background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.25)',padding:0,fontSize:10}}>
+        <button onClick={()=>setHidden(h=>!h)} style={{background:'transparent',border:'none',cursor:'pointer',color:C.muted,padding:0,fontSize:10,lineHeight:1}}>
           {hidden?'👁':'👁‍🗨'}
         </button>
+      </div>
+      {/* Baris 2: angka + currency sejajar */}
+      <div style={{display:'flex',alignItems:'baseline',gap:4}}>
+        {isLoading?<Sk h={18} w={80}/>:
+          hidden?(
+            <div style={{display:'flex',alignItems:'center',gap:2}}>
+              {[...Array(5)].map((_,i)=><span key={i} style={{width:4,height:4,borderRadius:'50%',background:col,opacity:0.4+(i%2)*0.2}}/>)}
+            </div>
+          ):(
+            <p style={{fontSize:'clamp(14px,3.5vw,18px)',fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col}}>
+              {Math.round(amount).toLocaleString('id-ID',{maximumFractionDigits:0})}
+            </p>
+          )
+        }
+        <span style={{fontSize:8,color:C.muted}}>{balance?.currency??'IDR'}</span>
       </div>
     </Card>
   );
@@ -341,7 +357,7 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
             <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:col}}>24j</span>
           </span>
         </div>
-        <div style={{width:1,alignSelf:'stretch',background:'rgba(255,255,255,0.07)'}}/>
+        <div style={{width:1,alignSelf:'stretch',background:C.bdr}}/>
         <div style={{flex:1,minWidth:0}}>
           {isLoading?<Sk h={24} w="85%"/>:(
             <p key={animKey} style={{
@@ -387,14 +403,14 @@ const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?
           )}
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <p style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:'rgba(255,255,255,0.65)',lineHeight:1,marginBottom:5}}>{t('dashboard.asset')}</p>
+          <p style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,lineHeight:1,marginBottom:5}}>{t('dashboard.asset')}</p>
           {asset?(
             <>
-              <p style={{fontSize:15,fontWeight:700,lineHeight:1,color:'#f0f4ff',letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.ric}</p>
-              <p style={{fontSize:10,marginTop:3,color:'rgba(255,255,255,0.68)',lineHeight:1.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.name}</p>
+              <p style={{fontSize:15,fontWeight:700,lineHeight:1,color:C.text,letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.ric}</p>
+              <p style={{fontSize:10,marginTop:3,color:C.sub,lineHeight:1.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.name}</p>
             </>
           ):(
-            <p style={{fontSize:12,color:'rgba(255,255,255,0.2)'}}>{t('dashboard.notSelected')}</p>
+            <p style={{fontSize:12,color:C.muted}}>{t('dashboard.notSelected')}</p>
           )}
         </div>
         {asset && <span style={{fontSize:11,fontWeight:700,color:modeCol,flexShrink:0}}>{asset.profitRate}%</span>}
@@ -473,8 +489,8 @@ const PickerBtn: React.FC<{label:string;placeholder?:string;disabled?:boolean;on
   return (
     <button type="button" onClick={onClick} disabled={disabled} style={{
       width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 12px',borderRadius:8,
-      background:has?`rgba(41,151,255,0.04)`:'rgba(0,0,0,0.3)',
-      border:`1px solid ${has?'rgba(41,151,255,0.18)':C.bdr}`,
+      background:has?C.cyand:C.card2,
+      border:`1px solid ${has?C.bdrAct:C.bdr}`,
       cursor:disabled?'not-allowed':'pointer',opacity:disabled?0.5:1,
     }}>
       <span style={{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:has?C.text:C.muted}}>{label||placeholder||'— pilih —'}</span>
@@ -1231,8 +1247,8 @@ const ModeSessionPanel: React.FC<{
             width: '100%', display: 'flex', alignItems: 'center',
             justifyContent: 'space-between', padding: '8px 12px',
             borderRadius: 12, cursor: 'pointer',
-            background: dropOpen ? `${ac}14` : 'rgba(0,0,0,0.4)',
-            border: `1px solid ${dropOpen ? `${ac}40` : 'rgba(255,255,255,0.08)'}`,
+            background: dropOpen ? `${ac}14` : C.card2,
+            border: `1px solid ${dropOpen ? `${ac}40` : C.bdr}`,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1304,7 +1320,7 @@ const ModeSessionPanel: React.FC<{
                       cursor: isLock ? 'not-allowed' : 'pointer',
                       background: isAct ? `${accent}10` : 'transparent',
                       borderBottom: idx < MODES.length - 1
-                        ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                        ? `1px solid ${C.bdr}` : 'none',
                       borderLeft: isAct ? `2px solid ${accent}` : '2px solid transparent',
                       borderTop: 'none', borderRight: 'none',
                       opacity: isLock ? 0.5 : 1,
@@ -1335,7 +1351,7 @@ const ModeSessionPanel: React.FC<{
               {blockedModes.length > 0 && (
                 <div style={{
                   padding: '8px 16px',
-                  borderTop: '1px solid rgba(255,255,255,0.04)',
+                  borderTop: `1px solid ${C.bdr}`,
                   background: 'rgba(255,69,58,0.04)',
                   display: 'flex', alignItems: 'center', gap: 6,
                 }}>
@@ -1456,7 +1472,7 @@ const SettingsCard: React.FC<{
                     {mode==='fastrade'
                       ? <PickerBtn label={FT_TF.find(t=>t.value===ftTf)?.label||''} disabled={disabled} onClick={()=>setPickerOpen('ftTf')}/>
                       : mode==='ctc'
-                      ? <div style={{display:'flex',alignItems:'center',padding:'9px 12px',borderRadius:8,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.bdr}`}}><span style={{fontSize:13,flex:1,color:C.violet}}>1 Menit (fixed)</span><Copy style={{width:13,height:13,color:C.violet}}/></div>
+                      ? <div style={{display:'flex',alignItems:'center',padding:'9px 12px',borderRadius:8,background:C.faint,border:`1px solid ${C.bdr}`}}><span style={{fontSize:13,flex:1,color:C.violet}}>1 Menit (fixed)</span><Copy style={{width:13,height:13,color:C.violet}}/></div>
                       : <PickerBtn label={durationOpts.find(d=>d.value===String(duration))?.label||''} disabled={disabled} onClick={()=>setPickerOpen('duration')}/>
                     }
                   </div>
@@ -1478,17 +1494,17 @@ const SettingsCard: React.FC<{
                     <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{paddingLeft:30,borderColor:isBelowMin?C.coral:undefined}}/>
                   </div>
                   <div style={{position:'relative',flexShrink:0}}>
-                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{height:'100%',padding:'0 10px',display:'flex',alignItems:'center',gap:4,borderRadius:8,fontSize:11,fontWeight:600,background:amtDrop?`${ac}18`:'rgba(255,255,255,0.04)',border:`1px solid ${amtDrop?`${ac}40`:'rgba(255,255,255,0.1)'}`,color:amtDrop?ac:C.muted,cursor:disabled?'not-allowed':'pointer'}}>
+                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{height:'100%',padding:'0 10px',display:'flex',alignItems:'center',gap:4,borderRadius:8,fontSize:11,fontWeight:600,background:amtDrop?`${ac}18`:C.faint,border:`1px solid ${amtDrop?`${ac}40`:C.bdr}`,color:amtDrop?ac:C.muted,cursor:disabled?'not-allowed':'pointer'}}>
                       Quick<ChevronDown style={{width:10,height:10,transform:amtDrop?'rotate(180deg)':'none',transition:'transform 0.15s'}}/>
                     </button>
                     {amtDrop&&!disabled&&(
                       <>
                         <div style={{position:'fixed',inset:0,zIndex:5}} onClick={()=>setAmtDrop(false)}/>
-                        <div style={{position:'absolute',right:0,marginTop:4,zIndex:10,minWidth:160,borderRadius:12,overflow:'hidden',background:'linear-gradient(160deg,#161618 0%,#0e0e10 100%)',border:`1px solid ${ac}30`,boxShadow:'0 8px 32px rgba(0,0,0,0.5)',animation:'slide-up 0.15s ease'}}>
+                        <div style={{position:'absolute',right:0,marginTop:4,zIndex:10,minWidth:160,borderRadius:12,overflow:'hidden',background:C.card,border:`1px solid ${ac}30`,boxShadow:'0 8px 32px rgba(0,0,0,0.3)',animation:'slide-up 0.15s ease'}}>
                           {QUICK_AMOUNTS.map((a,idx)=>{
                             const isAct=amount===a;
                             return (
-                              <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 12px',fontSize:12,background:isAct?`${ac}10`:'transparent',borderBottom:idx<QUICK_AMOUNTS.length-1?'1px solid rgba(255,255,255,0.04)':'none',borderLeft:isAct?`2px solid ${ac}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?ac:C.sub,fontWeight:isAct?700:400,cursor:'pointer'}}>
+                              <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 12px',fontSize:12,background:isAct?`${ac}10`:'transparent',borderBottom:idx<QUICK_AMOUNTS.length-1?`1px solid ${C.bdr}`:'none',borderLeft:isAct?`2px solid ${ac}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?ac:C.sub,fontWeight:isAct?700:400,cursor:'pointer'}}>
                                 <span>{a>=1000000?`Rp ${a/1000000}M`:`Rp ${(a/1000).toFixed(a%1000===0?0:1)}K`}</span>
                                 {isAct&&<span style={{color:ac}}>✓</span>}
                               </button>
@@ -1595,7 +1611,7 @@ const SettingsCard: React.FC<{
                 </div>
                 <div style={{marginBottom:14}}>
                   <FL>Always Signal Mode</FL>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:10,background:'rgba(255,255,255,0.03)',border:`1px solid rgba(255,255,255,0.08)`}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:10,background:C.faint,border:`1px solid ${C.bdr}`}}>
                     <div>
                       <p style={{fontSize:12,color:C.sub}}>Martingale pada sinyal berikutnya</p>
                       <p style={{fontSize:10,color:C.muted}}>Tidak blocking, lanjut saat sinyal datang</p>
@@ -1621,7 +1637,7 @@ const SettingsCard: React.FC<{
                     <FL>Max Step</FL>
                     <div style={{display:'flex',gap:6}}>
                       {[1,2,3,4,5].map(k=>(
-                        <button key={k} type="button" disabled={disabled} onClick={()=>set('maxStep',k)} style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',background:martingale.maxStep===k?`${ac}18`:'rgba(255,255,255,0.04)',border:`1px solid ${martingale.maxStep===k?`${ac}50`:'rgba(255,255,255,0.08)'}`,color:martingale.maxStep===k?ac:'rgba(255,255,255,0.5)'}}>K{k}</button>
+                        <button key={k} type="button" disabled={disabled} onClick={()=>set('maxStep',k)} style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',background:martingale.maxStep===k?`${ac}18`:C.faint,border:`1px solid ${martingale.maxStep===k?`${ac}50`:C.bdr}`,color:martingale.maxStep===k?ac:C.muted}}>K{k}</button>
                       ))}
                     </div>
                   </div>
@@ -1629,7 +1645,7 @@ const SettingsCard: React.FC<{
                     <FL>Multiplier</FL>
                     <div style={{display:'flex',gap:6}}>
                       {[1.5,2,2.5,3,5].map(m=>(
-                        <button key={m} type="button" disabled={disabled} onClick={()=>set('multiplier',m)} style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',background:martingale.multiplier===m?`${ac}18`:'rgba(255,255,255,0.04)',border:`1px solid ${martingale.multiplier===m?`${ac}50`:'rgba(255,255,255,0.08)'}`,color:martingale.multiplier===m?ac:'rgba(255,255,255,0.5)'}}>
+                        <button key={m} type="button" disabled={disabled} onClick={()=>set('multiplier',m)} style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',background:martingale.multiplier===m?`${ac}18`:C.faint,border:`1px solid ${martingale.multiplier===m?`${ac}50`:C.bdr}`,color:martingale.multiplier===m?ac:C.muted}}>
                           {m}x
                         </button>
                       ))}
@@ -1725,7 +1741,7 @@ const ControlCard: React.FC<{
 
   return (
     <Card style={{borderColor:isActive?`${ac}40`:undefined}}>
-      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'12px 16px',background:'transparent',border:'none',borderBottom:open?'1px solid rgba(255,255,255,0.05)':'none',cursor:'pointer'}}>
+      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'12px 16px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer'}}>
         <div style={{width:28,height:28,flexShrink:0,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}12`,border:`1px solid ${ac}25`}}>
           <span style={{color:ac}}>{modeIcon}</span>
         </div>
@@ -1750,14 +1766,14 @@ const ControlCard: React.FC<{
                   <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>Signal</span>
                   <span style={{fontSize:22,fontWeight:700,lineHeight:'1.1',color:C.text}}>{orders.filter(o=>!o.isExecuted&&!o.isSkipped).length}</span>
                 </div>
-                <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:'rgba(0,0,0,0.25)',border:`1px solid ${pnlPos?'rgba(41,151,255,0.12)':'rgba(255,69,58,0.12)'}`}}>
+                <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:C.card2,border:`1px solid ${pnlPos?'rgba(41,151,255,0.12)':'rgba(255,69,58,0.12)'}`}}>
                   <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L Sesi</span>
                   <span style={{fontSize:16,fontWeight:700,lineHeight:'1.1',color:pnlPos?C.cyan:C.coral}}>{pnlPos?'+':'-'}{Math.round(Math.abs(profit)/100).toLocaleString('id-ID')}</span>
                 </div>
               </>
             ):(
               <>
-                <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:'rgba(0,0,0,0.25)',border:`1px solid ${pnlPos?`${ac}12`:'rgba(255,69,58,0.12)'}`}}>
+                <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:C.card2,border:`1px solid ${pnlPos?`${ac}12`:'rgba(255,69,58,0.12)'}`}}>
                   <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L Sesi</span>
                   <span style={{fontSize:17,fontWeight:700,lineHeight:'1.1',color:pnlPos?ac:C.coral}}>{pnlPos?'+':'-'}{Math.round(Math.abs(profit)/100).toLocaleString('id-ID')}</span>
                 </div>
@@ -1805,6 +1821,10 @@ const ControlCard: React.FC<{
 export default function DashboardPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
+  const { isDarkMode } = useDarkMode();
+  const colors = useMemo(() => getColors(isDarkMode), [isDarkMode]);
+  // ✅ FIX: Update module-level C so all sub-components use the correct theme
+  C = colors;
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
 
@@ -2197,7 +2217,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div style={{minHeight:'100%',background:C.bg,paddingBottom:88}}>
+    <div style={{minHeight:'100%',background:colors.bg,paddingBottom:88,color:colors.text,transition:'background 0.3s, color 0.3s'}}>
       <style>{`
         @keyframes spin        { to { transform: rotate(360deg); } }
         @keyframes shimmer     { 0%,100%{background-position:200% 0} 50%{background-position:0% 0} }
@@ -2211,9 +2231,22 @@ export default function DashboardPage() {
         @keyframes lose-flash  { 0%{box-shadow:0 0 0 0 rgba(255,69,58,0)} 15%{box-shadow:0 0 0 4px rgba(255,69,58,0.35)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)} }
 
         .ds-card {
-          background: linear-gradient(145deg, #0e1d35 0%, #0a1526 100%);
-          border: 1px solid rgba(41,151,255,0.16);
+          background: ${isDarkMode ? 'linear-gradient(145deg, #0e1d35 0%, #0a1526 100%)' : 'linear-gradient(145deg, #FFFFFF 0%, #FAFBFC 100%)'};
+          border: 1px solid ${isDarkMode ? 'rgba(41,151,255,0.16)' : 'rgba(16,185,129,0.12)'};
           border-radius: 14px;
+          box-shadow: ${isDarkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'};
+          transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        @media (max-width: 767px) {
+          .ds-card, .ds-card:hover {
+            border-color: ${isDarkMode ? 'rgba(16,185,129,0.55)' : 'rgba(16,185,129,0.40)'} !important;
+            box-shadow: ${isDarkMode
+              ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(16,185,129,0.06), 0 2px 8px rgba(0,0,0,0.12)'
+              : '0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px rgba(0,0,0,0.06), 0 0 28px rgba(16,185,129,0.05), 0 2px 6px rgba(0,0,0,0.05)'
+            } !important;
+            transform: none !important;
+          }
         }
 
         .ds-input {
@@ -2221,20 +2254,20 @@ export default function DashboardPage() {
           padding: 9px 12px;
           border-radius: 8px;
           font-size: 13px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(41,151,255,0.18);
-          color: #ffffff;
+          background: ${isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(16,185,129,0.03)'};
+          border: 1px solid ${isDarkMode ? 'rgba(41,151,255,0.18)' : 'rgba(16,185,129,0.15)'};
+          color: ${isDarkMode ? '#ffffff' : '#1C1C1E'};
           outline: none;
           font-family: inherit;
-          transition: border-color 0.15s;
+          transition: border-color 0.15s, background 0.3s, color 0.3s;
           resize: vertical;
           box-sizing: border-box;
         }
-        .ds-input:focus { border-color: rgba(41,151,255,0.45); }
-        .ds-input::placeholder { color: rgba(255,255,255,0.28); }
+        .ds-input:focus { border-color: ${isDarkMode ? 'rgba(41,151,255,0.45)' : 'rgba(16,185,129,0.45)'}; }
+        .ds-input::placeholder { color: ${isDarkMode ? 'rgba(255,255,255,0.28)' : 'rgba(60,60,67,0.40)'}; }
 
         .schedule-item { transition: background 0.15s; }
-        .schedule-item:hover { background: rgba(41,151,255,0.04) !important; }
+        .schedule-item:hover { background: ${isDarkMode ? 'rgba(41,151,255,0.04)' : 'rgba(16,185,129,0.06)'} !important; }
       `}</style>
 
       <OrderInputModal
@@ -2271,7 +2304,7 @@ export default function DashboardPage() {
         />
       )}
 
-      <div style={{maxWidth:1280,margin:'0 auto',padding:`16px ${px}px 0`}}>
+      <div style={{maxWidth:1280,margin:'0 auto',padding:`0 ${px}px 0`}}>
         {error&&(
           <div style={{display:'flex',alignItems:'flex-start',gap:9,padding:'10px 14px',borderRadius:8,marginBottom:g,background:C.cord,border:`1px solid rgba(255,69,58,0.2)`,borderLeft:`2px solid ${C.coral}`}}>
             <AlertCircle style={{width:13,height:13,flexShrink:0,marginTop:2,color:C.coral}}/>
@@ -2330,24 +2363,17 @@ export default function DashboardPage() {
         {/* ── MOBILE ── */}
         {deviceType==='mobile'&&(
           <div style={{display:'flex',flexDirection:'column',gap:g}}>
-            {/* Header Image */}
-            <img 
-              src="/header.png" 
-              alt="STC AutoTrade" 
-              style={{
-                width:'100%',
-                height:'auto',
-                display:'block',
-                marginBottom:8,
-              }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-            {TopCards}
-            {/* Asset + Balance Cards - Side by side, max 2 rows */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g}}>
-              <AssetCardCompact asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}/>
-              <BalanceCardCompact balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
+            {/* Header Image - Fullwidth, no top margin */}
+            {/* Header Image - Full bleed, breaks out of padding */}
+            <div style={{marginLeft:`-${px}px`,marginRight:`-${px}px`,marginTop:0,marginBottom:8,lineHeight:0}}>
+              <img 
+                src="/header.png" 
+                alt="STC AutoTrade" 
+                style={{width:'100%',height:'auto',display:'block'}}
+                onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+              />
             </div>
+            {TopCards}
             <div style={{display:'grid',gridTemplateColumns:'3fr 2fr',gap:g,alignItems:'stretch'}}>
               <div style={{display:'flex',flexDirection:'column',gap:8}}>
                 <RealtimeClockCompact t={t} lang={language}/>
@@ -2363,7 +2389,7 @@ export default function DashboardPage() {
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                       <span style={{fontSize:9,color:C.muted}}>Status</span>
                       <span style={{display:'flex',alignItems:'center',gap:4,fontSize:9,fontWeight:600,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
-                        <span style={{width:5,height:5,borderRadius:'50%',background:isActiveMode?modeAccent(tradingMode):'rgba(255,255,255,0.2)'}}/>
+                        <span style={{width:5,height:5,borderRadius:'50%',background:isActiveMode?modeAccent(tradingMode):C.muted}}/>
                         {isActiveMode?t('common.active'):'Off'}
                       </span>
                     </div>
@@ -2393,7 +2419,7 @@ export default function DashboardPage() {
                   {/* P&L + Stats + Lihat Sesi — unified card */}
                   <div style={{
                     padding:'10px 12px',borderRadius:12,
-                    background:'rgba(0,0,0,0.35)',
+                    background:C.card2,
                     border:`1px solid ${modeAccent(tradingMode)}28`,
                     display:'flex',flexDirection:'column',gap:7,
                     flex:1,
@@ -2461,6 +2487,11 @@ export default function DashboardPage() {
               ) : (
                 ModeSession(true)
               )}
+            </div>
+            {/* Asset + Balance Cards - di atas Settings */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g}}>
+              <AssetCardCompact asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}/>
+              <BalanceCardCompact balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
             </div>
             {SettingsCardEl}
             {ControlCardEl}
