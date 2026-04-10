@@ -363,6 +363,23 @@ function LoginPageContent() {
         }
         .register-link a:hover { opacity: 0.70; }
 
+        /* Logo */
+        .logo-desktop {
+          display: none;
+          position: absolute;
+          top: 16px;
+          left: 16px;
+          z-index: 10;
+          align-items: center;
+        }
+        .logo-desktop img { height: 32px; width: auto; object-fit: contain; }
+        .logo-mobile { display: flex; justify-content: center; margin-bottom: 14px; }
+        .logo-mobile img { height: 56px; width: auto; object-fit: contain; }
+        @media (min-width: 600px) {
+          .logo-desktop { display: flex; }
+          .logo-mobile  { display: none; }
+        }
+
         /* Language Selector */
         .lang-selector {
           position: absolute;
@@ -601,6 +618,11 @@ function LoginPageContent() {
             pointerEvents: 'none',
           } : undefined}
         >
+          {/* Logo Desktop - pojok kiri atas, sejajar dengan lang-selector */}
+          <div className="logo-desktop">
+            <img src="/logo.png" alt="STC AutoTrade" />
+          </div>
+
           {/* Language Selector */}
           <div className="lang-selector" ref={langRef}>
             <button 
@@ -637,7 +659,11 @@ function LoginPageContent() {
 
           <div className="card">
             <div className="brand">
-              <span className="brand-title">{t('login.title')}</span>
+              {/* Logo Mobile - di atas judul */}
+              <div className="logo-mobile">
+                <img src="/logo.png" alt="STC AutoTrade" />
+              </div>
+
               <p className="brand-sub">{t('login.subtitle')}</p>
             </div>
 
