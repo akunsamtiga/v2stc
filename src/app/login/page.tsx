@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { storage, isSessionValid } from '@/lib/storage';
-import { LanguageProvider, useLanguage, AVAILABLE_LANGUAGES, Language } from '@/lib/i18n';
+import { LanguageProvider, useLanguage, AVAILABLE_LANGUAGES, Language, isWindows } from '@/lib/i18n';
 
 type SplashPhase = 'hidden' | 'welcome' | 'verified' | 'out';
 
@@ -22,6 +22,7 @@ function LoginPageContent() {
   const [showPass, setShowPass] = useState(false);
   const [splash,   setSplash]   = useState<SplashPhase>('hidden');
   const [showLangSelector, setShowLangSelector] = useState(false);
+  const [useImg, setUseImg] = useState(false);
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passRef  = useRef<HTMLInputElement>(null);
@@ -38,6 +39,10 @@ function LoginPageContent() {
     };
     init();
   }, [router]);
+
+  useEffect(() => {
+    setUseImg(isWindows());
+  }, []);
 
   // Close language selector when clicking outside
   useEffect(() => {
@@ -136,13 +141,28 @@ function LoginPageContent() {
     (password || passRef.current?.value)
   );
 
-  const getLanguageFlag = (code: Language) => {
-    const lang = AVAILABLE_LANGUAGES.find(l => l.code === code);
-    return lang?.flag || '🌐';
-  };
-
   const getLanguageName = (code: Language) => {
     return code.toUpperCase();
+  };
+
+  const FlagIcon = ({ lang, size = 16 }: { lang: typeof AVAILABLE_LANGUAGES[0]; size?: number }) => {
+    if (useImg) {
+      return (
+        <img
+          src={lang.flagImg}
+          alt={lang.name}
+          style={{
+            width: size + 2,
+            height: Math.round((size + 2) * 0.75),
+            objectFit: 'cover',
+            borderRadius: 2,
+            display: 'inline-block',
+            verticalAlign: 'middle',
+          }}
+        />
+      );
+    }
+    return <span style={{ fontSize: size }}>{lang.flag}</span>;
   };
 
   return (
@@ -587,7 +607,7 @@ function LoginPageContent() {
               className="lang-btn" 
               onClick={() => setShowLangSelector(!showLangSelector)}
             >
-              <span>{getLanguageFlag(language)}</span>
+              {(() => { const l = AVAILABLE_LANGUAGES.find(l => l.code === language); return l ? <FlagIcon lang={l} size={16} /> : '🌐'; })()}
               <span>{getLanguageName(language)}</span>
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
                 <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -604,7 +624,7 @@ function LoginPageContent() {
                       setShowLangSelector(false);
                     }}
                   >
-                    <span>{lang.flag}</span>
+                    <FlagIcon lang={lang} size={16} />
                     <span>{lang.nativeName}</span>
                   </button>
                 ))}

@@ -7,6 +7,7 @@ export {
   formatCurrency,
   formatDate,
   formatTime,
+  isWindows,
   AVAILABLE_LANGUAGES,
   type Language 
 } from './LanguageContext';
