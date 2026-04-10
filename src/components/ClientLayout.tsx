@@ -246,6 +246,58 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     <DarkModeProvider>
       <LanguageProvider>
         <ThemeWrapper>
+          {/* Prototype badge */}
+          <div style={{
+            position: 'fixed',
+            top: 'env(safe-area-inset-top, 0px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 99998,
+            pointerEvents: 'none',
+          }}>
+            <style>{`
+              @keyframes proto-pulse {
+                0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,149,0,0.5), 0 4px 16px rgba(255,149,0,0.35); }
+                50%       { opacity: 0.82; box-shadow: 0 0 0 5px rgba(255,149,0,0), 0 4px 20px rgba(255,149,0,0.5); }
+              }
+              @keyframes proto-dot {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50%       { transform: scale(1.4); opacity: 0.6; }
+              }
+            `}</style>
+            <div style={{
+              marginTop: 20,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              padding: '6px 16px',
+              borderRadius: 99,
+              background: 'linear-gradient(135deg, #FF9500 0%, #FF6B00 100%)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              animation: 'proto-pulse 2s ease-in-out infinite',
+              opacity: 0.5,
+            }}>
+              <span style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.95)',
+                flexShrink: 0,
+                animation: 'proto-dot 2s ease-in-out infinite',
+              }}/>
+              <span style={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.97)',
+                fontFamily: "-apple-system, 'SF Pro Text', BlinkMacSystemFont, sans-serif",
+                whiteSpace: 'nowrap',
+              }}>
+                Design Prototype 1
+              </span>
+            </div>
+          </div>
           <main
             style={{
               display: 'block',

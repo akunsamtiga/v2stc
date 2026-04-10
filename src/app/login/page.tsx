@@ -374,7 +374,7 @@ function LoginPageContent() {
         }
         .logo-desktop img { height: 32px; width: auto; object-fit: contain; }
         .logo-mobile { display: flex; justify-content: center; margin-bottom: 14px; }
-        .logo-mobile img { height: 56px; width: auto; object-fit: contain; }
+        .logo-mobile img { height: 80px; width: auto; object-fit: contain; }
         @media (min-width: 600px) {
           .logo-desktop { display: flex; }
           .logo-mobile  { display: none; }
