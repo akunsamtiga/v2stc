@@ -177,24 +177,58 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string}> = ({t:t
   const [time,setTime] = useState<Date|null>(null);
   useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
   const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
-  const fmt = (d:Date) => d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-  const tz  = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
-  const fmtDay  = (d:Date) => d.toLocaleDateString(locale,{weekday:'short'}).toUpperCase();
-  const fmtDate = (d:Date) => d.toLocaleDateString(locale,{day:'2-digit',month:'short'});
-  const timeLabel = lang==='ru'?'ВРЕМЯ':lang==='en'?'TIME':'WAKTU';
+  const fmt     = (d:Date) => d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const fmtDay  = (d:Date) => d.toLocaleDateString(locale,{weekday:'long'});
+  const fmtDate = (d:Date) => d.toLocaleDateString(locale,{day:'2-digit',month:'short',year:'numeric'});
+  const tz      = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
+  const tzLabel = lang==='ru'?'ВРЕМЯ':lang==='en'?'LOCAL TIME':'WAKTU LOKAL';
   return (
-    <div style={{borderRadius:8,background:C.card2,border:`1px solid ${C.bdr}`,boxShadow:'0 0 10px rgba(41,151,255,0.06)'}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 10px',borderBottom:'1px solid rgba(41,151,255,0.1)'}}>
-        <span style={{fontSize:9,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>{timeLabel}</span>
-        <span style={{width:5,height:5,borderRadius:'50%',background:C.coral}}/>
+    <div style={{
+      borderRadius:12,
+      background:`linear-gradient(135deg,rgba(16,185,129,0.09) 0%,rgba(16,185,129,0.03) 100%)`,
+      border:`1px solid rgba(16,185,129,0.22)`,
+      overflow:'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        display:'flex',alignItems:'center',justifyContent:'space-between',
+        padding:'5px 10px 4px',
+        borderBottom:'1px solid rgba(16,185,129,0.10)',
+        background:'rgba(16,185,129,0.05)',
+      }}>
+        <span style={{fontSize:8,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:C.cyan,opacity:0.75}}>{tzLabel}</span>
+        <span style={{display:'flex',alignItems:'center',gap:3}}>
+          <span style={{width:4,height:4,borderRadius:'50%',background:C.coral,boxShadow:`0 0 5px ${C.coral}80`,animation:'ping 1.6s ease-in-out infinite'}}/>
+          <span style={{fontSize:7,fontWeight:700,color:C.coral,letterSpacing:'0.10em'}}>LIVE</span>
+        </span>
       </div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 10px'}}>
-        <span suppressHydrationWarning style={{fontSize:10,fontWeight:600,color:C.muted}}>{time?fmtDay(time):'—'}</span>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <p suppressHydrationWarning style={{fontSize:16,fontWeight:600,lineHeight:1,color:C.text}}>{time?fmt(time):'--:--:--'}</p>
-          <p suppressHydrationWarning style={{fontSize:9,marginTop:3,color:C.muted}}>{tz()}</p>
+      {/* Body */}
+      <div style={{padding:'8px 10px 8px',display:'flex',flexDirection:'column',gap:3}}>
+        {/* Clock */}
+        <p suppressHydrationWarning style={{
+          fontSize:21,fontWeight:700,lineHeight:1,letterSpacing:'-0.03em',
+          fontFamily:'ui-monospace,SFMono-Regular,monospace',
+          color:C.text,
+          textShadow:`0 0 20px rgba(16,185,129,0.25)`,
+        }}>
+          {time?fmt(time):'--:--:--'}
+        </p>
+        {/* Day + TZ badge */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
+          <span suppressHydrationWarning style={{
+            fontSize:9,fontWeight:500,color:C.sub,
+            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,
+          }}>{time?fmtDay(time):''}</span>
+          <span suppressHydrationWarning style={{
+            fontSize:8,fontWeight:700,color:C.cyan,letterSpacing:'0.06em',flexShrink:0,
+            background:'rgba(16,185,129,0.10)',border:'1px solid rgba(16,185,129,0.20)',
+            borderRadius:4,padding:'1px 5px',
+          }}>{tz()}</span>
         </div>
-        <span suppressHydrationWarning style={{fontSize:10,fontWeight:600,color:C.muted}}>{time?fmtDate(time):'—'}</span>
+        {/* Full date */}
+        <span suppressHydrationWarning style={{
+          fontSize:9,color:C.muted,letterSpacing:'0.02em',
+        }}>{time?fmtDate(time):''}</span>
       </div>
     </div>
   );
@@ -296,8 +330,8 @@ const BalanceCardCompact: React.FC<{balance:ProfileBalance|null;accountType:'dem
           {hidden?'👁':'👁‍🗨'}
         </button>
       </div>
-      {/* Baris 2: angka + currency sejajar */}
-      <div style={{display:'flex',alignItems:'baseline',gap:4}}>
+      {/* Baris 2: angka + currency pojok kanan */}
+      <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:4}}>
         {isLoading?<Sk h={18} w={80}/>:
           hidden?(
             <div style={{display:'flex',alignItems:'center',gap:2}}>
@@ -309,7 +343,7 @@ const BalanceCardCompact: React.FC<{balance:ProfileBalance|null;accountType:'dem
             </p>
           )
         }
-        <span style={{fontSize:8,color:C.muted}}>{balance?.currency??'IDR'}</span>
+        <span style={{fontSize:11,fontWeight:700,color:C.muted,letterSpacing:'0.04em'}}>{balance?.currency??'IDR'}</span>
       </div>
     </Card>
   );
@@ -706,11 +740,20 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
   return (
     <Card style={{display:'flex',flexDirection:'column'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <Zap style={{width:14,height:14,color:accent}}/>
-          <span style={{fontSize:12,fontWeight:600,color:C.sub}}>{isCTC?'Sesi CTC':'Sesi FastTrade'}</span>
-        </div>
-        {isOn?<StatusChip col={accent} label="Aktif" pulse/>:<span style={{fontSize:10,color:C.muted}}>Standby</span>}
+        {isOn ? (
+          <>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <Zap style={{width:14,height:14,color:accent}}/>
+              <span style={{fontSize:12,fontWeight:600,color:C.sub}}>{isCTC?'Sesi CTC':'Sesi FastTrade'}</span>
+            </div>
+            <StatusChip col={accent} label="Aktif" pulse/>
+          </>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{width:5,height:5,borderRadius:'50%',background:C.muted,opacity:0.4}}/>
+            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>Standby</span>
+          </div>
+        )}
       </div>
 
       {isLoading?(
@@ -833,15 +876,22 @@ const AISignalPanel: React.FC<{
       {/* ── Header ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '11px 14px', borderBottom: `1px solid rgba(52,211,153,0.20)`, flexShrink: 0,
+        padding: '11px 14px', borderBottom: `1px solid ${isOn ? 'rgba(52,211,153,0.20)' : C.bdr}`, flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Radio style={{ width: 14, height: 14, color: C.sky }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>AI Signal</span>
-        </div>
-        {isOn
-          ? <StatusChip col={C.sky} label="Aktif" pulse />
-          : <span style={{ fontSize: 10, color: C.muted }}>Standby</span>}
+        {isOn ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Radio style={{ width: 14, height: 14, color: C.sky }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>AI Signal</span>
+            </div>
+            <StatusChip col={C.sky} label="Aktif" pulse />
+          </>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{width:5,height:5,borderRadius:'50%',background:C.muted,opacity:0.4}}/>
+            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>Standby</span>
+          </div>
+        )}
       </div>
  
       {/* ── Loading skeleton ── */}
@@ -1134,12 +1184,21 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
 
   return (
     <Card style={{display:'flex',flexDirection:'column'}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid rgba(255,107,53,0.2)`,flexShrink:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <BarChart style={{width:14,height:14,color:C.orange}}/>
-          <span style={{fontSize:12,fontWeight:600,color:C.sub}}>Indicator <span style={{color:C.orange}}>— {indType}</span></span>
-        </div>
-        {isOn?<StatusChip col={C.orange} label="Aktif" pulse/>:<span style={{fontSize:10,color:C.muted}}>Standby</span>}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${isOn ? 'rgba(255,107,53,0.2)' : C.bdr}`,flexShrink:0}}>
+        {isOn ? (
+          <>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <BarChart style={{width:14,height:14,color:C.orange}}/>
+              <span style={{fontSize:12,fontWeight:600,color:C.sub}}>Indicator <span style={{color:C.orange}}>— {indType}</span></span>
+            </div>
+            <StatusChip col={C.orange} label="Aktif" pulse/>
+          </>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{width:5,height:5,borderRadius:'50%',background:C.muted,opacity:0.4}}/>
+            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>Standby</span>
+          </div>
+        )}
       </div>
       {isLoading?(
         <div style={{padding:'8px 0'}}>{[1,2,3].map(i=><div key={i} style={{padding:'8px 12px'}}><Sk w={`${i===1?70:i===2?50:60}%`} h={14}/></div>)}</div>
@@ -1193,12 +1252,21 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
 
   return (
     <Card style={{display:'flex',flexDirection:'column'}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid rgba(255,55,95,0.2)`,flexShrink:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <Waves style={{width:14,height:14,color:C.pink}}/>
-          <span style={{fontSize:12,fontWeight:600,color:C.sub}}>Momentum</span>
-        </div>
-        {isOn?<StatusChip col={C.pink} label="Aktif" pulse/>:<span style={{fontSize:10,color:C.muted}}>Standby</span>}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${isOn ? 'rgba(255,55,95,0.2)' : C.bdr}`,flexShrink:0}}>
+        {isOn ? (
+          <>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <Waves style={{width:14,height:14,color:C.pink}}/>
+              <span style={{fontSize:12,fontWeight:600,color:C.sub}}>Momentum</span>
+            </div>
+            <StatusChip col={C.pink} label="Aktif" pulse/>
+          </>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{width:5,height:5,borderRadius:'50%',background:C.muted,opacity:0.4}}/>
+            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>Standby</span>
+          </div>
+        )}
       </div>
       {isLoading?(
         <div style={{padding:'8px 0'}}>{[1,2,3].map(i=><div key={i} style={{padding:'8px 12px'}}><Sk w={`${i===1?70:i===2?50:60}%`} h={14}/></div>)}</div>
@@ -1322,6 +1390,106 @@ const MobileSessionSheet: React.FC<{
 };
 
 // ═══════════════════════════════════════════
+// MODE PICKER MODAL
+// ═══════════════════════════════════════════
+const ModePickerModal: React.FC<{
+  open: boolean; onClose: () => void;
+  mode: TradingMode; onModeChange: (m: TradingMode) => void;
+  locked: boolean; blockedModes: TradingMode[];
+}> = ({ open, onClose, mode, onModeChange, locked, blockedModes }) => {
+  if (!open) return null;
+
+  const MODES = [
+    { v: 'schedule'  as TradingMode, label: 'Signal',    icon: <Calendar  style={{ width: 16, height: 16 }} />, accent: C.cyan,   desc: 'Order terjadwal' },
+    { v: 'fastrade'  as TradingMode, label: 'FastTrade', icon: <Zap       style={{ width: 16, height: 16 }} />, accent: C.cyan,   desc: 'Auto per candle (FTT)' },
+    { v: 'ctc'       as TradingMode, label: 'CTC',       icon: <Copy      style={{ width: 16, height: 16 }} />, accent: C.violet, desc: 'Copy candle · 1 menit' },
+    { v: 'aisignal'  as TradingMode, label: 'AI Signal', icon: <Radio     style={{ width: 16, height: 16 }} />, accent: C.sky,    desc: 'Sinyal dari AI / Telegram' },
+    { v: 'indicator' as TradingMode, label: 'Indicator', icon: <BarChart  style={{ width: 16, height: 16 }} />, accent: C.orange, desc: 'SMA / EMA / RSI' },
+    { v: 'momentum'  as TradingMode, label: 'Momentum',  icon: <Waves     style={{ width: 16, height: 16 }} />, accent: C.pink,   desc: 'Deteksi pola candle' },
+  ];
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:70,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',animation:'fade-in 0.15s ease'}}>
+      {/* backdrop */}
+      <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)'}}/>
+      {/* sheet */}
+      <div style={{
+        position:'relative',width:'100%',maxWidth:420,
+        background:'linear-gradient(160deg,#1a1a1e 0%,#111113 100%)',
+        borderRadius:20,
+        border:`1px solid rgba(255,255,255,0.08)`,
+        animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
+        boxShadow:'0 20px 60px rgba(0,0,0,0.6)',
+        maxHeight:'85dvh',
+        overflowY:'auto',
+      }}>
+        {/* header */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px 12px'}}>
+          <div>
+            <p style={{fontSize:16,fontWeight:700,color:C.text,lineHeight:1}}>Mode Trading</p>
+            <p style={{fontSize:12,color:C.muted,marginTop:3}}>Pilih mode yang ingin digunakan</p>
+          </div>
+          <button onClick={onClose} style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:99,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',cursor:'pointer',color:C.muted}}>
+            <X style={{width:14,height:14}}/>
+          </button>
+        </div>
+        {/* mode list */}
+        <div style={{padding:'0 12px 16px',display:'flex',flexDirection:'column',gap:6}}>
+          {MODES.map(({ v, label, icon, accent, desc }) => {
+            const isAct = mode === v;
+            const isLock = blockedModes.includes(v);
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  onModeChange(v);
+                  if (!isLock) onClose();
+                }}
+                style={{
+                  display:'flex',alignItems:'center',gap:12,padding:'11px 14px',
+                  borderRadius:14,cursor:'pointer',
+                  background:isAct?`${accent}14`:'rgba(255,255,255,0.03)',
+                  border:`1px solid ${isAct?`${accent}45`:isLock?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.06)'}`,
+                  opacity:isLock?0.6:1,
+                  transition:'background 0.15s,border-color 0.15s',
+                }}
+              >
+                <span style={{
+                  width:38,height:38,borderRadius:11,flexShrink:0,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  background:`${accent}18`,border:`1px solid ${accent}25`,color:accent,
+                }}>
+                  {icon}
+                </span>
+                <div style={{flex:1,textAlign:'left'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:5}}>
+                    <span style={{display:'block',fontSize:14,fontWeight:600,color:isAct?accent:C.sub}}>{label}</span>
+                    {isLock&&!isAct&&(
+                      <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:6,color:C.coral,background:'rgba(255,69,58,0.10)',border:'1px solid rgba(255,69,58,0.22)',letterSpacing:'0.04em',flexShrink:0}}>🔒 Aktif</span>
+                    )}
+                  </div>
+                  <span style={{display:'block',fontSize:11,color:C.muted,marginTop:1}}>{desc}</span>
+                </div>
+                {isAct && (
+                  <span style={{width:20,height:20,borderRadius:'50%',background:`${accent}18`,border:`1px solid ${accent}40`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:accent,flexShrink:0}}>✓</span>
+                )}
+              </button>
+            );
+          })}
+          {blockedModes.length > 0 && (
+            <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:10,background:'rgba(255,159,10,0.06)',border:'1px solid rgba(255,159,10,0.22)',marginTop:2}}>
+              <Info style={{width:11,height:11,color:C.amber,flexShrink:0}}/>
+              <span style={{fontSize:11,color:C.amber}}>Hentikan mode aktif terlebih dahulu untuk berpindah mode</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════
 // MODE SESSION PANEL — FIXED
 // ═══════════════════════════════════════════
 //
@@ -1360,35 +1528,7 @@ const ModeSessionPanel: React.FC<{
   aiStatus, aiPending,
   indicatorStatus, momentumStatus, fillHeight,
 }) => {
-  const [dropOpen, setDropOpen] = useState(false);
-
-  // ✅ FIX: ref ke tombol agar posisi dropdown bisa dihitung
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
-
-  const openDrop = () => {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setDropPos({
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-      });
-    }
-    setDropOpen(v => !v);
-  };
-
-  // Tutup dropdown saat scroll atau resize agar tidak "melayang"
-  useEffect(() => {
-    if (!dropOpen) return;
-    const close = () => setDropOpen(false);
-    window.addEventListener('scroll', close, { passive: true, capture: true });
-    window.addEventListener('resize', close, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', close, { capture: true });
-      window.removeEventListener('resize', close);
-    };
-  }, [dropOpen]);
+  const [modePickerOpen, setModePickerOpen] = useState(false);
 
   const MODES = [
     { v: 'schedule'  as TradingMode, label: 'Signal',    icon: <Calendar  style={{ width: 12, height: 12 }} />, accent: C.cyan,   desc: 'Order terjadwal' },
@@ -1403,28 +1543,39 @@ const ModeSessionPanel: React.FC<{
   const ac = modeAccent(mode);
 
   return (
-    // ✅ FIX: hapus overflow:'hidden' — ini penyebab dropdown terpotong
     <div style={{
       display: 'flex', flexDirection: 'column',
       height: fillHeight ? '100%' : undefined,
       gap: 6, minWidth: 0, width: '100%',
-      // overflow:'hidden' ← DIHAPUS
     }}>
+      {/* Mode picker modal */}
+      <ModePickerModal
+        open={modePickerOpen}
+        onClose={() => setModePickerOpen(false)}
+        mode={mode}
+        onModeChange={onModeChange}
+        locked={locked}
+        blockedModes={blockedModes}
+      />
+
       <div style={{ position: 'relative', flexShrink: 0 }}>
-        {/* ✅ FIX: tambah ref ke tombol */}
         <button
-          ref={btnRef}
           type="button"
-          onClick={openDrop}
+          onClick={() => setModePickerOpen(true)}
+          className="mode-picker-shimmer"
           style={{
             width: '100%', display: 'flex', alignItems: 'center',
             justifyContent: 'space-between', padding: '8px 12px',
             borderRadius: 12, cursor: 'pointer',
-            background: dropOpen ? `${ac}14` : C.card2,
-            border: `1px solid ${dropOpen ? `${ac}40` : C.bdr}`,
+            background: C.card2,
+            border: `1px solid ${ac}30`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* inner bg mask for conic border cutout */}
+          <div className="mode-picker-shimmer-inner" style={{background:C.card2}}/>
+          {/* diagonal light sweep */}
+          <div className="mode-picker-shimmer-sweep"/>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, position:'relative', zIndex:2 }}>
             <span style={{
               width: 20, height: 20, borderRadius: 6,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1434,7 +1585,7 @@ const ModeSessionPanel: React.FC<{
             </span>
             <span style={{ fontSize: 12, fontWeight: 600, color: ac }}>{active.label}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, position:'relative', zIndex:2 }}>
             {locked && (
               <span style={{
                 fontSize: 9, padding: '1px 6px', borderRadius: 99,
@@ -1445,98 +1596,9 @@ const ModeSessionPanel: React.FC<{
             )}
             <ChevronDown style={{
               width: 11, height: 11, color: C.muted,
-              transform: dropOpen ? 'rotate(180deg)' : 'none',
-              transition: 'transform 0.2s',
             }} />
           </div>
         </button>
-
-        {dropOpen && (
-          <>
-            {/* ✅ FIX: backdrop hanya tutup dropdown, tidak blokir scroll halaman */}
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 49 }}
-              onClick={() => setDropOpen(false)}
-            />
-
-            {/* ✅ FIX: position:'fixed' dengan koordinat dari ref → lolos dari overflow:hidden manapun */}
-            <div style={{
-              position: 'fixed',
-              top: dropPos.top,
-              left: dropPos.left,
-              width: dropPos.width,
-              zIndex: 50,
-              borderRadius: 12,
-              // ✅ FIX: overflow:'hidden' diganti dengan overflowY:'auto' + maxHeight
-              //         agar semua opsi bisa discroll jika tidak cukup ruang layar
-              overflowY: 'auto',
-              maxHeight: `calc(100dvh - ${dropPos.top}px - 16px)`,
-              background: 'linear-gradient(160deg,#161618 0%,#0e0e10 100%)',
-              border: `1px solid rgba(41,151,255,0.18)`,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
-              animation: 'slide-up 0.15s ease',
-            }}>
-              {MODES.map(({ v, label, icon, accent, desc }, idx) => {
-                const isAct = mode === v;
-                const isLock = blockedModes.includes(v);
-                return (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => {
-                      onModeChange(v);
-                      if (!isLock) setDropOpen(false);
-                    }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center',
-                      gap: 10, padding: '11px 16px',
-                      cursor: isLock ? 'not-allowed' : 'pointer',
-                      background: isAct ? `${accent}10` : 'transparent',
-                      borderBottom: idx < MODES.length - 1
-                        ? `1px solid ${C.bdr}` : 'none',
-                      borderLeft: isAct ? `2px solid ${accent}` : '2px solid transparent',
-                      borderTop: 'none', borderRight: 'none',
-                      opacity: isLock ? 0.5 : 1,
-                    }}
-                  >
-                    <span style={{
-                      width: 24, height: 24, borderRadius: 8,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `${accent}15`, color: accent, flexShrink: 0,
-                    }}>
-                      {icon}
-                    </span>
-                    <div style={{ flex: 1, textAlign: 'left' }}>
-                      <span style={{
-                        display: 'block', fontSize: 12, fontWeight: 600,
-                        color: isAct ? accent : C.sub,
-                      }}>
-                        {label}
-                      </span>
-                      <span style={{ display: 'block', fontSize: 10, color: C.muted }}>{desc}</span>
-                    </div>
-                    {isAct && <span style={{ color: accent, fontSize: 12 }}>✓</span>}
-                    {isLock && !isAct && <span style={{ fontSize: 10, color: C.coral }}>🔒</span>}
-                  </button>
-                );
-              })}
-
-              {blockedModes.length > 0 && (
-                <div style={{
-                  padding: '8px 16px',
-                  borderTop: `1px solid ${C.bdr}`,
-                  background: 'rgba(255,69,58,0.04)',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  <AlertCircle style={{ width: 10, height: 10, color: 'rgba(255,69,58,0.75)', flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, color: 'rgba(255,69,58,0.75)' }}>
-                    Hentikan mode aktif untuk berpindah
-                  </span>
-                </div>
-              )}
-            </div>
-          </>
-        )}
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -1588,9 +1650,11 @@ const SettingsCard: React.FC<{
   onMomentumPatternsChange:(p:any)=>void;
   disabled?:boolean;
 }> = ({mode,assets,assetRic,onAssetChange,isDemo,onDemoChange,duration,onDurationChange,amount,onAmountChange,martingale,onMartingaleChange,ftTf,onFtTfChange,stopLoss,onSlChange,stopProfit,onSpChange,indicatorType,onIndicatorTypeChange,indicatorPeriod,onIndicatorPeriodChange,indicatorSensitivity,onSensitivityChange,rsiOverbought,onOverboughtChange,rsiOversold,onOversoldChange,momentumPatterns,onMomentumPatternsChange,disabled}) => {
-  const [open,setOpen] = useState(true);
+  const [open,setOpen] = useState(!disabled);
   const [pickerOpen,setPickerOpen] = useState<string|null>(null);
   const [amtDrop,setAmtDrop] = useState(false);
+  // Auto-collapse when bot becomes active (disabled=true), restore when stopped
+  useEffect(()=>{ if(disabled) setOpen(false); },[disabled]);
   const set = (k:keyof MartingaleConfig,v:any) => onMartingaleChange({...martingale,[k]:v});
   const assetOpts: PickerOpt[] = assets.map(a=>({value:a.ric,label:a.name,sub:`${a.ric} · ${a.profitRate}%`,icon:a.iconUrl}));
   const durationOpts = [{value:'60',label:'1 Menit'},{value:'120',label:'2 Menit'},{value:'300',label:'5 Menit'},{value:'600',label:'10 Menit'},{value:'900',label:'15 Menit'},{value:'1800',label:'30 Menit'}];
@@ -1892,6 +1956,9 @@ const ControlCard: React.FC<{
     return false;
   })();
 
+  // Auto-collapse when bot becomes active
+  useEffect(()=>{ if(isActive) setOpen(false); },[isActive]);
+
   const si = isActive ? {label:'Aktif',col:ac,pulse:true} : {label:'Standby',col:C.muted,pulse:false};
 
   const modeIcon = {
@@ -1914,20 +1981,23 @@ const ControlCard: React.FC<{
 
   return (
     <Card style={{borderColor:isActive?`${ac}40`:undefined}}>
-      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'12px 16px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer'}}>
-        <div style={{width:28,height:28,flexShrink:0,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}12`,border:`1px solid ${ac}25`}}>
+      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'10px 14px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer',minHeight:44}}>
+        {/* mode icon badge */}
+        <div style={{width:26,height:26,flexShrink:0,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}12`,border:`1px solid ${ac}25`}}>
           <span style={{color:ac}}>{modeIcon}</span>
         </div>
-        <div style={{flex:1,minWidth:0}}>
-          <span style={{display:'block',fontSize:13,fontWeight:600,lineHeight:1,marginBottom:3,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{modeLabel}</span>
-          <span style={{fontSize:10,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>{modeSub}</span>
+        {/* label + sub inline, single row */}
+        <div style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:5}}>
+          <span style={{fontSize:12,fontWeight:700,color:C.text,whiteSpace:'nowrap',flexShrink:0}}>{modeLabel}</span>
+          <span style={{fontSize:10,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>· {modeSub}</span>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
-          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:9,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',padding:'3px 8px',borderRadius:99,color:si.col,background:`${si.col}10`,border:`1px solid ${si.col}28`,whiteSpace:'nowrap'}}>
-            <span style={{width:5,height:5,borderRadius:'50%',background:si.col,flexShrink:0,animation:si.pulse?'ping 1.6s ease-in-out infinite':undefined,boxShadow:`0 0 4px ${si.col}`}}/>
+        {/* status chip + chevron */}
+        <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
+          <span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',padding:'2px 7px',borderRadius:99,color:si.col,background:`${si.col}10`,border:`1px solid ${si.col}28`,whiteSpace:'nowrap'}}>
+            <span style={{width:4,height:4,borderRadius:'50%',background:si.col,flexShrink:0,animation:si.pulse?'ping 1.6s ease-in-out infinite':undefined,boxShadow:`0 0 4px ${si.col}`}}/>
             {si.label}
           </span>
-          {open?<ChevronUp style={{width:11,height:11,color:C.muted,flexShrink:0}}/>:<ChevronDown style={{width:11,height:11,color:C.muted,flexShrink:0}}/>}
+          {open?<ChevronUp style={{width:10,height:10,color:C.muted,flexShrink:0}}/>:<ChevronDown style={{width:10,height:10,color:C.muted,flexShrink:0}}/>}
         </div>
       </button>
       {open&&(
@@ -1969,7 +2039,6 @@ const ControlCard: React.FC<{
           )}
           <div style={{display:'flex',gap:8}}>
             {!isActive&&<CtrlBtn onClick={onStart} disabled={isLoading||!canStart||isBelowMin} loading={isLoading&&!isActive} accent={ac} label={`Mulai ${modeLabel}`} icon={<PlayCircle style={{width:14,height:14}}/>} solid/>}
-            {isSchedRunning&&mode==='schedule'&&<CtrlBtn onClick={onPause} loading={isLoading} accent="#7EC8FF" label="Jeda" icon={<Timer style={{width:14,height:14}}/>}/>}
             {isActive&&<CtrlBtn onClick={onStop} loading={isLoading} accent={C.coral} label="Stop" icon={<StopCircle style={{width:14,height:14}}/>}/>}
           </div>
           {!canStart&&!isActive&&!error&&!isBelowMin&&(
@@ -2269,8 +2338,14 @@ export default function DashboardPage() {
     finally{setActionLoading(false);}
   };
 
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+
   const handleStop = async()=>{
-    if(!confirm('Yakin ingin menghentikan bot?'))return;
+    setStopConfirmOpen(true);
+  };
+
+  const handleStopConfirmed = async()=>{
+    setStopConfirmOpen(false);
     setActionLoading(true);setError(null);
     try{
       if(tradingMode==='schedule') await api.scheduleStop();
@@ -2380,6 +2455,55 @@ export default function DashboardPage() {
 
   return (
     <div style={{minHeight:'100%',background:colors.bg,paddingBottom:88,color:colors.text,transition:'background 0.3s, color 0.3s'}}>
+      {/* Stop Confirmation Modal */}
+      {stopConfirmOpen && (
+        <div style={{position:'fixed',inset:0,zIndex:90,display:'flex',alignItems:'center',justifyContent:'center',padding:20,animation:'fade-in 0.18s ease'}}>
+          <div onClick={()=>setStopConfirmOpen(false)} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)'}}/>
+          <div style={{
+            position:'relative',width:'100%',maxWidth:320,
+            background:'linear-gradient(160deg,#1c1c1e 0%,#141416 100%)',
+            borderRadius:18,border:'1px solid rgba(255,255,255,0.10)',
+            overflow:'hidden',
+            animation:'slide-up 0.24s cubic-bezier(0.32,0.72,0,1)',
+            boxShadow:'0 20px 60px rgba(0,0,0,0.6)',
+          }}>
+            {/* Icon + Title + Desc */}
+            <div style={{padding:'28px 24px 20px',textAlign:'center',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+              <div style={{width:52,height:52,borderRadius:16,background:'rgba(255,69,58,0.12)',border:'1px solid rgba(255,69,58,0.25)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px'}}>
+                <StopCircle style={{width:24,height:24,color:C.coral}}/>
+              </div>
+              <p style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:6}}>Hentikan Bot?</p>
+              <p style={{fontSize:13,color:C.muted,lineHeight:1.5}}>
+                Bot akan dihentikan dan sesi trading saat ini akan berakhir.
+              </p>
+            </div>
+            {/* Action buttons — Apple-style */}
+            <div style={{display:'flex',flexDirection:'column'}}>
+              <button
+                onClick={handleStopConfirmed}
+                style={{
+                  padding:'15px 20px',fontSize:16,fontWeight:600,
+                  color:C.coral,background:'transparent',border:'none',
+                  borderBottom:'1px solid rgba(255,255,255,0.07)',
+                  cursor:'pointer',letterSpacing:'-0.01em',
+                }}
+              >
+                Ya, Hentikan
+              </button>
+              <button
+                onClick={()=>setStopConfirmOpen(false)}
+                style={{
+                  padding:'15px 20px',fontSize:16,fontWeight:400,
+                  color:C.text,background:'transparent',border:'none',
+                  cursor:'pointer',letterSpacing:'-0.01em',
+                }}
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         @keyframes spin        { to { transform: rotate(360deg); } }
         @keyframes shimmer     { 0%,100%{background-position:200% 0} 50%{background-position:0% 0} }
@@ -2520,7 +2644,7 @@ export default function DashboardPage() {
           <div style={{display:'flex',flexDirection:'column',gap:g}}>
             {/* Header Image - Fullwidth, no top margin */}
             {/* Header Image - Full bleed, breaks out of padding */}
-            <div style={{marginLeft:`-${px}px`,marginRight:`-${px}px`,marginTop:0,marginBottom:8,lineHeight:0}}>
+            <div className="header-shimmer-wrap" style={{marginLeft:`-${px}px`,marginRight:`-${px}px`,marginTop:0,marginBottom:8}}>
               <img 
                 src="/header.png" 
                 alt="STC AutoTrade" 
@@ -2534,25 +2658,24 @@ export default function DashboardPage() {
                 <RealtimeClockCompact t={t} lang={language}/>
                 <Card style={{padding:10,flex:1,display:'flex',flexDirection:'column'}}>
                   <ChartCard assetSymbol={selectedRic} height={110}/>
-                  <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:5,marginTop:8}}>
-                    {selectedRic&&(
-                      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'3px 8px',borderRadius:6,background:C.faint}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:7,gap:6}}>
+                    {selectedRic?(
+                      <div style={{display:'flex',alignItems:'center',gap:4,minWidth:0}}>
                         <span style={{width:4,height:4,borderRadius:'50%',background:modeAccent(tradingMode),opacity:0.6,flexShrink:0}}/>
                         <span style={{fontSize:9,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{selectedRic}</span>
                       </div>
+                    ):(
+                      <span style={{fontSize:9,color:C.muted}}>—</span>
                     )}
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span style={{fontSize:9,color:C.muted}}>Status</span>
-                      <span style={{display:'flex',alignItems:'center',gap:4,fontSize:9,fontWeight:600,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
-                        <span style={{width:5,height:5,borderRadius:'50%',background:isActiveMode?modeAccent(tradingMode):C.muted}}/>
-                        {isActiveMode?t('common.active'):'Off'}
-                      </span>
-                    </div>
+                    <span style={{display:'flex',alignItems:'center',gap:4,fontSize:9,fontWeight:600,flexShrink:0,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
+                      <span style={{width:5,height:5,borderRadius:'50%',background:isActiveMode?modeAccent(tradingMode):C.muted,flexShrink:0}}/>
+                      {isActiveMode?t('common.active'):'Off'}
+                    </span>
                   </div>
                 </Card>
               </div>
               {/* Mode panel — compact when active, full when idle */}
-              {isActiveMode ? (
+              {isActiveMode && tradingMode !== 'schedule' ? (
                 <div style={{display:'flex',flexDirection:'column',gap:6}}>
                   {/* mode selector button (read-only style) */}
                   <div style={{
@@ -2571,7 +2694,7 @@ export default function DashboardPage() {
                       Aktif
                     </span>
                   </div>
-                  {/* P&L + Stats + Lihat Sesi — unified card */}
+                  {/* P&L + Mini Stats + Lihat Sesi — unified card (non-schedule modes) */}
                   <div style={{
                     padding:'10px 12px',borderRadius:12,
                     background:C.card2,
@@ -2590,26 +2713,19 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <div style={{height:1,background:`${modeAccent(tradingMode)}15`}}/>
-                    {/* Mini Stats */}
+                    {/* Mini Stats (non-schedule modes) */}
                     {(()=>{
                       const ac = modeAccent(tradingMode);
-                      const wins = tradingMode==='schedule'
-                        ? scheduleOrders.filter(o=>o.isExecuted).length
-                        : (ftStatus?.totalWins??aiStatus?.totalWins??indicatorStatus?.totalWins??momentumStatus?.totalWins??0);
-                      const losses = tradingMode==='schedule'
-                        ? 0
-                        : (ftStatus?.totalLosses??aiStatus?.totalLosses??indicatorStatus?.totalLosses??momentumStatus?.totalLosses??0);
+                      const wins = ftStatus?.totalWins??aiStatus?.totalWins??indicatorStatus?.totalWins??momentumStatus?.totalWins??0;
+                      const losses = ftStatus?.totalLosses??aiStatus?.totalLosses??indicatorStatus?.totalLosses??momentumStatus?.totalLosses??0;
                       const total = wins+losses;
                       const wr = total>0?Math.round((wins/total)*100):null;
-                      const statRows: {label:string;value:string;col?:string}[] = [];
-                      if(tradingMode==='schedule'){
-                        statRows.push({label:'Signal',value:`${scheduleOrders.filter(o=>!o.isExecuted&&!o.isSkipped).length} sisa`});
-                        statRows.push({label:'Done',value:`${scheduleOrders.filter(o=>o.isExecuted).length}`,col:ac});
-                      } else {
-                        statRows.push({label:'W/L',value:`${wins}/${losses}`,col:wins>losses?ac:losses>wins?C.coral:C.muted});
-                        if(wr!==null) statRows.push({label:'WR',value:`${wr}%`,col:wr>=50?ac:C.coral});
-                        else statRows.push({label:'Trade',value:`${total>0?total:'-'}`});
-                      }
+                      const statRows: {label:string;value:string;col?:string}[] = [
+                        {label:'W/L',value:`${wins}/${losses}`,col:wins>losses?ac:losses>wins?C.coral:C.muted},
+                        wr!==null
+                          ? {label:'WR',value:`${wr}%`,col:wr>=50?ac:C.coral}
+                          : {label:'Trade',value:`${total>0?total:'-'}`},
+                      ];
                       return (
                         <div style={{display:'flex',flexDirection:'column',gap:5}}>
                           {statRows.map(s=>(
@@ -2638,6 +2754,29 @@ export default function DashboardPage() {
                       Lihat Sesi
                     </button>
                   </div>
+                </div>
+              ) : isActiveMode && tradingMode === 'schedule' ? (
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {/* Schedule aktif: tampilkan list seperti idle + tombol Lihat Sesi di bawah */}
+                  <div style={{flex:1}}>
+                    {ModeSession(true)}
+                  </div>
+                  <button
+                    onClick={()=>setMobileSessionOpen(true)}
+                    style={{
+                      display:'flex',alignItems:'center',justifyContent:'center',gap:5,
+                      padding:'8px 0',borderRadius:10,
+                      background:`${modeAccent(tradingMode)}14`,
+                      border:`1px solid ${modeAccent(tradingMode)}35`,
+                      color:modeAccent(tradingMode),
+                      fontSize:10,fontWeight:700,letterSpacing:'0.04em',
+                      cursor:'pointer',
+                      width:'100%',
+                    }}
+                  >
+                    <Info style={{width:11,height:11}}/>
+                    Lihat Sesi
+                  </button>
                 </div>
               ) : (
                 ModeSession(true)

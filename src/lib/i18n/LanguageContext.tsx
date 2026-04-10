@@ -12,9 +12,14 @@ const DEFAULT_LANGUAGE: Language = 'id';
 
 // Available languages
 export const AVAILABLE_LANGUAGES: { code: Language; name: string; flag: string; nativeName: string }[] = [
-  { code: 'en', name: 'English', flag: '🇬🇧', nativeName: 'English' },
-  { code: 'id', name: 'Indonesian', flag: '🇮🇩', nativeName: 'Indonesia' },
-  { code: 'ru', name: 'Russian', flag: '🇷🇺', nativeName: 'Русский' },
+  { code: 'en', name: 'English',    flag: '🇬🇧', nativeName: 'English'        },
+  { code: 'id', name: 'Indonesian', flag: '🇮🇩', nativeName: 'Indonesia'      },
+  { code: 'ru', name: 'Russian',    flag: '🇷🇺', nativeName: 'Русский'        },
+  { code: 'es', name: 'Spanish',    flag: '🇪🇸', nativeName: 'Español'        },
+  { code: 'ms', name: 'Malay',      flag: '🇲🇾', nativeName: 'Bahasa Melayu' },
+  { code: 'hi', name: 'Hindi',      flag: '🇮🇳', nativeName: 'हिन्दी'          },
+  { code: 'th', name: 'Thai',       flag: '🇹🇭', nativeName: 'ภาษาไทย'        },
+  { code: 'tr', name: 'Turkish',    flag: '🇹🇷', nativeName: 'Türkçe'         },
 ];
 
 // Language Context Type
@@ -55,14 +60,16 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
 
     const loadLanguage = async () => {
       try {
+        const validCodes = AVAILABLE_LANGUAGES.map(l => l.code);
+
         // Try to get from localStorage first
         const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-        if (savedLanguage && ['en', 'id', 'ru'].includes(savedLanguage)) {
+        if (savedLanguage && validCodes.includes(savedLanguage as Language)) {
           setLanguageState(savedLanguage as Language);
         } else {
           // Try to detect browser language
           const browserLang = navigator.language.split('-')[0];
-          if (['en', 'id', 'ru'].includes(browserLang)) {
+          if (validCodes.includes(browserLang as Language)) {
             setLanguageState(browserLang as Language);
           }
         }
@@ -160,6 +167,11 @@ export function formatNumber(num: number, language: Language): string {
     en: 'en-US',
     id: 'id-ID',
     ru: 'ru-RU',
+    es: 'es-ES',
+    ms: 'ms-MY',
+    hi: 'hi-IN',
+    th: 'th-TH',
+    tr: 'tr-TR',
   };
   return num.toLocaleString(locales[language]);
 }
@@ -170,11 +182,16 @@ export function formatCurrency(amount: number, currency: string, language: Langu
     en: 'en-US',
     id: 'id-ID',
     ru: 'ru-RU',
+    es: 'es-ES',
+    ms: 'ms-MY',
+    hi: 'hi-IN',
+    th: 'th-TH',
+    tr: 'tr-TR',
   };
-  
+
   // Convert from cents to main currency unit
   const value = amount / 100;
-  
+
   return new Intl.NumberFormat(locales[language], {
     style: 'currency',
     currency: currency,
@@ -189,14 +206,19 @@ export function formatDate(date: Date | number, language: Language, options?: In
     en: 'en-US',
     id: 'id-ID',
     ru: 'ru-RU',
+    es: 'es-ES',
+    ms: 'ms-MY',
+    hi: 'hi-IN',
+    th: 'th-TH',
+    tr: 'tr-TR',
   };
-  
+
   const defaultOptions: Intl.DateTimeFormatOptions = {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   };
-  
+
   return new Intl.DateTimeFormat(locales[language], options || defaultOptions).format(date);
 }
 
@@ -206,14 +228,19 @@ export function formatTime(date: Date | number, language: Language, options?: In
     en: 'en-US',
     id: 'id-ID',
     ru: 'ru-RU',
+    es: 'es-ES',
+    ms: 'ms-MY',
+    hi: 'hi-IN',
+    th: 'th-TH',
+    tr: 'tr-TR',
   };
-  
+
   const defaultOptions: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
   };
-  
+
   return new Intl.DateTimeFormat(locales[language], options || defaultOptions).format(date);
 }

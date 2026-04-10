@@ -305,14 +305,15 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   background: conic-gradient(
     from 0deg,
     transparent                   0deg,
-    transparent                 265deg,
-    rgba(52, 211, 153, 0.05)    275deg,
-    rgba(52, 211, 153, 0.18)    295deg,
-    rgba(52, 211, 153, 0.50)    318deg,
-    rgba(52, 211, 153, 0.85)    338deg,
+    transparent                 120deg,
+    rgba(52, 211, 153, 0.02)    145deg,
+    rgba(52, 211, 153, 0.06)    185deg,
+    rgba(52, 211, 153, 0.14)    225deg,
+    rgba(52, 211, 153, 0.32)    265deg,
+    rgba(52, 211, 153, 0.62)    305deg,
+    rgba(52, 211, 153, 0.90)    335deg,
     rgba(52, 211, 153, 1.00)    352deg,
-    rgba(52, 211, 153, 0.55)    357deg,
-    rgba(52, 211, 153, 0.12)    360deg
+    transparent                 360deg
   );
   animation: ds-border-rotate 8s linear infinite;
   pointer-events: none;
@@ -365,14 +366,15 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   background: conic-gradient(
     from 0deg,
     transparent                   0deg,
-    transparent                 262deg,
-    rgba(52, 211, 153, 0.07)    273deg,
-    rgba(52, 211, 153, 0.25)    293deg,
-    rgba(52, 211, 153, 0.65)    316deg,
-    rgba(52, 211, 153, 0.95)    336deg,
+    transparent                 115deg,
+    rgba(52, 211, 153, 0.03)    140deg,
+    rgba(52, 211, 153, 0.08)    180deg,
+    rgba(52, 211, 153, 0.20)    220deg,
+    rgba(52, 211, 153, 0.45)    262deg,
+    rgba(52, 211, 153, 0.78)    305deg,
+    rgba(52, 211, 153, 0.98)    338deg,
     rgba(52, 211, 153, 1.00)    352deg,
-    rgba(52, 211, 153, 0.65)    357deg,
-    rgba(52, 211, 153, 0.15)    360deg
+    transparent                 360deg
   );
 }
 
@@ -387,14 +389,15 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   background: conic-gradient(
     from 0deg,
     transparent                   0deg,
-    transparent                 265deg,
-    rgba(167, 139, 250, 0.05)   275deg,
-    rgba(167, 139, 250, 0.18)   295deg,
-    rgba(167, 139, 250, 0.50)   318deg,
-    rgba(167, 139, 250, 0.85)   338deg,
+    transparent                 120deg,
+    rgba(167, 139, 250, 0.02)   145deg,
+    rgba(167, 139, 250, 0.06)   185deg,
+    rgba(167, 139, 250, 0.14)   225deg,
+    rgba(167, 139, 250, 0.32)   265deg,
+    rgba(167, 139, 250, 0.62)   305deg,
+    rgba(196, 181, 253, 0.90)   335deg,
     rgba(196, 181, 253, 1.00)   352deg,
-    rgba(167, 139, 250, 0.55)   357deg,
-    rgba(167, 139, 250, 0.12)   360deg
+    transparent                 360deg
   );
 }
 .ds-card.ctc::after {
@@ -411,15 +414,16 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 [data-theme="light"] .ds-card::before {
   background: conic-gradient(
     from 0deg,
-    transparent                  0deg,
-    transparent                265deg,
-    rgba(16, 185, 129, 0.04)   275deg,
-    rgba(16, 185, 129, 0.15)   295deg,
-    rgba(16, 185, 129, 0.45)   318deg,
-    rgba(16, 185, 129, 0.75)   338deg,
-    rgba(52, 211, 153, 0.88)   352deg,
-    rgba(16, 185, 129, 0.45)   357deg,
-    rgba(16, 185, 129, 0.10)   360deg
+    transparent                 0deg,
+    transparent               120deg,
+    rgba(16, 185, 129, 0.02)  145deg,
+    rgba(16, 185, 129, 0.05)  185deg,
+    rgba(16, 185, 129, 0.12)  225deg,
+    rgba(16, 185, 129, 0.28)  265deg,
+    rgba(16, 185, 129, 0.55)  305deg,
+    rgba(52, 211, 153, 0.82)  335deg,
+    rgba(52, 211, 153, 0.88)  352deg,
+    transparent               360deg
   );
 }
 [data-theme="light"] .ds-card::after {
@@ -447,10 +451,10 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 @keyframes pulse          { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 @keyframes float          { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @keyframes countUp        { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes shimmer        { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+@keyframes shimmer        { 0% { background-position: 100% center; } 100% { background-position: -100% center; } }
 @keyframes shimmer-h {
-  0%   { background-position:  200% center; }
-  100% { background-position: -200% center; }
+  0%   { background-position:  100% center; }
+  100% { background-position: -100% center; }
 }
 @keyframes shimmer-v {
   0%   { background-position: 0   0%; }
@@ -479,6 +483,146 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 @keyframes pop-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
 
 /* ============================================================
+   HEADER IMAGE — SHIMMER OVERLAY (diagonal light sweep)
+   ============================================================ */
+.header-shimmer-wrap {
+  position: relative;
+  overflow: hidden;
+  line-height: 0;
+}
+
+/* primary shimmer sweep */
+.header-shimmer-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    108deg,
+    transparent   0%,
+    transparent  30%,
+    rgba(255,255,255,0.04) 38%,
+    rgba(255,255,255,0.22) 46%,
+    rgba(180,255,220,0.28) 50%,
+    rgba(255,255,255,0.22) 54%,
+    rgba(255,255,255,0.04) 62%,
+    transparent  70%,
+    transparent 100%
+  );
+  background-size: 250% 100%;
+  animation: header-shine 4s cubic-bezier(0.4,0,0.6,1) infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* soft green edge glow */
+.header-shimmer-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom,
+      rgba(16,185,129,0.12) 0%,
+      transparent           35%,
+      transparent           65%,
+      rgba(16,185,129,0.08) 100%
+    );
+  pointer-events: none;
+  z-index: 1;
+  animation: header-glow-pulse 3.5s ease-in-out infinite;
+}
+
+@keyframes header-shine {
+  0%   { background-position: -100% 0; opacity: 0; }
+  8%   { opacity: 1; }
+  55%  { background-position: 220% 0; opacity: 0; }
+  100% { background-position: 220% 0; opacity: 0; }
+}
+
+@keyframes header-glow-pulse {
+  0%,100% { opacity: 0.6; }
+  50%     { opacity: 1; }
+}
+
+/* ============================================================
+   MODE PICKER BUTTON — SHIMMER CARD EFFECT
+   ============================================================ */
+.mode-picker-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+/* spinning conic border glow */
+.mode-picker-shimmer::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 0deg,
+    transparent       0%,
+    transparent      30%,
+    rgba(16,185,129,0.55) 42%,
+    rgba(180,255,220,0.85) 50%,
+    rgba(16,185,129,0.55) 58%,
+    transparent      70%,
+    transparent     100%
+  );
+  animation: mode-border-spin 4s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* inner fill mask to show only border */
+.mode-picker-shimmer-inner {
+  position: absolute;
+  inset: 1px;
+  border-radius: 11px;
+  background: inherit;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* actual children sit above */
+.mode-picker-shimmer > *:not(.mode-picker-shimmer-inner):not(.mode-picker-shimmer-sweep) {
+  position: relative;
+  z-index: 2;
+}
+
+/* diagonal light sweep on top */
+.mode-picker-shimmer-sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  background: linear-gradient(
+    108deg,
+    transparent   0%,
+    transparent  25%,
+    rgba(255,255,255,0.04) 35%,
+    rgba(180,255,220,0.18) 48%,
+    rgba(255,255,255,0.10) 52%,
+    rgba(255,255,255,0.04) 62%,
+    transparent  75%,
+    transparent 100%
+  );
+  background-size: 250% 100%;
+  animation: mode-sweep 5s cubic-bezier(0.4,0,0.6,1) infinite;
+  pointer-events: none;
+}
+
+@keyframes mode-border-spin {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes mode-sweep {
+  0%   { background-position: -100% 0; opacity: 0; }
+  10%  { opacity: 1; }
+  55%  { background-position: 230% 0; opacity: 0; }
+  100% { background-position: 230% 0; opacity: 0; }
+}
+
+/* ============================================================
    UTILITY
    ============================================================ */
 .animate-spin     { animation: spin 0.7s linear infinite; }
@@ -495,12 +639,14 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--s1) 0%,
+    var(--s1)  0%,
+    var(--s1) 35%,
     var(--s2) 50%,
+    var(--s1) 65%,
     var(--s1) 100%
   );
-  background-size: 200% 100%;
-  animation: shimmer 1.8s ease infinite;
+  background-size: 400% 100%;
+  animation: shimmer 1.8s linear infinite;
   border-radius: 6px;
 }
 
