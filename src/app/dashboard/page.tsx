@@ -9,6 +9,8 @@ import {
   type AISignalStatus, type AISignalOrder, type AISignalConfig,
   type IndicatorStatus, type IndicatorConfig, type IndicatorType,
   type MomentumStatus, type MomentumConfig,
+  type TodayProfitSummary,
+  type AlwaysSignalLossState,
 } from '@/lib/api';
 import { ChartCard } from '@/components/ChartCard';
 import AssetIcon from '@/components/common/AssetIcon';
@@ -127,6 +129,36 @@ const StatusChip: React.FC<{col:string;label:string;pulse?:boolean}> = ({col,lab
     {label}
   </span>
 );
+
+/** Tampilkan status Always Signal Martingale yang sedang aktif */
+const AlwaysSignalBadge: React.FC<{
+  isActive: boolean;
+  step: number;
+  maxSteps: number;
+  totalLoss?: number;
+  accent?: string;
+}> = ({ isActive, step, maxSteps, totalLoss, accent = C.amber }) => {
+  if (!isActive) return null;
+  const lossDisplay = totalLoss ? `  −${Math.round(Math.abs(totalLoss) / 100).toLocaleString('id-ID')}` : '';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6,
+      padding: '5px 10px', borderRadius: 99,
+      background: `${accent}12`, border: `1px solid ${accent}35`,
+    }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: accent, animation: 'ping 1.4s ease-in-out infinite', boxShadow: `0 0 5px ${accent}` }} />
+      <span style={{ fontSize: 10, fontWeight: 700, color: accent, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        Always Signal
+      </span>
+      <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'monospace', color: accent }}>
+        K{step}/{maxSteps}
+      </span>
+      {lossDisplay && (
+        <span style={{ fontSize: 9, color: C.coral, fontFamily: 'monospace' }}>{lossDisplay}</span>
+      )}
+    </div>
+  );
+};
 
 const CtrlBtn: React.FC<{onClick:()=>void;disabled?:boolean;loading?:boolean;accent:string;label:string;icon?:React.ReactNode;solid?:boolean}> =
 ({onClick,disabled,loading,accent,label,icon,solid}) => (
@@ -411,6 +443,124 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
           </div>
         )}
       </div>
+    </Card>
+  );
+};
+
+// ═══════════════════════════════════════════
+// TODAY PROFIT CARD — uses /today-profit API
+// ═══════════════════════════════════════════
+const MODE_LABELS: Record<string, string> = {
+  schedule: 'Signal', fastrade: 'FTT', indicator: 'Indikator',
+  momentum: 'Momentum', aisignal: 'AI',
+};
+const MODE_COLORS: Record<string, string> = {
+  schedule: '#10B981', fastrade: '#10B981', ctc: '#BF5AF2',
+  aisignal: '#34D399', indicator: '#FF6B35', momentum: '#FF375F',
+};
+
+const TodayProfitCard: React.FC<{
+  data: TodayProfitSummary | null;
+  localProfit: number;
+  isLoading?: boolean;
+  flash?: 'win' | 'lose' | null;
+  t: (k: string) => string;
+}> = ({ data, localProfit, isLoading, flash, t }) => {
+  const profit   = data ? data.totalPnL : localProfit;
+  const isPos    = profit >= 0;
+  const col      = isPos ? C.cyan : C.coral;
+  const prevR    = useRef(profit);
+  const [animKey, setAnimKey] = useState(0);
+  const [dir, setDir]         = useState<'up' | 'down'>('up');
+
+  useEffect(() => {
+    if (profit !== prevR.current) {
+      setDir(profit > prevR.current ? 'up' : 'down');
+      setAnimKey(k => k + 1);
+      prevR.current = profit;
+    }
+  }, [profit]);
+
+  const displayValue = Math.round(Math.abs(profit / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+  const fontSize = getAutoScaleFontSize(displayValue.length);
+  const activeModes = data ? Object.values(data.byMode).filter(m => m.trades > 0) : [];
+  const winRate     = data?.winRate ?? null;
+  const totalTrades = data?.totalTrades ?? 0;
+
+  return (
+    <Card style={{ padding: '11px 16px' }} flash={flash}>
+      {/* Top row: label + win rate */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted }}>
+            {t('dashboard.profitToday')}
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 99, background: `${col}10`, border: `1px solid ${col}22` }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: col, boxShadow: `0 0 5px ${col}`, animation: 'pulse 1.8s ease-in-out infinite' }} />
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: col }}>24j</span>
+          </span>
+        </div>
+        {!isLoading && winRate !== null && totalTrades > 0 && (
+          <span style={{
+            fontSize: 10, fontWeight: 700,
+            color: winRate >= 50 ? C.cyan : C.coral,
+            background: winRate >= 50 ? 'rgba(16,185,129,0.10)' : 'rgba(255,69,58,0.10)',
+            border: `1px solid ${winRate >= 50 ? 'rgba(16,185,129,0.25)' : 'rgba(255,69,58,0.25)'}`,
+            borderRadius: 99, padding: '2px 8px',
+          }}>
+            {winRate.toFixed(0)}% WR
+          </span>
+        )}
+      </div>
+      {/* Main P&L row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {isLoading ? <Sk h={24} w="85%" /> : (
+            <p key={animKey} style={{
+              fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: col,
+              fontSize, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              animation: animKey > 0 ? `profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both` : undefined,
+            }}>
+              {isPos ? '+' : '-'}Rp {displayValue}
+            </p>
+          )}
+          {!isLoading && totalTrades > 0 && (
+            <p style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>
+              {data?.totalWins ?? 0}W · {data?.totalLosses ?? 0}L · {totalTrades} trade
+            </p>
+          )}
+        </div>
+        {!isLoading && (
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 20, flexShrink: 0 }}>
+            {[0.4, 0.7, 1, 0.6, 0.85, 0.5, 0.9].map((h, i) => (
+              <div key={i} style={{ width: 3, height: `${h * 100}%`, borderRadius: 2, background: col, opacity: 0.3 + h * 0.45, animation: `pulse ${1.2 + i * 0.15}s ease-in-out infinite`, animationDelay: `${i * 0.1}s` }} />
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Per-mode breakdown chips */}
+      {!isLoading && activeModes.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.bdr}` }}>
+          {activeModes.map(m => {
+            const mCol = MODE_COLORS[m.mode] ?? C.cyan;
+            const mPnl = m.pnl / 100;
+            const mPos = mPnl >= 0;
+            return (
+              <span key={m.mode} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+                color: mCol, background: `${mCol}12`, border: `1px solid ${mCol}25`,
+              }}>
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: mPos ? mCol : C.coral }} />
+                {MODE_LABELS[m.mode] ?? m.mode}
+                <span style={{ color: mPos ? mCol : C.coral, opacity: 0.85 }}>
+                  {mPos ? '+' : ''}{Math.round(mPnl).toLocaleString('id-ID')}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 };
@@ -1888,6 +2038,16 @@ const SettingsCard: React.FC<{
                       ))}
                     </div>
                   </div>
+                  {/* Always Signal — tersedia di semua mode kecuali CTC & aisignal (aisignal punya panel sendiri) */}
+                  {mode!=='ctc'&&mode!=='aisignal'&&(
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:10,background:`${ac}07`,border:`1px solid ${ac}18`}}>
+                      <div>
+                        <p style={{fontSize:12,fontWeight:600,color:C.sub,marginBottom:2}}>Always Signal</p>
+                        <p style={{fontSize:10,color:C.muted}}>Martingale dilanjutkan pada signal berikutnya jika loss</p>
+                      </div>
+                      <Toggle checked={martingale.alwaysSignal??false} onChange={v=>set('alwaysSignal',v)} disabled={disabled} accent={ac}/>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1937,7 +2097,8 @@ const ControlCard: React.FC<{
   onStart:()=>void; onStop:()=>void; onPause:()=>void; onResume:()=>void;
   error:string|null;
   isBelowMin:boolean;
-}> = ({mode,scheduleStatus,orders,ftStatus,aiStatus,indicatorStatus,momentumStatus,canStart,isLoading,profit,onStart,onStop,onPause,onResume,error,isBelowMin}) => {
+  martingale:MartingaleConfig;
+}> = ({mode,scheduleStatus,orders,ftStatus,aiStatus,indicatorStatus,momentumStatus,canStart,isLoading,profit,onStart,onStop,onPause,onResume,error,isBelowMin,martingale}) => {
   const [open,setOpen] = useState(true);
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
@@ -2008,6 +2169,14 @@ const ControlCard: React.FC<{
                 <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:`${C.cyan}06`,border:`1px solid ${C.cyan}10`}}>
                   <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>Signal</span>
                   <span style={{fontSize:22,fontWeight:700,lineHeight:'1.1',color:C.text}}>{orders.filter(o=>!o.isExecuted&&!o.isSkipped).length}</span>
+                  {(scheduleStatus as any)?.nextOrderTime&&(
+                    <span style={{display:'block',fontSize:9,color:C.cyan,marginTop:2,fontFamily:'monospace'}}>
+                      ⏱ {(scheduleStatus as any).nextOrderTime}
+                      {(scheduleStatus as any).nextOrderInSeconds!=null&&(
+                        <span style={{color:C.muted}}> ({(scheduleStatus as any).nextOrderInSeconds}s)</span>
+                      )}
+                    </span>
+                  )}
                 </div>
                 <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:C.card2,border:`1px solid ${pnlPos?'rgba(41,151,255,0.12)':'rgba(255,69,58,0.12)'}`}}>
                   <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L Sesi</span>
@@ -2031,6 +2200,28 @@ const ControlCard: React.FC<{
               </>
             )}
           </div>
+          {/* Always Signal aktif — tampilkan badge status */}
+          {(()=>{
+            const schAS = mode==='schedule'&&(scheduleStatus as any)?.alwaysSignalActive;
+            const ftAS  = (mode==='fastrade'||mode==='ctc')&&(ftStatus as any)?.alwaysSignalActive;
+            const aiAS  = mode==='aisignal'&&aiStatus?.alwaysSignalStatus?.isActive;
+            const indAS = mode==='indicator'&&(indicatorStatus as any)?.alwaysSignalActive;
+            const momAS = mode==='momentum'&&(momentumStatus as any)?.alwaysSignalActive;
+            const anyAS = schAS||ftAS||aiAS||indAS||momAS;
+            if(!anyAS||!isActive) return null;
+            const step  = (scheduleStatus as any)?.alwaysSignalStep
+              ?? (ftStatus as any)?.alwaysSignalStep
+              ?? aiStatus?.alwaysSignalStatus?.currentStep
+              ?? (indicatorStatus as any)?.alwaysSignalStep
+              ?? (momentumStatus as any)?.alwaysSignalStep ?? 1;
+            const totalLoss = (scheduleStatus as any)?.alwaysSignalLossState?.totalLoss
+              ?? aiStatus?.alwaysSignalStatus?.totalLoss ?? 0;
+            return (
+              <div style={{marginBottom:10}}>
+                <AlwaysSignalBadge isActive={true} step={step} maxSteps={martingale.maxStep} totalLoss={totalLoss} accent={C.amber}/>
+              </div>
+            );
+          })()}
           {error&&(
             <div style={{display:'flex',gap:8,padding:'10px 12px',marginBottom:12,borderRadius:12,background:'rgba(255,69,58,0.07)',border:'1px solid rgba(255,69,58,0.18)'}}>
               <AlertCircle style={{width:12,height:12,flexShrink:0,marginTop:1,color:C.coral}}/>
@@ -2084,6 +2275,7 @@ export default function DashboardPage() {
   const [aiPendingOrders,setAiPendingOrders] = useState<AISignalOrder[]>([]);
   const [indicatorStatus,setIndicatorStatus] = useState<IndicatorStatus|null>(null);
   const [momentumStatus,setMomentumStatus] = useState<MomentumStatus|null>(null);
+  const [todayProfitData,setTodayProfitData] = useState<TodayProfitSummary|null>(null);
 
   const [tradingMode,setTradingMode] = useState<TradingMode>('schedule');
   const [error,setError] = useState<string|null>(null);
@@ -2142,7 +2334,7 @@ export default function DashboardPage() {
   const loadAll = useCallback(async(silent=false)=>{
     if(!silent)setIsLoading(true);
     try{
-      const [assRes,balRes,schRes,ordRes,logRes,ftRes,ftLogRes,aiRes,aiPendRes,indRes,momRes] = await Promise.allSettled([
+      const [assRes,balRes,schRes,ordRes,logRes,ftRes,ftLogRes,aiRes,aiPendRes,indRes,momRes,tpRes] = await Promise.allSettled([
         api.getAssets(),api.balance(),api.scheduleStatus(),
         api.getOrders(),
         api.scheduleLogs(500),
@@ -2150,6 +2342,7 @@ export default function DashboardPage() {
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
+        api.todayProfit(),
       ]);
       if(!isMounted.current)return;
       if(assRes.status==='fulfilled')setAssets(assRes.value);
@@ -2163,6 +2356,7 @@ export default function DashboardPage() {
       if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
       if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
       if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
+      if(tpRes.status==='fulfilled')setTodayProfitData(tpRes.value);
 
       // ✅ FIX: Auto-detect mode aktif hanya saat load pertama (bukan silent)
       if (!silent) {
@@ -2209,9 +2403,10 @@ export default function DashboardPage() {
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
+        api.realtimeProfit(),
       ]);
       if(!isMounted.current)return;
-      const [sRes,fRes,oRes,ftlRes,aiRes,aiPendRes,indRes,momRes] = results;
+      const [sRes,fRes,oRes,ftlRes,aiRes,aiPendRes,indRes,momRes,tpRes] = results;
       if(sRes.status==='fulfilled')setScheduleStatus(sRes.value);
       if(fRes.status==='fulfilled')setFtStatus(fRes.value);
       if(oRes.status==='fulfilled')setScheduleOrders(oRes.value);
@@ -2220,6 +2415,7 @@ export default function DashboardPage() {
       if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
       if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
       if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
+      if(tpRes.status==='fulfilled')setTodayProfitData(tpRes.value);
       const balRes = await api.balance().catch(()=>null);
       if(balRes&&isMounted.current)setBalance(balRes);
     },10000);
@@ -2267,6 +2463,9 @@ export default function DashboardPage() {
   })();
 
   const profitToday = React.useMemo(()=>{
+    // ✅ Prioritaskan data dari /today-profit API (aggregates semua mode)
+    if(todayProfitData) return todayProfitData.totalPnL;
+    // Fallback: hitung lokal dari schedule + fastrade logs
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     let total = 0;
     for(const log of scheduleLogs){
@@ -2276,7 +2475,7 @@ export default function DashboardPage() {
       if((log.executedAt??0)>=cutoff&&log.profit!=null&&log.isDemoAccount===isDemo) total+=log.profit;
     }
     return total;
-  },[scheduleLogs,ftLogs,isDemo]);
+  },[todayProfitData,scheduleLogs,ftLogs,isDemo]);
 
   const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
 
@@ -2389,7 +2588,7 @@ export default function DashboardPage() {
   const g = deviceType==='desktop'?20:deviceType==='tablet'?18:16;
   const px = 16;
 
-  const TopCards = <ProfitCard profit={profitToday} isLoading={isLoading} flash={flash} t={t}/>;
+  const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} isLoading={isLoading} flash={flash} t={t}/>;
 
   const InfoRow = (
     <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(4,1fr)':deviceType==='tablet'?'repeat(3,1fr)':'1fr 1fr',gap:g}}>
@@ -2450,6 +2649,7 @@ export default function DashboardPage() {
       canStart={canStart} isLoading={actionLoading} profit={sessionPnL}
       onStart={handleStart} onStop={handleStop} onPause={handlePause} onResume={handleResume}
       error={error} isBelowMin={isBelowMin&&tradingMode!=='indicator'}
+      martingale={martingale}
     />
   );
 
@@ -2720,12 +2920,24 @@ export default function DashboardPage() {
                       const losses = ftStatus?.totalLosses??aiStatus?.totalLosses??indicatorStatus?.totalLosses??momentumStatus?.totalLosses??0;
                       const total = wins+losses;
                       const wr = total>0?Math.round((wins/total)*100):null;
+                      // Always Signal state
+                      const asActive = (ftStatus as any)?.alwaysSignalActive
+                        || aiStatus?.alwaysSignalStatus?.isActive
+                        || (indicatorStatus as any)?.alwaysSignalActive
+                        || (momentumStatus as any)?.alwaysSignalActive;
+                      const asStep = (ftStatus as any)?.alwaysSignalStep
+                        ?? aiStatus?.alwaysSignalStatus?.currentStep
+                        ?? (indicatorStatus as any)?.alwaysSignalStep
+                        ?? (momentumStatus as any)?.alwaysSignalStep ?? 0;
                       const statRows: {label:string;value:string;col?:string}[] = [
                         {label:'W/L',value:`${wins}/${losses}`,col:wins>losses?ac:losses>wins?C.coral:C.muted},
                         wr!==null
                           ? {label:'WR',value:`${wr}%`,col:wr>=50?ac:C.coral}
                           : {label:'Trade',value:`${total>0?total:'-'}`},
                       ];
+                      if(asActive && asStep>0) {
+                        statRows.push({label:'AlwaysSig',value:`K${asStep}/${martingale.maxStep}`,col:C.amber});
+                      }
                       return (
                         <div style={{display:'flex',flexDirection:'column',gap:5}}>
                           {statRows.map(s=>(
@@ -2758,6 +2970,29 @@ export default function DashboardPage() {
               ) : isActiveMode && tradingMode === 'schedule' ? (
                 <div style={{display:'flex',flexDirection:'column',gap:6}}>
                   {/* Schedule aktif: tampilkan list seperti idle + tombol Lihat Sesi di bawah */}
+                  {/* Always Signal badge jika aktif */}
+                  {(scheduleStatus as any)?.alwaysSignalActive && (
+                    <div style={{padding:'5px 8px',borderRadius:10,background:`${C.amber}10`,border:`1px solid ${C.amber}30`,display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{width:5,height:5,borderRadius:'50%',background:C.amber,animation:'ping 1.4s ease-in-out infinite'}}/>
+                      <span style={{fontSize:9,fontWeight:700,color:C.amber,letterSpacing:'0.06em'}}>
+                        ALWAYS SIGNAL · K{(scheduleStatus as any)?.alwaysSignalStep ?? 1}/{martingale.maxStep}
+                      </span>
+                    </div>
+                  )}
+                  {/* Next order time */}
+                  {(scheduleStatus as any)?.nextOrderTime && (
+                    <div style={{padding:'4px 8px',borderRadius:8,background:`${modeAccent(tradingMode)}08`,border:`1px solid ${modeAccent(tradingMode)}20`,display:'flex',alignItems:'center',gap:5}}>
+                      <Timer style={{width:9,height:9,color:modeAccent(tradingMode)}}/>
+                      <span style={{fontSize:9,fontWeight:600,color:modeAccent(tradingMode),fontFamily:'monospace'}}>
+                        {(scheduleStatus as any).nextOrderTime}
+                      </span>
+                      {(scheduleStatus as any)?.nextOrderInSeconds != null && (
+                        <span style={{fontSize:9,color:C.muted,marginLeft:'auto'}}>
+                          {(scheduleStatus as any).nextOrderInSeconds}s
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div style={{flex:1}}>
                     {ModeSession(true)}
                   </div>

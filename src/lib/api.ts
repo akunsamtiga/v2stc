@@ -62,13 +62,36 @@ export interface ProfileBalance {
   [key: string]: unknown;
 }
 
+export interface AlwaysSignalLossState {
+  hasOutstandingLoss: boolean;
+  currentMartingaleStep: number;
+  originalOrderId: string;
+  totalLoss: number;
+  currentTrend: 'call' | 'put';
+}
+
 export interface ScheduleStatus {
   botState?: 'RUNNING' | 'PAUSED' | 'STOPPED' | 'IDLE';
   totalOrders?: number;
+  pendingOrders?: number;
+  awaitingOrders?: number;
   executedOrders?: number;
   skippedOrders?: number;
   activeOrders?: number;
   sessionPnL?: number;
+  // Always Signal
+  alwaysSignalActive?: boolean;
+  alwaysSignalStep?: number;
+  alwaysSignalLossState?: AlwaysSignalLossState;
+  // Risk management
+  stopLoss?: number;
+  stopProfit?: number;
+  // Next order
+  nextOrderTime?: string | null;
+  nextOrderInSeconds?: number | null;
+  // Legacy
+  activeMartingaleOrderId?: string | null;
+  wsConnected?: boolean;
   nextExecutionTime?: string;
   startedAt?: string;
   updatedAt?: string;
@@ -409,6 +432,35 @@ export interface IndicatorLog {
 }
 
 // ─────────────────────────────────────────────
+// TYPES — Today Profit
+// ─────────────────────────────────────────────
+export interface ModeProfitSummary {
+  mode: string;
+  pnl: number;
+  trades: number;
+  wins: number;
+  losses: number;
+}
+
+export interface AssetProfitSummary {
+  ric: string;
+  name: string;
+  pnl: number;
+  trades: number;
+}
+
+export interface TodayProfitSummary {
+  date: string;          // YYYY-MM-DD
+  totalPnL: number;
+  totalTrades: number;
+  totalWins: number;
+  totalLosses: number;
+  winRate: number;
+  byMode: Record<string, ModeProfitSummary>;
+  byAsset: Record<string, AssetProfitSummary>;
+}
+
+// ─────────────────────────────────────────────
 // TYPES — Combined Bot Status
 // ─────────────────────────────────────────────
 export interface CombinedBotStatus {
@@ -553,4 +605,23 @@ export const api = {
   getStatus: () => req<CombinedBotStatus>('GET', '/bot/status'),
   startBot:  (payload: StartBotPayload) => req<{ message: string }>('POST', '/bot/start', payload),
   stopBot:   (mode: string) => req<{ message: string }>('POST', '/bot/stop', { mode }),
+
+  // ── Today Profit ─────────────────────────
+  /** GET /today-profit?date=YYYY-MM-DD — aggregates all modes for a day */
+  todayProfit: (date?: string) =>
+    req<{ success: boolean; data: TodayProfitSummary }>(
+      'GET', `/today-profit${date ? `?date=${date}` : ''}`
+    ).then(r => r.data),
+
+  /** GET /today-profit/realtime — includes active session data */
+  realtimeProfit: () =>
+    req<{ success: boolean; data: TodayProfitSummary }>(
+      'GET', '/today-profit/realtime'
+    ).then(r => r.data),
+
+  /** GET /today-profit/history?startDate=...&endDate=... */
+  profitHistory: (startDate: string, endDate: string) =>
+    req<{ success: boolean; data: TodayProfitSummary[] }>(
+      'GET', `/today-profit/history?startDate=${startDate}&endDate=${endDate}`
+    ).then(r => r.data),
 };
