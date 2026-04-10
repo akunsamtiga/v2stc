@@ -1,13 +1,51 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useLanguage, AVAILABLE_LANGUAGES, Language } from '@/lib/i18n/LanguageContext';
+import { useLanguage, AVAILABLE_LANGUAGES, Language, isWindows } from '@/lib/i18n/LanguageContext';
 
 interface LanguageSelectorProps {
   variant?: 'row' | 'sheet' | 'dropdown';
   showLabel?: boolean;
   disabled?: boolean;
 }
+
+// ─── FlagIcon ────────────────────────────────────────────────────────────────
+// Di Windows: render <img> dari flagcdn (emoji bendera tidak didukung Windows)
+// Di HP / Mac: render emoji bendera seperti biasa
+interface FlagIconProps {
+  flag: string;      // emoji, e.g. 🇮🇩
+  flagImg: string;   // URL gambar, e.g. https://flagcdn.com/w20/id.png
+  name: string;      // untuk alt text
+  size?: number;     // ukuran emoji (px), default 18
+}
+
+function FlagIcon({ flag, flagImg, name, size = 18 }: FlagIconProps) {
+  const [useImg, setUseImg] = useState(false);
+
+  useEffect(() => {
+    setUseImg(isWindows());
+  }, []);
+
+  if (useImg) {
+    return (
+      <img
+        src={flagImg}
+        alt={name}
+        style={{
+          width: size + 2,
+          height: Math.round((size + 2) * 0.75),
+          objectFit: 'cover',
+          borderRadius: 2,
+          display: 'inline-block',
+          verticalAlign: 'middle',
+        }}
+      />
+    );
+  }
+
+  return <span style={{ fontSize: size }}>{flag}</span>;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Row variant - for use in settings list
 export function LanguageSelectorRow({ showLabel = true, disabled = false }: LanguageSelectorProps) {
@@ -65,8 +103,16 @@ export function LanguageSelectorRow({ showLabel = true, disabled = false }: Lang
         <span style={{ flex: 1, fontSize: 15, color: '#1c1c1e' }}>
           {showLabel ? t('language.title') : getLanguageName(language)}
         </span>
-        <span style={{ fontSize: 14, color: '#aeaeb2', marginRight: 4 }}>
-          {getLanguageFlag(language)} {getLanguageName(language)}
+        <span style={{ fontSize: 14, color: '#aeaeb2', marginRight: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+          {currentLang && (
+            <FlagIcon
+              flag={currentLang.flag}
+              flagImg={currentLang.flagImg}
+              name={currentLang.name}
+              size={16}
+            />
+          )}
+          {getLanguageName(language)}
         </span>
         <svg width="6" height="11" viewBox="0 0 7 12" fill="none">
           <path
@@ -122,7 +168,7 @@ export function LanguageSelectorRow({ showLabel = true, disabled = false }: Lang
                   gap: 12,
                 }}
               >
-                <span style={{ fontSize: 18 }}>{lang.flag}</span>
+                <FlagIcon flag={lang.flag} flagImg={lang.flagImg} name={lang.name} size={18} />
                 <span
                   style={{
                     flex: 1,
@@ -260,7 +306,7 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
                   gap: 14,
                 }}
               >
-                <span style={{ fontSize: 24 }}>{lang.flag}</span>
+                <FlagIcon flag={lang.flag} flagImg={lang.flagImg} name={lang.name} size={24} />
                 <div style={{ flex: 1, textAlign: 'left' }}>
                   <p
                     style={{
@@ -290,7 +336,7 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
 
 // Compact variant - for navbar/header
 export function LanguageSelectorCompact() {
-  const { language, setLanguage, getLanguageFlag } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -303,6 +349,8 @@ export function LanguageSelectorCompact() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const currentLang = AVAILABLE_LANGUAGES.find((l) => l.code === language);
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
@@ -318,12 +366,13 @@ export function LanguageSelectorCompact() {
           background: 'rgba(0,0,0,0.05)',
           border: 'none',
           cursor: 'pointer',
-          fontSize: 18,
           transition: 'background 0.15s',
         }}
         title="Change Language"
       >
-        {getLanguageFlag(language)}
+        {currentLang && (
+          <FlagIcon flag={currentLang.flag} flagImg={currentLang.flagImg} name={currentLang.name} size={18} />
+        )}
       </button>
 
       {isOpen && (
@@ -368,7 +417,7 @@ export function LanguageSelectorCompact() {
                   gap: 10,
                 }}
               >
-                <span style={{ fontSize: 16 }}>{lang.flag}</span>
+                <FlagIcon flag={lang.flag} flagImg={lang.flagImg} name={lang.name} size={16} />
                 <span
                   style={{
                     fontSize: 14,

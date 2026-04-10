@@ -11,16 +11,22 @@ const LANGUAGE_STORAGE_KEY = 'stc_language';
 const DEFAULT_LANGUAGE: Language = 'id';
 
 // Available languages
-export const AVAILABLE_LANGUAGES: { code: Language; name: string; flag: string; nativeName: string }[] = [
-  { code: 'en', name: 'English',    flag: '🇬🇧', nativeName: 'English'        },
-  { code: 'id', name: 'Indonesian', flag: '🇮🇩', nativeName: 'Indonesia'      },
-  { code: 'ru', name: 'Russian',    flag: '🇷🇺', nativeName: 'Русский'        },
-  { code: 'es', name: 'Spanish',    flag: '🇪🇸', nativeName: 'Español'        },
-  { code: 'ms', name: 'Malay',      flag: '🇲🇾', nativeName: 'Bahasa Melayu' },
-  { code: 'hi', name: 'Hindi',      flag: '🇮🇳', nativeName: 'हिन्दी'          },
-  { code: 'th', name: 'Thai',       flag: '🇹🇭', nativeName: 'ภาษาไทย'        },
-  { code: 'tr', name: 'Turkish',    flag: '🇹🇷', nativeName: 'Türkçe'         },
+export const AVAILABLE_LANGUAGES: { code: Language; name: string; flag: string; flagImg: string; nativeName: string }[] = [
+  { code: 'en', name: 'English',    flag: '🇬🇧', flagImg: 'https://flagcdn.com/w20/gb.png', nativeName: 'English'        },
+  { code: 'id', name: 'Indonesian', flag: '🇮🇩', flagImg: 'https://flagcdn.com/w20/id.png', nativeName: 'Indonesia'      },
+  { code: 'ru', name: 'Russian',    flag: '🇷🇺', flagImg: 'https://flagcdn.com/w20/ru.png', nativeName: 'Русский'        },
+  { code: 'es', name: 'Spanish',    flag: '🇪🇸', flagImg: 'https://flagcdn.com/w20/es.png', nativeName: 'Español'        },
+  { code: 'ms', name: 'Malay',      flag: '🇲🇾', flagImg: 'https://flagcdn.com/w20/my.png', nativeName: 'Bahasa Melayu' },
+  { code: 'hi', name: 'Hindi',      flag: '🇮🇳', flagImg: 'https://flagcdn.com/w20/in.png', nativeName: 'हिन्दी'          },
+  { code: 'th', name: 'Thai',       flag: '🇹🇭', flagImg: 'https://flagcdn.com/w20/th.png', nativeName: 'ภาษาไทย'        },
+  { code: 'tr', name: 'Turkish',    flag: '🇹🇷', flagImg: 'https://flagcdn.com/w20/tr.png', nativeName: 'Türkçe'         },
 ];
+
+// Detect if running on Windows (emoji flags not supported)
+export function isWindows(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Win/i.test(navigator.platform || navigator.userAgent);
+}
 
 // Language Context Type
 interface LanguageContextType {
@@ -31,6 +37,7 @@ interface LanguageContextType {
   availableLanguages: typeof AVAILABLE_LANGUAGES;
   getLanguageName: (code: Language) => string;
   getLanguageFlag: (code: Language) => string;
+  getLanguageFlagImg: (code: Language) => string;
   formatNumber: (num: number) => string;
 }
 
@@ -111,10 +118,16 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
     return lang?.nativeName || lang?.name || code;
   }, []);
 
-  // Get language flag
+  // Get language flag emoji
   const getLanguageFlag = useCallback((code: Language): string => {
     const lang = AVAILABLE_LANGUAGES.find((l) => l.code === code);
     return lang?.flag || '🌐';
+  }, []);
+
+  // Get language flag image URL
+  const getLanguageFlagImg = useCallback((code: Language): string => {
+    const lang = AVAILABLE_LANGUAGES.find((l) => l.code === code);
+    return lang?.flagImg || '';
   }, []);
 
   // Format number based on current language
@@ -133,6 +146,7 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
         availableLanguages: AVAILABLE_LANGUAGES,
         getLanguageName,
         getLanguageFlag,
+        getLanguageFlagImg,
         formatNumber: formatNumberFn,
       }}
     >
