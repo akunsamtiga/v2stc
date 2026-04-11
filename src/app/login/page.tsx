@@ -195,7 +195,7 @@ function LoginPageContent() {
           flex-direction: column;
           align-items:    center;
           justify-content: center;
-          padding:        24px 20px;
+          padding:        24px 20px 80px;
           overflow-y:     auto;
           overflow-x:     hidden;
           -webkit-overflow-scrolling: touch;
@@ -228,7 +228,7 @@ function LoginPageContent() {
         }
         @keyframes rise { to { opacity: 1; transform: translateY(0) scale(1); } }
 
-        .brand { text-align: center; margin-bottom: 20px; }
+        .brand { text-align: center; margin-bottom: 10px; }
         .brand-title { display: block; font-size: 26px; font-weight: 700; letter-spacing: -0.7px; color: var(--text-1); margin-bottom: 4px; }
         .brand-sub   { font-size: 14px; color: var(--text-2); font-weight: 400; }
 
@@ -373,8 +373,9 @@ function LoginPageContent() {
           align-items: center;
         }
         .logo-desktop img { height: 32px; width: auto; object-fit: contain; }
-        .logo-mobile { display: flex; justify-content: center; margin-bottom: 14px; }
-        .logo-mobile img { height: 80px; width: auto; object-fit: contain; }
+        .logo-mobile { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .logo-mobile img { height: 120px; width: auto; object-fit: contain; }
+        .logo-mobile-name { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-1); line-height: 1; }
         @media (min-width: 600px) {
           .logo-desktop { display: flex; }
           .logo-mobile  { display: none; }
@@ -662,6 +663,7 @@ function LoginPageContent() {
               {/* Logo Mobile - di atas judul */}
               <div className="logo-mobile">
                 <img src="/logo.png" alt="STC AutoTrade" />
+                <span className="logo-mobile-name">STC AutoTrade</span>
               </div>
 
               <p className="brand-sub">{t('login.subtitle')}</p>
@@ -766,9 +768,9 @@ function LoginPageContent() {
 
             <div className="foot">
               © 2026 STC AutoTrade ·{' '}
-              <span className="foot-lnk">{t('login.terms')}</span>
+              <a className="foot-lnk" href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer">{t('login.terms')}</a>
               {' '}·{' '}
-              <span className="foot-lnk">{t('login.privacy')}</span>
+              <a className="foot-lnk" href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer">{t('login.privacy')}</a>
             </div>
           </div>
         </div>

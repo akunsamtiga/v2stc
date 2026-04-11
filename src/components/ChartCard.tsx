@@ -127,7 +127,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     const height = canvas.height / (window.devicePixelRatio || 1);
 
     // Clear canvas
-    const bgColor = isDarkMode ? '#0a0a0a' : '#F8F9FA';
+    const bgColor = isDarkMode ? '#1A1A1E' : '#F8F9FA';
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, width, height);
 
@@ -427,7 +427,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
 
   const responsiveHeight = deviceType === 'mobile' ? 100 : deviceType === 'tablet' ? 300 : height;
 
-  const wrapperBg = isDarkMode ? '#0a0a0a' : '#F8F9FA';
+  const wrapperBg = isDarkMode ? '#1A1A1E' : '#F8F9FA';
 
   return (
     <div

@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 /* ============================================================
+   DIGITAL CLOCK FONT — "Digital-7" via Google Fonts fallback
+   Using 'Share Tech Mono' which closely resembles a digital LCD font
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap');
+
+/* ============================================================
    ANIMATED BORDER PROPERTY REGISTRATION
    ============================================================ */
 @property --border-angle {
@@ -42,63 +48,76 @@ body {
    DESIGN TOKENS — Dark & Light Mode dengan tema warna menarik
    ============================================================ */
 
-/* DARK MODE (Default) */
+/* DARK MODE (Default) — Matched to Kotlin DarkColors
+   background=#161616  surface=#1F1F1F  cardBackground=#323232
+   textPrimary=#EBEBEB  textSecondary=#BAC1CB  textMuted=rgba(126,126,126,.73)
+   successColor=#10B981  errorColor=#EF4444  warningColor=#FBBF24
+   borderColor=#494949   chartLine=Cyan */
 :root {
-  --bg:          #000000;
-  --s1:          #0a0a0c;
-  --s2:          #141416;
-  --s3:          #0d0d0f;
+  /* ── Surfaces ── */
+  --bg:          #161616;        /* Kotlin: background */
+  --s1:          #1F1F1F;        /* Kotlin: surface */
+  --s2:          #2C2C2C;        /* Kotlin: cardBackground ~#323232, softer */
+  --s3:          #383838;        /* Kotlin: cardBackground elevated */
 
-  --blue:        #10B981;  /* emerald-500 */
-  --blue-dim:    rgba(16, 185, 129, 0.14);
-  --blue-glow:   rgba(16, 185, 129, 0.06);
-  --blue-bdr:    rgba(16, 185, 129, 0.28);
+  /* ── Emerald accent = Kotlin successColor ── */
+  --blue:        #10B981;
+  --blue-dim:    rgba(16, 185, 129, 0.18);
+  --blue-glow:   rgba(16, 185, 129, 0.10);
+  --blue-bdr:    rgba(16, 185, 129, 0.40);
 
-  --coral:       #FF453A;
-  --coral-dim:   rgba(255, 69, 58, 0.12);
-  --amber:       #FF9F0A;
-  --amber-dim:   rgba(255, 159, 10, 0.10);
-  --violet:      #BF5AF2;
-  --violet-dim:  rgba(191, 90, 242, 0.10);
+  /* ── Status colors — exact Kotlin values ── */
+  --coral:       #EF4444;        /* Kotlin: errorColor */
+  --coral-dim:   rgba(239, 68, 68, 0.16);
+  --amber:       #FBBF24;        /* Kotlin: warningColor */
+  --amber-dim:   rgba(251, 191, 36, 0.15);
+  --violet:      #C96CF5;
+  --violet-dim:  rgba(201, 108, 245, 0.14);
 
-  --bdr:         rgba(255, 255, 255, 0.08);
-  --bdr-act:     rgba(16, 185, 129, 0.55);
-  --faint:       rgba(16, 185, 129, 0.07);
+  /* ── Borders — Kotlin: #494949 ── */
+  --bdr:         rgba(73, 73, 73, 0.75);
+  --bdr-act:     rgba(16, 185, 129, 0.60);
+  --faint:       rgba(16, 185, 129, 0.08);
 
-  --text:        #ffffff;
-  --sub:         rgba(235, 235, 245, 0.88);
-  --muted:       rgba(235, 235, 245, 0.50);
+  /* ── Typography — Kotlin textPrimary/Secondary/Muted ── */
+  --text:        #EBEBEB;
+  --sub:         #BAC1CB;
+  --muted:       rgba(126, 126, 126, 0.80);
 
   --font-exo:    var(--font-geist-sans), 'Geist', ui-sans-serif, system-ui, sans-serif;
   --font-mono:   ui-monospace, 'SF Mono', 'Courier New', monospace;
 }
 
-/* LIGHT MODE - Tema warna cerah dengan aksen hijau emerald */
+/* LIGHT MODE — Matched to Kotlin LightColors
+   background=#F8F9FA  surface=#FFFFFF  surface3=#EBEBEB
+   textPrimary=#1F2937  textSecondary=#6B7280  textMuted=#9CA3AF
+   successColor=#059669  errorColor=#DC2626  warningColor=#D97706
+   borderColor=#D6DADF */
 [data-theme="light"] {
-  --bg:          #ffffff;
-  --s1:          #f8f9fa;
-  --s2:          #f1f3f5;
-  --s3:          #e9ecef;
+  --bg:          #F8F9FA;        /* Kotlin: background */
+  --s1:          #FFFFFF;        /* Kotlin: surface */
+  --s2:          #FFFFFF;        /* Kotlin: cardBackground */
+  --s3:          #EBEBEB;        /* Kotlin: surface3 */
 
-  --blue:        #059669;  /* emerald-600 untuk kontras lebih baik di light */
+  --blue:        #059669;        /* Kotlin: successColor light */
   --blue-dim:    rgba(5, 150, 105, 0.10);
   --blue-glow:   rgba(5, 150, 105, 0.04);
-  --blue-bdr:    rgba(5, 150, 105, 0.25);
+  --blue-bdr:    rgba(5, 150, 105, 0.30);
 
-  --coral:       #dc2626;  /* red-600 */
-  --coral-dim:   rgba(220, 38, 38, 0.08);
-  --amber:       #ea580c;  /* orange-600 */
-  --amber-dim:   rgba(234, 88, 12, 0.08);
-  --violet:      #9333ea;  /* purple-600 */
-  --violet-dim:  rgba(147, 51, 234, 0.08);
+  --coral:       #DC2626;        /* Kotlin: errorColor light */
+  --coral-dim:   rgba(220, 38, 38, 0.09);
+  --amber:       #D97706;        /* Kotlin: warningColor light */
+  --amber-dim:   rgba(217, 119, 6, 0.09);
+  --violet:      #9333EA;
+  --violet-dim:  rgba(147, 51, 234, 0.09);
 
-  --bdr:         rgba(0, 0, 0, 0.08);
-  --bdr-act:     rgba(5, 150, 105, 0.40);
+  --bdr:         rgba(214, 218, 223, 0.90);  /* Kotlin: #D6DADF */
+  --bdr-act:     rgba(5, 150, 105, 0.45);
   --faint:       rgba(5, 150, 105, 0.05);
 
-  --text:        #1a1a1a;
-  --sub:         rgba(0, 0, 0, 0.70);
-  --muted:       rgba(0, 0, 0, 0.45);
+  --text:        #1F2937;        /* Kotlin: textPrimary light */
+  --sub:         #6B7280;        /* Kotlin: textSecondary light */
+  --muted:       #9CA3AF;        /* Kotlin: textMuted light */
 }
 
 /* ============================================================
@@ -154,29 +173,37 @@ body::after {
   z-index: 0;
 }
 
-/* Dark mode gradient */
+/* Dark mode gradient — subtle, befitting Kotlin's #161616 base */
 body:not([data-theme="light"])::after {
   background:
     linear-gradient(
-      105deg,
+      112deg,
       transparent 0%,
-      rgba(255,255,255,0.0)   25%,
-      rgba(180,255,220,0.055) 50%,
-      rgba(255,255,255,0.0)   75%,
+      rgba(16,185,129,0.0)  20%,
+      rgba(16,185,129,0.04) 45%,
+      rgba(180,255,220,0.03) 50%,
+      rgba(16,185,129,0.04) 55%,
+      rgba(16,185,129,0.0)  80%,
       transparent 100%
     ),
     radial-gradient(
-      ellipse 70% 40% at 50% -5%,
+      ellipse 80% 50% at 50% -10%,
       rgba(16, 185, 129, 0.10) 0%,
-      transparent 65%
+      rgba(16, 185, 129, 0.04) 40%,
+      transparent 70%
     ),
     radial-gradient(
-      ellipse 40% 30% at 90% 100%,
-      rgba(16, 185, 129, 0.04) 0%,
+      ellipse 55% 40% at 95% 105%,
+      rgba(16, 185, 129, 0.05) 0%,
       transparent 60%
+    ),
+    radial-gradient(
+      ellipse 45% 35% at 5% 100%,
+      rgba(191, 90, 242, 0.03) 0%,
+      transparent 55%
     );
-  background-size: 200% 100%, 100% 100%, 100% 100%;
-  animation: shimmer-h 18s ease-in-out infinite;
+  background-size: 200% 100%, 100% 100%, 100% 100%, 100% 100%;
+  animation: shimmer-h 22s ease-in-out infinite;
 }
 
 /* Light mode gradient */
@@ -222,7 +249,7 @@ input, textarea, select {
   background: var(--s1) !important;
   color: var(--text) !important;
   border: 1px solid var(--bdr) !important;
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   font-family: var(--font-exo) !important;
   font-size: 16px !important;
   outline: none !important;
@@ -264,170 +291,44 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 /* ============================================================
    DS-CARD
    ============================================================ */
-/* ============================================================
-   CARD BORDER SPIN ANIMATION
-   ============================================================ */
-/* Menggunakan transform rotate — tidak butuh @property/Houdini, kompatibel di semua WebView */
-@keyframes ds-border-rotate {
-  from { transform: translate(-50%, -50%) rotate(0deg);   }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
-}
 
 .ds-card {
-  /* Solid gray background — tidak ada gradient/shimmer di dalam card */
-  background: #1a1d24;
-  border: none;
-  border-radius: 12px !important;
-  clip-path: none !important;
+  background: var(--s2);
+  border: 1px solid var(--bdr);
+  border-radius: 18px !important;
   position: relative;
-  /* overflow: hidden ditambahkan oleh Card className — clips ::before spinning element */
-
   box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.50),
-    0 1px 4px  rgba(0, 0, 0, 0.30);
-
+    0 1px 0 rgba(255, 255, 255, 0.045) inset,   /* subtle top highlight gloss */
+    0 6px 24px rgba(0, 0, 0, 0.60),
+    0 2px 6px  rgba(0, 0, 0, 0.40),
+    0 0 0 0    transparent;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
-
-/*
- * ::before — spinning conic-gradient, menciptakan efek kilauan border berputar.
- * Ukuran 300%×300% agar saat rotate tidak ada sudut yang "kosong".
- * Dikliping oleh overflow:hidden pada .ds-card.
- */
-.ds-card::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 300%;
-  height: 300%;
-  transform: translate(-50%, -50%) rotate(0deg);
-  background: conic-gradient(
-    from 0deg,
-    transparent                   0deg,
-    transparent                 120deg,
-    rgba(52, 211, 153, 0.02)    145deg,
-    rgba(52, 211, 153, 0.06)    185deg,
-    rgba(52, 211, 153, 0.14)    225deg,
-    rgba(52, 211, 153, 0.32)    265deg,
-    rgba(52, 211, 153, 0.62)    305deg,
-    rgba(52, 211, 153, 0.90)    335deg,
-    rgba(52, 211, 153, 1.00)    352deg,
-    transparent                 360deg
-  );
-  animation: ds-border-rotate 8s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/*
- * ::after — menutup interior card dengan background solid,
- * menyisakan hanya 1.5px tepi (border area) yang memperlihatkan kilauan ::before.
- */
-.ds-card::after {
-  content: '';
-  position: absolute;
-  inset: 1.5px;
-  border-radius: 10.5px; /* 12px - 1.5px */
-  background: #1a1d24;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/*
- * Semua direct children harus berada di atas ::after (z-index: 1)
- * agar konten card terlihat dengan benar.
- */
-.ds-card > * {
-  position: relative;
-  z-index: 2;
-}
-
-/* Speed variasi per kartu agar terlihat organik */
-.ds-card:nth-child(1)::before  { animation-duration: 7.5s;  animation-delay: -1.2s;  }
-.ds-card:nth-child(2)::before  { animation-duration: 10.0s; animation-delay: -4.0s;  }
-.ds-card:nth-child(3)::before  { animation-duration: 8.5s;  animation-delay: -2.1s;  }
-.ds-card:nth-child(4)::before  { animation-duration: 11.5s; animation-delay: -5.5s;  }
-.ds-card:nth-child(5)::before  { animation-duration: 9.0s;  animation-delay: -3.0s;  }
-.ds-card:nth-child(6)::before  { animation-duration: 13.0s; animation-delay: -7.0s;  }
-.ds-card:nth-child(7)::before  { animation-duration: 8.0s;  animation-delay: -0.5s;  }
-.ds-card:nth-child(8)::before  { animation-duration: 11.0s; animation-delay: -8.5s;  }
 
 .ds-card:hover {
   transform: translateY(-2px);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.55),
-    0 2px 8px  rgba(0, 0, 0, 0.35),
-    0 0 24px rgba(16, 185, 129, 0.08);
-}
-
-/* Kilauan lebih terang saat hover */
-.ds-card:hover::before {
-  background: conic-gradient(
-    from 0deg,
-    transparent                   0deg,
-    transparent                 115deg,
-    rgba(52, 211, 153, 0.03)    140deg,
-    rgba(52, 211, 153, 0.08)    180deg,
-    rgba(52, 211, 153, 0.20)    220deg,
-    rgba(52, 211, 153, 0.45)    262deg,
-    rgba(52, 211, 153, 0.78)    305deg,
-    rgba(52, 211, 153, 0.98)    338deg,
-    rgba(52, 211, 153, 1.00)    352deg,
-    transparent                 360deg
-  );
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 12px 44px rgba(0, 0, 0, 0.65),
+    0 4px 12px  rgba(0, 0, 0, 0.45),
+    0 0 28px    rgba(16, 185, 129, 0.05);  /* emerald ambient on hover */
 }
 
 .ds-card.active {
   box-shadow:
-    0 0 0 1px rgba(52, 211, 153, 0.45),
-    0 8px 32px rgba(52, 211, 153, 0.12);
-}
-
-/* CTC variant — shimmer violet */
-.ds-card.ctc::before {
-  background: conic-gradient(
-    from 0deg,
-    transparent                   0deg,
-    transparent                 120deg,
-    rgba(167, 139, 250, 0.02)   145deg,
-    rgba(167, 139, 250, 0.06)   185deg,
-    rgba(167, 139, 250, 0.14)   225deg,
-    rgba(167, 139, 250, 0.32)   265deg,
-    rgba(167, 139, 250, 0.62)   305deg,
-    rgba(196, 181, 253, 0.90)   335deg,
-    rgba(196, 181, 253, 1.00)   352deg,
-    transparent                 360deg
-  );
-}
-.ds-card.ctc::after {
-  background: #1a1820;
+    0 1px 0 rgba(255,255,255,0.05) inset,
+    0 0 0 1px rgba(16, 185, 129, 0.50),
+    0 8px 32px rgba(16, 185, 129, 0.14),
+    0 0 60px  rgba(16, 185, 129, 0.06);
 }
 
 /* Light mode card */
 [data-theme="light"] .ds-card {
   background: #ffffff;
+  border-color: rgba(16, 185, 129, 0.15);
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.06),
     0 1px 4px  rgba(0, 0, 0, 0.04);
-}
-[data-theme="light"] .ds-card::before {
-  background: conic-gradient(
-    from 0deg,
-    transparent                 0deg,
-    transparent               120deg,
-    rgba(16, 185, 129, 0.02)  145deg,
-    rgba(16, 185, 129, 0.05)  185deg,
-    rgba(16, 185, 129, 0.12)  225deg,
-    rgba(16, 185, 129, 0.28)  265deg,
-    rgba(16, 185, 129, 0.55)  305deg,
-    rgba(52, 211, 153, 0.82)  335deg,
-    rgba(52, 211, 153, 0.88)  352deg,
-    transparent               360deg
-  );
-}
-[data-theme="light"] .ds-card::after {
-  background: #ffffff;
 }
 
 /* ============================================================
@@ -451,7 +352,6 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 @keyframes pulse          { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 @keyframes float          { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @keyframes countUp        { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes shimmer        { 0% { background-position: 100% center; } 100% { background-position: -100% center; } }
 @keyframes shimmer-h {
   0%   { background-position:  100% center; }
   100% { background-position: -100% center; }
@@ -468,13 +368,13 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 @keyframes ticker         { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 @keyframes win-flash {
   0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-  18%  { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.55), 0 0 40px rgba(16, 185, 129, 0.18); }
+  15%  { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.65), 0 0 50px rgba(16, 185, 129, 0.25); }
   100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 @keyframes lose-flash {
-  0%   { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0); }
-  18%  { box-shadow: 0 0 0 4px rgba(255, 69, 58, 0.55), 0 0 40px rgba(255, 69, 58, 0.18); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
+  15%  { box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.65), 0 0 50px rgba(255, 77, 77, 0.25); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
 }
 @keyframes profit-slide-up   { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes profit-slide-down { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
@@ -637,16 +537,7 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
    SKELETON LOADER
    ============================================================ */
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--s1)  0%,
-    var(--s1) 35%,
-    var(--s2) 50%,
-    var(--s1) 65%,
-    var(--s1) 100%
-  );
-  background-size: 400% 100%;
-  animation: shimmer 1.8s linear infinite;
+  background: var(--faint);
   border-radius: 6px;
 }
 
@@ -741,7 +632,7 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
   align-items: center;
   justify-content: space-between;
   padding: 9px 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--s1);
   border: 1px solid var(--bdr);
   cursor: pointer;

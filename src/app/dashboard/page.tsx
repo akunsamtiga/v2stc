@@ -23,36 +23,55 @@ import {
   Settings, Trash2, X, Zap, TrendingUp, TrendingDown,
   PlayCircle, StopCircle, PauseCircle, RefreshCw, Timer, Copy,
   ArrowRight, Radio, BarChart, Waves,
+  Wallet, Clock, CreditCard,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
 // DESIGN TOKENS - Emerald Theme (Dark/Light)
 // ═══════════════════════════════════════════
 function getColors(isDark: boolean) {
+  // ── Dark: matched to Kotlin DarkColors ──────────────────────────────────
+  // background=#161616  surface=#1F1F1F  cardBackground=#323232
+  // textPrimary=#EBEBEB textSecondary=#BAC1CB textMuted=rgba(126,126,126,.73)
+  // successColor=#10B981  errorColor=#EF4444  warningColor=#FBBF24
+  // borderColor=#494949   chartLine=Cyan(#00FFFF)
+  //
+  // ── Light: matched to Kotlin LightColors ────────────────────────────────
+  // background=#F8F9FA  surface=#FFFFFF  surface3=#EBEBEB
+  // textPrimary=#1F2937  textSecondary=#6B7280  textMuted=#9CA3AF
+  // successColor=#059669  errorColor=#DC2626  warningColor=#D97706
+  // borderColor=#D6DADF
   return {
-    bg:    isDark ? '#000000' : '#F8F9FA',
-    card:  isDark ? '#18181c' : '#FFFFFF',
-    card2: isDark ? '#101012' : '#F3F4F6',
-    bdr:   isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-    bdrAct:'rgba(16,185,129,0.50)',
-    cyan:  '#10B981', // emerald-500
-    cyand: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.08)',
-    coral: '#FF453A',
-    cord:  isDark ? 'rgba(255,69,58,0.12)' : 'rgba(255,69,58,0.08)',
-    amber: '#FF9F0A',
-    ambd:  isDark ? 'rgba(255,159,10,0.10)' : 'rgba(255,159,10,0.08)',
-    violet:'#BF5AF2',
-    vltd:  isDark ? 'rgba(191,90,242,0.10)' : 'rgba(191,90,242,0.08)',
-    sky:   '#34D399', // emerald-400
-    skyd:  isDark ? 'rgba(52,211,153,0.10)' : 'rgba(52,211,153,0.08)',
+    // Surfaces
+    bg:    isDark ? '#161616' : '#F8F9FA',   // Kotlin: background
+    card:  isDark ? '#2C2C2C' : '#FFFFFF',   // Kotlin: cardBackground ~#323232, softer
+    card2: isDark ? '#1F1F1F' : '#EBEBEB',   // Kotlin: surface / surface3
+    // Borders
+    bdr:   isDark ? 'rgba(73,73,73,0.75)' : 'rgba(214,218,223,0.90)', // Kotlin: #494949 / #D6DADF
+    bdrAct:'rgba(16,185,129,0.55)',
+    // Primary accent — successColor in Kotlin
+    cyan:  isDark ? '#10B981' : '#059669',   // Kotlin: successColor dark / light
+    cyand: isDark ? 'rgba(16,185,129,0.18)' : 'rgba(5,150,105,0.10)',
+    // Error / loss
+    coral: isDark ? '#EF4444' : '#DC2626',   // Kotlin: errorColor
+    cord:  isDark ? 'rgba(239,68,68,0.16)'  : 'rgba(220,38,38,0.09)',
+    // Warning / martingale
+    amber: isDark ? '#FBBF24' : '#D97706',   // Kotlin: warningColor
+    ambd:  isDark ? 'rgba(251,191,36,0.15)' : 'rgba(217,119,6,0.09)',
+    // Misc accent colors
+    violet: isDark ? '#C96CF5' : '#BF5AF2',
+    vltd:  isDark ? 'rgba(201,108,245,0.14)' : 'rgba(191,90,242,0.09)',
+    sky:   isDark ? '#34D399' : '#34D399',   // emerald-400 (accentProfit area)
+    skyd:  isDark ? 'rgba(52,211,153,0.14)' : 'rgba(52,211,153,0.09)',
     orange:'#FF6B35',
-    orgd:  isDark ? 'rgba(255,107,53,0.10)' : 'rgba(255,107,53,0.08)',
+    orgd:  isDark ? 'rgba(255,107,53,0.14)' : 'rgba(255,107,53,0.09)',
     pink:  '#FF375F',
-    pinkd: isDark ? 'rgba(255,55,95,0.10)' : 'rgba(255,55,95,0.08)',
-    text:  isDark ? '#FFFFFF' : '#1C1C1E',
-    sub:   isDark ? 'rgba(235,235,245,0.88)' : 'rgba(60,60,67,0.78)',
-    muted: isDark ? 'rgba(235,235,245,0.50)' : 'rgba(60,60,67,0.45)',
-    faint: isDark ? 'rgba(16,185,129,0.07)' : 'rgba(16,185,129,0.05)',
+    pinkd: isDark ? 'rgba(255,55,95,0.14)'  : 'rgba(255,55,95,0.09)',
+    // Text
+    text:  isDark ? '#EBEBEB' : '#1F2937',   // Kotlin: textPrimary
+    sub:   isDark ? '#BAC1CB' : '#6B7280',   // Kotlin: textSecondary
+    muted: isDark ? 'rgba(126,126,126,0.80)' : '#9CA3AF', // Kotlin: textMuted
+    faint: isDark ? 'rgba(16,185,129,0.08)'  : 'rgba(5,150,105,0.05)',
   };
 }
 
@@ -85,12 +104,12 @@ function modeAccent(mode: TradingMode): string {
 // PRIMITIVES
 // ═══════════════════════════════════════════
 const Sk: React.FC<{w?:string|number;h?:number;style?:React.CSSProperties}> = ({w='100%',h=20,style}) => (
-  <div style={{width:w,height:h,background:`linear-gradient(90deg,${C.faint} 0%,rgba(255,255,255,0.06) 50%,${C.faint} 100%)`,backgroundSize:'200% 100%',animation:'shimmer 1.8s ease infinite',borderRadius:4,...style}}/>
+  <div style={{width:w,height:h,background:C.faint,borderRadius:4,...style}}/>
 );
 
-const Card: React.FC<{children:React.ReactNode;style?:React.CSSProperties;className?:string;flash?:'win'|'lose'|null}> =
-({children,style,className='',flash}) => (
-  <div className={`ds-card overflow-hidden ${className}`} style={{
+const Card: React.FC<{children:React.ReactNode;style?:React.CSSProperties;className?:string;flash?:'win'|'lose'|null;onClick?:()=>void}> =
+({children,style,className='',flash,onClick}) => (
+  <div className={`ds-card overflow-hidden ${className}`} onClick={onClick} style={{
     // Flash animation hanya berjalan pada .ds-card (box-shadow pulse)
     // Border rotation tetap berjalan pada ::before — tidak terpengaruh
     animation: flash==='win'
@@ -98,6 +117,7 @@ const Card: React.FC<{children:React.ReactNode;style?:React.CSSProperties;classN
       : flash==='lose'
       ? 'lose-flash 2s ease forwards'
       : undefined,
+    borderRadius: 18, // More rounded like Kotlin
     // boxShadow TIDAK di-override inline — biarkan globals.css yang mengontrol
     ...style,
   }}>{children}</div>
@@ -178,89 +198,109 @@ const CtrlBtn: React.FC<{onClick:()=>void;disabled?:boolean;loading?:boolean;acc
 // ═══════════════════════════════════════════
 // CLOCK
 // ═══════════════════════════════════════════
-const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string}> = ({t:tr,lang}) => {
+const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:boolean}> = ({t:tr,lang,isBotRunning=false}) => {
   const [time,setTime] = useState<Date|null>(null);
   useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
   const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
   const fmt  = (d:Date) => d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-  const fmtD = (d:Date) => d.toLocaleDateString(locale,{weekday:'short',day:'2-digit',month:'short'});
+  const fmtD = (d:Date) => d.toLocaleDateString(locale,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
   const tz   = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
+  const dotColor = isBotRunning ? C.cyan : C.coral;
   return (
-    <Card style={{padding:'14px 16px',height:'100%'}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-        <span style={{fontSize:11,fontWeight:500,color:C.muted}}>{tr('dashboard.localTime')}</span>
-        <span style={{display:'flex',alignItems:'center',gap:5}}>
-          <span style={{width:6,height:6,borderRadius:'50%',background:C.coral}}/>
-          <span style={{fontSize:10,fontWeight:600,color:C.coral}}>{tr('dashboard.live')}</span>
-        </span>
+    <div style={{
+      borderRadius:16,overflow:'hidden',height:'100%',
+      background:C.card,
+      border:`1px solid rgba(16,185,129,0.40)`,
+      boxShadow:`0 4px 18px rgba(0,0,0,0.28)`,
+      padding:'14px 14px 10px',
+      display:'flex',flexDirection:'column',gap:6,
+    }}>
+      {/* Digital time box */}
+      <div style={{
+        height:46,borderRadius:12,
+        background:C.card2,
+        border:`1px solid rgba(16,185,129,0.35)`,
+        display:'flex',alignItems:'center',justifyContent:'center',
+      }}>
+        <p suppressHydrationWarning style={{
+          fontSize:28,fontWeight:700,lineHeight:1,letterSpacing:'0.08em',
+          fontFamily:"'Orbitron','Share Tech Mono',ui-monospace,monospace",
+          color:C.text,
+          textShadow:`0 0 20px rgba(16,185,129,0.40),0 0 6px rgba(16,185,129,0.18)`,
+          margin:0,
+        }}>{time?fmt(time):'--:--:--'}</p>
       </div>
-      <p suppressHydrationWarning style={{fontSize:26,fontWeight:600,letterSpacing:'-0.01em',lineHeight:1,color:C.text,marginBottom:8}}>
-        {time?fmt(time):'--:--:--'}
-      </p>
-      <div style={{display:'flex',justifyContent:'space-between'}}>
-        <span suppressHydrationWarning style={{fontSize:11,color:C.sub}}>{time?fmtD(time):''}</span>
-        <span suppressHydrationWarning style={{fontSize:10,color:C.muted}}>{tz()}</span>
+      {/* Date row */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <span suppressHydrationWarning style={{fontSize:8,color:C.sub}}>{time?fmtD(time):''}</span>
+        <div style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{fontSize:8,fontWeight:600,color:C.text}}>{tz()}</span>
+          <span style={{
+            width:8,height:8,borderRadius:'50%',flexShrink:0,
+            background:dotColor,
+            boxShadow:`0 0 ${isBotRunning?6:3}px ${dotColor}`,
+            animation:isBotRunning?'ping 1.6s ease-in-out infinite':undefined,
+          }}/>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
-const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string}> = ({t:tr,lang}) => {
+const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:boolean}> = ({t:tr,lang,isBotRunning=false}) => {
   const [time,setTime] = useState<Date|null>(null);
   useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
   const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
   const fmt     = (d:Date) => d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-  const fmtDay  = (d:Date) => d.toLocaleDateString(locale,{weekday:'long'});
+  const fmtDay  = (d:Date) => d.toLocaleDateString(locale,{weekday:'short'});
   const fmtDate = (d:Date) => d.toLocaleDateString(locale,{day:'2-digit',month:'short',year:'numeric'});
   const tz      = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
+  const dotColor = isBotRunning ? C.cyan : C.coral;
   const tzLabel = lang==='ru'?'ВРЕМЯ':lang==='en'?'LOCAL TIME':'WAKTU LOKAL';
   return (
     <div style={{
-      borderRadius:12,
-      background:`linear-gradient(135deg,rgba(16,185,129,0.09) 0%,rgba(16,185,129,0.03) 100%)`,
-      border:`1px solid rgba(16,185,129,0.22)`,
-      overflow:'hidden',
+      width:'100%',borderRadius:14,overflow:'hidden',
+      background:C.card,
+      border:`1px solid rgba(16,185,129,0.38)`,
+      boxShadow:`0 3px 14px rgba(0,0,0,0.22)`,
+      padding:'10px 12px 8px',
+      display:'flex',flexDirection:'column',gap:5,
     }}>
-      {/* Header */}
+      {/* Digital time box */}
       <div style={{
-        display:'flex',alignItems:'center',justifyContent:'space-between',
-        padding:'5px 10px 4px',
-        borderBottom:'1px solid rgba(16,185,129,0.10)',
-        background:'rgba(16,185,129,0.05)',
+        borderRadius:10,
+        background:C.card2,
+        border:`1px solid rgba(16,185,129,0.32)`,
+        display:'flex',alignItems:'center',justifyContent:'center',
+        padding:'7px 0',
       }}>
-        <span style={{fontSize:8,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:C.cyan,opacity:0.75}}>{tzLabel}</span>
-        <span style={{display:'flex',alignItems:'center',gap:3}}>
-          <span style={{width:4,height:4,borderRadius:'50%',background:C.coral,boxShadow:`0 0 5px ${C.coral}80`,animation:'ping 1.6s ease-in-out infinite'}}/>
-          <span style={{fontSize:7,fontWeight:700,color:C.coral,letterSpacing:'0.10em'}}>LIVE</span>
-        </span>
-      </div>
-      {/* Body */}
-      <div style={{padding:'8px 10px 8px',display:'flex',flexDirection:'column',gap:3}}>
-        {/* Clock */}
         <p suppressHydrationWarning style={{
-          fontSize:21,fontWeight:700,lineHeight:1,letterSpacing:'-0.03em',
-          fontFamily:'ui-monospace,SFMono-Regular,monospace',
-          color:C.text,
-          textShadow:`0 0 20px rgba(16,185,129,0.25)`,
-        }}>
-          {time?fmt(time):'--:--:--'}
-        </p>
-        {/* Day + TZ badge */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4}}>
-          <span suppressHydrationWarning style={{
-            fontSize:9,fontWeight:500,color:C.sub,
-            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,
-          }}>{time?fmtDay(time):''}</span>
-          <span suppressHydrationWarning style={{
-            fontSize:8,fontWeight:700,color:C.cyan,letterSpacing:'0.06em',flexShrink:0,
-            background:'rgba(16,185,129,0.10)',border:'1px solid rgba(16,185,129,0.20)',
-            borderRadius:4,padding:'1px 5px',
-          }}>{tz()}</span>
+          fontSize:18,fontWeight:700,lineHeight:1,letterSpacing:'0.08em',
+          fontFamily:"'Orbitron','Share Tech Mono',ui-monospace,monospace",
+          color:C.text,margin:0,
+          textShadow:`0 0 18px rgba(16,185,129,0.38),0 0 5px rgba(16,185,129,0.15)`,
+        }}>{time?fmt(time):'--:--:--'}</p>
+      </div>
+      {/* Date + UTC + dot */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:4}}>
+          <span suppressHydrationWarning style={{fontSize:8,color:C.sub,fontWeight:500}}>{time?fmtDay(time):''}</span>
+          <span style={{width:2,height:2,borderRadius:'50%',background:C.muted}}/>
+          <span suppressHydrationWarning style={{fontSize:8,color:C.muted}}>{time?fmtDate(time):''}</span>
         </div>
-        {/* Full date */}
-        <span suppressHydrationWarning style={{
-          fontSize:9,color:C.muted,letterSpacing:'0.02em',
-        }}>{time?fmtDate(time):''}</span>
+        <div style={{display:'flex',alignItems:'center',gap:4}}>
+          <span style={{
+            fontSize:7,fontWeight:700,color:C.cyan,letterSpacing:'0.04em',
+            background:'rgba(16,185,129,0.12)',border:'1px solid rgba(16,185,129,0.26)',
+            borderRadius:4,padding:'1px 4px',
+          }}>{tz()}</span>
+          <span style={{
+            width:7,height:7,borderRadius:'50%',
+            background:dotColor,
+            boxShadow:`0 0 ${isBotRunning?6:3}px ${dotColor}`,
+            animation:isBotRunning?'ping 1.6s ease-in-out infinite':undefined,
+          }}/>
+        </div>
       </div>
     </div>
   );
@@ -327,13 +367,13 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
 // ═══════════════════════════════════════════
 // COMPACT ASSET CARD (Mobile 2-row layout)
 // ═══════════════════════════════════════════
-const AssetCardCompact: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean;t:(k:string)=>string}> = ({asset,mode,isLoading,t}) => {
+const AssetCardCompact: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean;t:(k:string)=>string;onOpenPicker?:()=>void;disabled?:boolean}> = ({asset,mode,isLoading,t,onOpenPicker,disabled}) => {
   const modeCol = modeAccent(mode);
   const abbr = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '—';
   const [imgErr,setImgErr] = useState(false);
   if(isLoading) return <Card style={{padding:'10px 12px'}}><Sk w={80} h={18}/></Card>;
   return (
-    <Card style={{padding:'10px 12px'}}>
+    <Card style={{padding:'10px 12px',cursor:onOpenPicker&&!disabled?'pointer':'default',position:'relative'}} onClick={onOpenPicker&&!disabled?onOpenPicker:undefined}>
       <div style={{display:'flex',alignItems:'center',gap:8}}>
         <div style={{width:32,height:32,borderRadius:9,overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeCol}12`,border:`1px solid ${modeCol}28`}}>
           {asset?.iconUrl&&!imgErr?(
@@ -350,10 +390,13 @@ const AssetCardCompact: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isL
           {asset?(
             <p style={{fontSize:13,fontWeight:700,lineHeight:1,color:C.text,letterSpacing:'-0.02em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{asset.ric}</p>
           ):(
-            <p style={{fontSize:11,color:C.muted}}>{t('dashboard.notSelected')}</p>
+            <p style={{fontSize:11,color:modeCol,fontWeight:600}}>{t('dashboard.notSelected')}</p>
           )}
         </div>
-        {asset && <span style={{fontSize:10,fontWeight:700,color:modeCol,flexShrink:0}}>{asset.profitRate}%</span>}
+        {asset
+          ? <span style={{fontSize:10,fontWeight:700,color:modeCol,flexShrink:0}}>{asset.profitRate}%</span>
+          : onOpenPicker&&!disabled&&<ChevronDown style={{width:12,height:12,color:modeCol,flexShrink:0}}/>
+        }
       </div>
     </Card>
   );
@@ -454,13 +497,6 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
             </p>
           )}
         </div>
-        {!isLoading&&(
-          <div style={{display:'flex',alignItems:'flex-end',gap:3,height:20,flexShrink:0}}>
-            {[0.4,0.7,1,0.6,0.85,0.5,0.9].map((h,i)=>(
-              <div key={i} style={{width:3,height:`${h*100}%`,borderRadius:2,background:col,opacity:0.3+h*0.45,animation:`pulse ${1.2+i*0.15}s ease-in-out infinite`,animationDelay:`${i*0.1}s`}}/>
-            ))}
-          </div>
-        )}
       </div>
     </Card>
   );
@@ -503,52 +539,29 @@ const TodayProfitCard: React.FC<{
   const displayValue = Math.round(Math.abs(profit / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 });
 
   return (
-    <Card style={{ padding: '0 12px', height: '100%', display: 'flex', alignItems: 'center', gap: 8, minHeight: 68 }} flash={flash}>
-      {/* Label + 24j badge — kiri, shrink kalau perlu */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-        <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: C.muted, whiteSpace: 'nowrap' }}>
-          {t('dashboard.profitToday')}
-        </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 99, background: `${col}10`, border: `1px solid ${col}20`, width: 'fit-content' }}>
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: col, boxShadow: `0 0 4px ${col}`, animation: 'pulse 1.8s ease-in-out infinite' }} />
-          <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', color: col }}>24j</span>
-        </span>
-      </div>
-      {/* Divider */}
-      <div style={{ width: 1, alignSelf: 'stretch', background: C.bdr, flexShrink: 0 }} />
-      {/* Profit number — tengah, auto-scale */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {isLoading ? (
-          <Sk h={22} w="80%" style={{ borderRadius: 6 }} />
-        ) : (
-          <p key={animKey} style={{
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
-            lineHeight: 1,
-            color: col,
-            fontSize: 'clamp(16px, 5.5vw, 30px)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            textAlign: 'center',
-            animation: animKey > 0 ? `profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both` : undefined,
-          }}>
-            {isPos ? '+' : '−'}Rp {displayValue}
-          </p>
-        )}
-      </div>
-      {/* Mini animated bar sparkline — kanan */}
-      {!isLoading && (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2.5, height: 22, flexShrink: 0 }}>
-          {[0.35, 0.6, 0.9, 0.55, 1, 0.45, 0.75].map((h, i) => (
-            <div key={i} style={{
-              width: 3, height: `${h * 100}%`, borderRadius: 2,
-              background: col, opacity: 0.25 + h * 0.55,
-              animation: `pulse ${1.2 + i * 0.15}s ease-in-out infinite`,
-              animationDelay: `${i * 0.08}s`,
-            }} />
-          ))}
-        </div>
+    <Card style={{ padding: '12px 16px', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 68 }} flash={flash}>
+      {/* Baris 1: Label */}
+      <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: C.muted, whiteSpace: 'nowrap' }}>
+        {t('dashboard.profitToday')}
+      </span>
+      {/* Baris 2: Angka profit */}
+      {isLoading ? (
+        <Sk h={22} w="80%" style={{ borderRadius: 6 }} />
+      ) : (
+        <p key={animKey} style={{
+          fontWeight: 800,
+          letterSpacing: '-0.03em',
+          lineHeight: 1,
+          color: col,
+          fontSize: 'clamp(16px, 5.5vw, 30px)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          textAlign: 'center',
+          animation: animKey > 0 ? `profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both` : undefined,
+        }}>
+          {isPos ? '+' : '−'}Rp {displayValue}
+        </p>
       )}
     </Card>
   );
@@ -557,13 +570,13 @@ const TodayProfitCard: React.FC<{
 // ═══════════════════════════════════════════
 // ASSET CARD
 // ═══════════════════════════════════════════
-const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean;t:(k:string)=>string}> = ({asset,mode,isLoading,t}) => {
+const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean;t:(k:string)=>string;onOpenPicker?:()=>void;disabled?:boolean}> = ({asset,mode,isLoading,t,onOpenPicker,disabled}) => {
   const modeCol = modeAccent(mode);
   const abbr    = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '—';
   const [imgErr,setImgErr] = useState(false);
   if(isLoading) return <Card style={{padding:'11px 14px',height:'100%'}}><Sk w={100} h={22}/></Card>;
   return (
-    <Card style={{padding:0,height:'100%'}}>
+    <Card style={{padding:0,height:'100%',cursor:onOpenPicker&&!disabled?'pointer':'default'}} onClick={onOpenPicker&&!disabled?onOpenPicker:undefined}>
       <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',height:68}}>
         <div style={{width:40,height:40,borderRadius:11,overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeCol}12`,border:`1.5px solid ${modeCol}28`}}>
           {asset?.iconUrl&&!imgErr?(
@@ -655,19 +668,83 @@ const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:
   );
 };
 
-const PickerBtn: React.FC<{label:string;placeholder?:string;disabled?:boolean;onClick:()=>void;accent?:string}> =
-({label,placeholder,disabled,onClick,accent}) => {
+// ═══════════════════════════════════════════
+// ENHANCED PICKER BUTTON WITH ICON & COLORED BACKGROUND
+// ═══════════════════════════════════════════
+const PickerBtn: React.FC<{
+  label: string;
+  placeholder?: string;
+  disabled?: boolean;
+  onClick: () => void;
+  accent?: string;
+  icon?: React.ReactNode;
+  variant?: 'default' | 'demo' | 'real';
+}> = ({ label, placeholder, disabled, onClick, accent, icon, variant = 'default' }) => {
   const has = !!label;
-  const ac  = accent||C.cyan;
+  const ac = accent || C.cyan;
+
+  // Background colors based on variant
+  const getBgColor = () => {
+    if (variant === 'demo') return 'rgba(255, 170, 0, 0.14)';
+    if (variant === 'real') return 'rgba(16, 185, 129, 0.14)';
+    return has ? C.cyand : C.card2;
+  };
+
+  const getBorderColor = () => {
+    if (variant === 'demo') return 'rgba(255, 170, 0, 0.50)';
+    if (variant === 'real') return 'rgba(16, 185, 129, 0.50)';
+    return has ? C.bdrAct : C.bdr;
+  };
+
+  const getTextColor = () => {
+    if (variant === 'demo') return '#FFAA00';
+    if (variant === 'real') return '#10B981';
+    return has ? C.text : C.muted;
+  };
+
   return (
-    <button type="button" onClick={onClick} disabled={disabled} style={{
-      width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 12px',borderRadius:8,
-      background:has?C.cyand:C.card2,
-      border:`1px solid ${has?C.bdrAct:C.bdr}`,
-      cursor:disabled?'not-allowed':'pointer',opacity:disabled?0.5:1,
-    }}>
-      <span style={{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:has?C.text:C.muted}}>{label||placeholder||'— pilih —'}</span>
-      <ChevronDown style={{width:12,height:12,flexShrink:0,marginLeft:6,color:has?ac:C.muted}}/>
+    <button 
+      type="button" 
+      onClick={onClick} 
+      disabled={disabled} 
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 14px',
+        borderRadius: 12,
+        background: getBgColor(),
+        border: `1.5px solid ${getBorderColor()}`,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+        transition: 'all 0.2s ease',
+      }}
+    >
+      {icon && (
+        <span style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          color: getTextColor(),
+          flexShrink: 0,
+        }}>
+          {icon}
+        </span>
+      )}
+      <span style={{ 
+        fontSize: 13, 
+        fontWeight: 500, 
+        overflow: 'hidden', 
+        textOverflow: 'ellipsis', 
+        whiteSpace: 'nowrap', 
+        color: getTextColor(),
+        flex: 1,
+        textAlign: 'left',
+      }}>
+        {label || placeholder || '— pilih —'}
+      </span>
+      <ChevronDown style={{ width: 14, height: 14, flexShrink: 0, color: getTextColor() }} />
     </button>
   );
 };
@@ -1771,6 +1848,145 @@ const ModeSessionPanel: React.FC<{
         {mode === 'momentum' && (
           <MomentumPanel status={momentumStatus} isLoading={false} fillHeight={fillHeight} />
         )}
+
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════
+// MARTINGALE DIALOG — mirip Kotlin MaxStepSelectionDialog
+// ═══════════════════════════════════════════
+const MartingaleDialog: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  martingale: MartingaleConfig;
+  onMartingaleChange: (c: MartingaleConfig) => void;
+  mode: TradingMode;
+}> = ({ open, onClose, martingale, onMartingaleChange, mode }) => {
+  const [customInput, setCustomInput] = useState('');
+  const [multInput, setMultInput] = useState(String(martingale.multiplier));
+  const [multType, setMultType] = useState<'fixed'|'pct'>('fixed');
+  const set = (k: keyof MartingaleConfig, v: any) => onMartingaleChange({ ...martingale, [k]: v });
+
+  const fixedPresets = [1.5, 2.0, 2.5, 3.0, 4.0, 5.0];
+  const pctPresets   = [50, 100, 150, 200, 300, 500];
+  const currentPresets = multType === 'fixed' ? fixedPresets : pctPresets;
+  const multVal = parseFloat(multInput) || martingale.multiplier;
+  const multErr = multType === 'fixed'
+    ? (multVal < 1 ? 'Min 1.0×' : multVal > 50 ? 'Maks 50×' : null)
+    : (multVal < 1 ? 'Min 1%'   : multVal > 5000 ? 'Maks 5000%' : null);
+
+  if (!open) return null;
+  return (
+    <div style={{ position:'fixed',inset:0,zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 16px',animation:'fade-in 0.15s ease' }}>
+      <div onClick={onClose} style={{ position:'absolute',inset:0,background:'rgba(0,0,0,0.60)',backdropFilter:'blur(14px)' }}/>
+      <div style={{
+        position:'relative',width:'100%',maxWidth:420,maxHeight:'88dvh',
+        background:C.card, borderRadius:20,border:`1px solid ${C.bdr}`,
+        boxShadow:'0 20px 60px rgba(0,0,0,0.55)',
+        overflow:'hidden',display:'flex',flexDirection:'column',
+        animation:'slide-up 0.22s cubic-bezier(0.32,0.72,0,1)',
+      }}>
+        {/* Header */}
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:`1px solid ${C.bdr}` }}>
+          <div>
+            <p style={{ fontSize:17,fontWeight:700,color:C.text,letterSpacing:'-0.02em',margin:0 }}>Martingale</p>
+            <p style={{ fontSize:12,color:C.muted,margin:'2px 0 0' }}>Configure strategy</p>
+          </div>
+          <button onClick={onClose} style={{ width:32,height:32,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:C.card2,border:`1px solid ${C.bdr}`,cursor:'pointer' }}>
+            <X style={{ width:15,height:15,color:C.sub }}/>
+          </button>
+        </div>
+        {/* Scrollable body */}
+        <div style={{ overflowY:'auto',padding:'0 20px 24px',flex:1 }}>
+          {/* Maks. Kompensasi */}
+          <div style={{ paddingTop:18 }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
+              <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:0 }}>Maks. Kompensasi</p>
+              {martingale.alwaysSignal && (
+                <span style={{ fontSize:10,fontWeight:600,color:C.amber,background:`${C.amber}14`,borderRadius:6,padding:'2px 8px',border:`1px solid ${C.amber}28` }}>∞ override</span>
+              )}
+            </div>
+            <div style={{ display:'flex',gap:6 }}>
+              {[1,2,3,4,5].map(k => {
+                const sel = martingale.maxStep === k;
+                return (
+                  <button key={k} onClick={() => set('maxStep', k)} style={{
+                    flex:1,height:38,borderRadius:10,cursor:'pointer',fontSize:12,fontWeight:sel?700:400,
+                    background:sel?`${C.cyan}20`:C.card2,border:`1px solid ${sel?`${C.cyan}70`:C.bdr}`,
+                    color:sel?C.cyan:C.muted,transition:'all 0.15s',
+                  }}>K{k}</button>
+                );
+              })}
+            </div>
+            <div style={{ display:'flex',gap:8,marginTop:8,alignItems:'center' }}>
+              <input className="ds-input" type="number" placeholder={martingale.maxStep>5?`K${martingale.maxStep} terpilih`:'Custom steps (1-10)'}
+                value={customInput} onChange={e=>{ if(e.target.value.length<=2) setCustomInput(e.target.value.replace(/\D/g,'')); }}
+                style={{ flex:1,borderColor:customInput&&(parseInt(customInput)<1||parseInt(customInput)>10)?C.coral:undefined }}/>
+              <button onClick={()=>{ const v=parseInt(customInput); if(v>=1&&v<=10){set('maxStep',v);setCustomInput('');} }}
+                disabled={!customInput||parseInt(customInput)<1||parseInt(customInput)>10}
+                style={{ height:44,padding:'0 18px',borderRadius:10,cursor:'pointer',fontSize:12,fontWeight:600,background:C.cyan,color:'#fff',border:'none',opacity:(!customInput||parseInt(customInput)<1||parseInt(customInput)>10)?0.4:1 }}>Set</button>
+            </div>
+            {customInput&&(parseInt(customInput)<1||parseInt(customInput)>10)&&(
+              <p style={{ fontSize:10,color:C.coral,marginTop:4 }}>Masukkan angka 1 – 10</p>
+            )}
+          </div>
+          <div style={{ height:1,background:C.bdr,margin:'18px 0' }}/>
+          {/* Perkalian Kompensasi */}
+          <div>
+            <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:'0 0 10px' }}>Perkalian Kompensasi</p>
+            <div style={{ display:'flex',gap:3,padding:3,borderRadius:10,background:C.card2,marginBottom:10 }}>
+              {(['fixed','pct'] as const).map(t => {
+                const sel = multType === t;
+                return (
+                  <button key={t} onClick={() => setMultType(t)} style={{
+                    flex:1,height:34,borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:sel?700:400,
+                    background:sel?`${C.cyan}20`:'transparent',border:sel?`1px solid ${C.cyan}60`:'1px solid transparent',
+                    color:sel?C.cyan:C.muted,transition:'all 0.15s',
+                  }}>{t==='fixed'?'Fixed (×)':'Persen (%)'}</button>
+                );
+              })}
+            </div>
+            <div style={{ display:'flex',gap:6,flexWrap:'wrap',marginBottom:10 }}>
+              {currentPresets.map(v => {
+                const sel = Math.abs(martingale.multiplier - v) < 0.001;
+                return (
+                  <button key={v} onClick={() => { set('multiplier',v); setMultInput(String(v)); }} style={{
+                    height:32,padding:'0 10px',borderRadius:8,cursor:'pointer',fontSize:11,fontWeight:sel?700:400,
+                    background:sel?`${C.cyan}20`:C.card2,border:`1px solid ${sel?`${C.cyan}60`:C.bdr}`,
+                    color:sel?C.cyan:C.muted,
+                  }}>{multType==='fixed'?`${v}×`:`${v}%`}</button>
+                );
+              })}
+            </div>
+            <div style={{ position:'relative' }}>
+              <input className="ds-input" type="number" value={multInput}
+                onChange={e=>{ setMultInput(e.target.value); const v=parseFloat(e.target.value); if(v>=1&&v<=(multType==='fixed'?50:5000)) set('multiplier',v); }}
+                style={{ paddingRight:36,borderColor:multErr?C.coral:undefined }}/>
+              <span style={{ position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',fontSize:13,color:C.sub,pointerEvents:'none' }}>{multType==='fixed'?'×':'%'}</span>
+            </div>
+            {multErr&&<p style={{ fontSize:10,color:C.coral,marginTop:4 }}>{multErr}</p>}
+          </div>
+          {/* Always Signal */}
+          {mode !== 'ctc' && (
+            <>
+              <div style={{ height:1,background:C.bdr,margin:'18px 0' }}/>
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                <div>
+                  <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:'0 0 2px' }}>Always Signal</p>
+                  <p style={{ fontSize:11,color:C.muted,margin:0 }}>{martingale.alwaysSignal?'Lanjut di setiap sinyal sampai WIN':'Eksekusi setiap sinyal terjadwal'}</p>
+                </div>
+                <Toggle checked={martingale.alwaysSignal??false} onChange={v=>set('alwaysSignal',v)} accent={C.amber}/>
+              </div>
+              {martingale.alwaysSignal&&(
+                <div style={{ marginTop:10,padding:'10px 12px',borderRadius:10,background:`${C.amber}09`,border:`1px solid ${C.amber}28` }}>
+                  <p style={{ fontSize:11,color:C.amber,margin:0,lineHeight:1.5 }}>⚠ Martingale terus jalan di sinyal berikutnya hingga WIN. Max step diabaikan.</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1801,97 +2017,118 @@ const SettingsCard: React.FC<{
   const [open,setOpen] = useState(!disabled);
   const [pickerOpen,setPickerOpen] = useState<string|null>(null);
   const [amtDrop,setAmtDrop] = useState(false);
-  // Auto-collapse when bot becomes active (disabled=true), restore when stopped
+  const [showMartingaleDialog, setShowMartingaleDialog] = useState(false);
   useEffect(()=>{ if(disabled) setOpen(false); },[disabled]);
   const set = (k:keyof MartingaleConfig,v:any) => onMartingaleChange({...martingale,[k]:v});
   const assetOpts: PickerOpt[] = assets.map(a=>({value:a.ric,label:a.name,sub:`${a.ric} · ${a.profitRate}%`,icon:a.iconUrl}));
   const durationOpts = [{value:'60',label:'1 Menit'},{value:'120',label:'2 Menit'},{value:'300',label:'5 Menit'},{value:'600',label:'10 Menit'},{value:'900',label:'15 Menit'},{value:'1800',label:'30 Menit'}];
   const acOpts: PickerOpt[] = [{value:'demo',label:'Demo',sub:'Virtual · tidak pakai dana nyata'},{value:'real',label:'Real',sub:'Menggunakan saldo sesungguhnya'}];
-  const selectedAsset = assets.find(a=>a.ric===assetRic);
   const ac = modeAccent(mode);
   const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
-
   const isNewMode = mode==='aisignal'||mode==='indicator'||mode==='momentum';
   const modeLabel = mode==='aisignal'?'AI Signal':mode==='indicator'?'Indicator':mode==='momentum'?'Momentum':mode==='ctc'?'CTC':mode==='fastrade'?'FastTrade':'Signal';
+  const acctCol = isDemo ? C.amber : C.cyan;
 
   return (
     <>
-      <PickerModal open={pickerOpen==='asset'} onClose={()=>setPickerOpen(null)} title="Pilih Aset" options={assetOpts} value={assetRic} searchable onSelect={v=>{const a=assets.find(x=>x.ric===v);if(a)onAssetChange(a);}}/>
+      <MartingaleDialog open={showMartingaleDialog} onClose={()=>setShowMartingaleDialog(false)} martingale={martingale} onMartingaleChange={onMartingaleChange} mode={mode}/>
       <PickerModal open={pickerOpen==='actype'} onClose={()=>setPickerOpen(null)} title="Tipe Akun" options={acOpts} value={isDemo?'demo':'real'} onSelect={v=>onDemoChange(v==='demo')}/>
       <PickerModal open={pickerOpen==='duration'} onClose={()=>setPickerOpen(null)} title="Durasi Order" options={durationOpts} value={String(duration)} onSelect={v=>onDurationChange(+v)}/>
       <PickerModal open={pickerOpen==='ftTf'} onClose={()=>setPickerOpen(null)} title="Timeframe FastTrade" options={FT_TF.map(t=>({value:t.value,label:t.label}))} value={ftTf} onSelect={v=>onFtTfChange(v as FastTradeTimeframe)}/>
 
-      <Card style={{opacity:disabled?0.65:1}}>
-        <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer'}}>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <Settings style={{width:14,height:14,color:ac}}/>
-            <span style={{fontSize:13,fontWeight:600,color:C.text}}>Pengaturan Order</span>
-            {disabled&&<span style={{fontSize:10,padding:'1px 6px',borderRadius:6,color:C.muted,background:C.faint}}>terkunci</span>}
+      <Card style={{ opacity:disabled?0.65:1, border:`1px solid ${C.bdr}`, boxShadow:`0 8px 24px rgba(0,0,0,0.22)` }}>
+        {/* Header */}
+        <button onClick={()=>setOpen(!open)} style={{ width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 18px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+            <div style={{ width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}14`,border:`1px solid ${ac}30` }}>
+              <Settings style={{ width:16,height:16,color:ac }}/>
+            </div>
+            <div>
+              <span style={{ fontSize:16,fontWeight:700,color:C.text,display:'block',lineHeight:1.2 }}>Pengaturan Trading</span>
+              {disabled ? <span style={{ fontSize:10,color:C.amber,fontWeight:600 }}>⚡ Bot sedang aktif</span>
+                        : <span style={{ fontSize:10,color:C.muted }}>Konfigurasi order &amp; martingale</span>}
+            </div>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <span style={{fontSize:10,padding:'2px 8px',borderRadius:99,background:`${ac}12`,color:ac,border:`1px solid ${ac}25`}}>{modeLabel}</span>
-            {open?<ChevronUp style={{width:13,height:13,color:C.muted}}/>:<ChevronDown style={{width:13,height:13,color:C.muted}}/>}
+          <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+            <span style={{ fontSize:10,padding:'3px 9px',borderRadius:99,background:`${ac}12`,color:ac,border:`1px solid ${ac}28`,fontWeight:600 }}>{modeLabel}</span>
+            <div style={{ width:24,height:24,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:C.card2,border:`1px solid ${C.bdr}` }}>
+              {open?<ChevronUp style={{ width:12,height:12,color:C.muted }}/>:<ChevronDown style={{ width:12,height:12,color:C.muted }}/>}
+            </div>
           </div>
         </button>
+
         {open&&(
-          <div style={{padding:'14px 16px',pointerEvents:disabled?'none':undefined}}>
-            <div style={{marginBottom:10}}>
-              <FL>Aset Trading</FL>
-              <PickerBtn label={selectedAsset?.name||''} placeholder="Pilih aset trading" disabled={disabled} onClick={()=>setPickerOpen('asset')}/>
-            </div>
-            {!isNewMode&&(
-              <>
-                {mode==='ctc'&&(
-                  <div style={{marginBottom:10,padding:'10px 12px',borderRadius:10,background:'rgba(191,90,242,0.06)',border:'1px solid rgba(191,90,242,0.2)',display:'flex',gap:8}}>
-                    <Copy style={{width:14,height:14,color:C.violet,flexShrink:0,marginTop:2}}/>
-                    <div>
-                      <p style={{fontSize:11,fontWeight:600,color:C.violet,marginBottom:4}}>CTC — Timeframe fixed 1 menit</p>
-                      <p style={{fontSize:10,color:C.muted,lineHeight:1.5}}>WIN → lanjut arah sama · LOSE → martingale, arah mengikuti candle kalah</p>
-                    </div>
-                  </div>
-                )}
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
-                  <div><FL>Tipe Akun</FL><PickerBtn label={isDemo?'Demo':'Real'} disabled={disabled} onClick={()=>setPickerOpen('actype')}/></div>
-                  <div>
-                    <FL>{mode==='fastrade'?'Timeframe':'Durasi'}</FL>
-                    {mode==='fastrade'
-                      ? <PickerBtn label={FT_TF.find(t=>t.value===ftTf)?.label||''} disabled={disabled} onClick={()=>setPickerOpen('ftTf')}/>
-                      : mode==='ctc'
-                      ? <div style={{display:'flex',alignItems:'center',padding:'9px 12px',borderRadius:8,background:C.faint,border:`1px solid ${C.bdr}`}}><span style={{fontSize:13,flex:1,color:C.violet}}>1 Menit (fixed)</span><Copy style={{width:13,height:13,color:C.violet}}/></div>
-                      : <PickerBtn label={durationOpts.find(d=>d.value===String(duration))?.label||''} disabled={disabled} onClick={()=>setPickerOpen('duration')}/>
-                    }
-                  </div>
+          <div style={{ padding:'18px 18px 20px',pointerEvents:disabled?'none':undefined,display:'flex',flexDirection:'column',gap:18 }}>
+
+            {/* Konfigurasi Akun */}
+            <div>
+              <p style={{ fontSize:12,fontWeight:600,color:C.text,margin:'0 0 10px' }}>Konfigurasi Akun</p>
+              <div style={{ display:'flex',gap:8 }}>
+                <button disabled={disabled} onClick={()=>setPickerOpen('actype')} style={{
+                  flex:'0 0 40%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'0 12px',
+                  background:`${acctCol}16`,border:`0.8px solid ${acctCol}55`,transition:'all 0.15s',
+                }}>
+                  <Wallet style={{ width:16,height:16,color:acctCol,flexShrink:0 }}/>
+                  <span style={{ fontSize:12,fontWeight:700,color:C.text,flex:1,textAlign:'left' }}>{isDemo?'Demo':'Real'}</span>
+                  <ChevronDown style={{ width:14,height:14,color:C.text,flexShrink:0 }}/>
+                </button>
+                <div style={{ flex:'1 1 0' }}>
+                  {!isNewMode&&(mode==='fastrade'
+                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'0 12px',background:C.card2,border:`0.8px solid ${C.bdr}` }}>
+                       <Clock style={{ width:15,height:15,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:12,fontWeight:600,color:C.text,flex:1,textAlign:'left' }}>{FT_TF.find(t=>t.value===ftTf)?.label||''}</span><ChevronDown style={{ width:14,height:14,color:C.muted }}/>
+                     </button>
+                    :mode==='ctc'
+                    ?<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',gap:8,padding:'0 12px',background:C.faint,border:`0.8px solid ${C.bdr}` }}>
+                       <Copy style={{ width:14,height:14,color:C.violet }}/><span style={{ fontSize:12,color:C.violet }}>1 Menit (fixed)</span>
+                     </div>
+                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'0 12px',background:C.card2,border:`0.8px solid ${C.bdr}` }}>
+                       <Clock style={{ width:15,height:15,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:12,fontWeight:600,color:C.text,flex:1,textAlign:'left' }}>{durationOpts.find(d=>d.value===String(duration))?.label||''}</span><ChevronDown style={{ width:14,height:14,color:C.muted }}/>
+                     </button>
+                  )}
+                  {isNewMode&&<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',padding:'0 12px',background:C.card2,border:`0.8px solid ${C.bdr}` }}><span style={{ fontSize:11,color:C.muted }}>Mode otomatis</span></div>}
                 </div>
-              </>
-            )}
-            {isNewMode&&(
-              <div style={{marginBottom:10}}>
-                <FL>Tipe Akun</FL>
-                <PickerBtn label={isDemo?'Demo':'Real'} disabled={disabled} onClick={()=>setPickerOpen('actype')}/>
               </div>
-            )}
+              {mode==='ctc'&&<div style={{ marginTop:8,padding:'9px 12px',borderRadius:10,background:'rgba(191,90,242,0.07)',border:'1px solid rgba(191,90,242,0.2)',display:'flex',gap:8 }}><Copy style={{ width:13,height:13,color:C.violet,flexShrink:0,marginTop:1 }}/><p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>WIN → lanjut arah sama · LOSE → martingale, arah mengikuti candle kalah</p></div>}
+            </div>
+
+            {/* Mata Uang AUTO */}
+            <div>
+              <p style={{ fontSize:12,fontWeight:600,color:C.text,marginBottom:8 }}>Mata Uang</p>
+              <div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',background:`${C.cyan}10`,border:`0.8px solid ${C.cyan}30` }}>
+                <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                  <CreditCard style={{ width:16,height:16,color:C.cyan }}/><span style={{ fontSize:12,fontWeight:700,color:C.text }}>IDR 🇮🇩</span>
+                </div>
+                <span style={{ fontSize:9,fontWeight:700,color:C.cyan,background:`${C.cyan}18`,borderRadius:4,padding:'2px 7px',border:`1px solid ${C.cyan}30` }}>AUTO</span>
+              </div>
+              <p style={{ fontSize:10,color:C.muted,marginTop:5 }}>Mata uang otomatis mengikuti akun {isDemo?'Demo':'Real'}</p>
+            </div>
+
+            {/* Jumlah Trade */}
             {mode!=='indicator'&&(
-              <div style={{marginBottom:16}}>
-                <FL>Jumlah per Order</FL>
-                <div style={{display:'flex',gap:6}}>
-                  <div style={{flex:1,position:'relative'}}>
-                    <span style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none'}}>Rp</span>
-                    <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{paddingLeft:30,borderColor:isBelowMin?C.coral:undefined}}/>
+              <div>
+                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8 }}>
+                  <p style={{ fontSize:12,fontWeight:600,color:C.text,margin:0 }}>Jumlah Trade</p>
+                  <span style={{ fontSize:10,color:C.muted }}>Min: Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}</span>
+                </div>
+                <div style={{ display:'flex',gap:8 }}>
+                  <div style={{ flex:1,position:'relative' }}>
+                    <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                    <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{ paddingLeft:30,borderColor:isBelowMin?C.coral:undefined }}/>
                   </div>
-                  <div style={{position:'relative',flexShrink:0}}>
-                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{height:'100%',padding:'0 10px',display:'flex',alignItems:'center',gap:4,borderRadius:8,fontSize:11,fontWeight:600,background:amtDrop?`${ac}18`:C.faint,border:`1px solid ${amtDrop?`${ac}40`:C.bdr}`,color:amtDrop?ac:C.muted,cursor:disabled?'not-allowed':'pointer'}}>
-                      Quick<ChevronDown style={{width:10,height:10,transform:amtDrop?'rotate(180deg)':'none',transition:'transform 0.15s'}}/>
+                  <div style={{ position:'relative',flexShrink:0 }}>
+                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer' }}>
+                      <Zap style={{ width:13,height:13 }}/> Quick
                     </button>
                     {amtDrop&&!disabled&&(
                       <>
-                        <div style={{position:'fixed',inset:0,zIndex:5}} onClick={()=>setAmtDrop(false)}/>
-                        <div style={{position:'absolute',right:0,marginTop:4,zIndex:10,minWidth:160,borderRadius:12,overflow:'hidden',background:C.card,border:`1px solid ${ac}30`,boxShadow:'0 8px 32px rgba(0,0,0,0.3)',animation:'slide-up 0.15s ease'}}>
+                        <div style={{ position:'fixed',inset:0,zIndex:5 }} onClick={()=>setAmtDrop(false)}/>
+                        <div style={{ position:'absolute',right:0,marginTop:4,zIndex:10,minWidth:170,borderRadius:12,overflow:'hidden',background:C.card,border:`1px solid ${C.bdr}`,boxShadow:'0 8px 32px rgba(0,0,0,0.3)',animation:'slide-up 0.15s ease' }}>
                           {QUICK_AMOUNTS.map((a,idx)=>{
                             const isAct=amount===a;
                             return (
-                              <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 12px',fontSize:12,background:isAct?`${ac}10`:'transparent',borderBottom:idx<QUICK_AMOUNTS.length-1?`1px solid ${C.bdr}`:'none',borderLeft:isAct?`2px solid ${ac}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?ac:C.sub,fontWeight:isAct?700:400,cursor:'pointer'}}>
+                              <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{ width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',fontSize:13,background:isAct?`${C.cyan}12`:'transparent',borderBottom:idx<QUICK_AMOUNTS.length-1?`1px solid ${C.bdr}`:'none',borderLeft:isAct?`2px solid ${C.cyan}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?C.cyan:C.sub,fontWeight:isAct?700:400,cursor:'pointer' }}>
                                 <span>{a>=1000000?`Rp ${a/1000000}M`:`Rp ${(a/1000).toFixed(a%1000===0?0:1)}K`}</span>
-                                {isAct&&<span style={{color:ac}}>✓</span>}
+                                {isAct&&<span style={{ color:C.cyan }}>✓</span>}
                               </button>
                             );
                           })}
@@ -1900,178 +2137,133 @@ const SettingsCard: React.FC<{
                     )}
                   </div>
                 </div>
-                {isBelowMin&&(
-                  <div style={{display:'flex',alignItems:'center',gap:6,marginTop:6,padding:'6px 10px',borderRadius:8,background:'rgba(255,69,58,0.08)',border:'1px solid rgba(255,69,58,0.25)'}}>
-                    <AlertCircle style={{width:11,height:11,color:C.coral,flexShrink:0}}/>
-                    <p style={{fontSize:10,color:C.coral}}>Minimum IDR Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}</p>
-                    <button type="button" onClick={()=>onAmountChange(IDR_MIN_DISPLAY)} style={{marginLeft:'auto',fontSize:9,fontWeight:700,color:C.coral,background:'transparent',border:'none',cursor:'pointer',textDecoration:'underline',flexShrink:0}}>Set min →</button>
-                  </div>
-                )}
+                {isBelowMin&&<p style={{ fontSize:10,color:C.coral,marginTop:4 }}>⚠ Amount di bawah minimum</p>}
               </div>
             )}
+
+            {/* Indicator specific */}
             {mode==='indicator'&&(
-              <>
-                <Divider/>
-                <SL accent={`rgba(255,107,53,0.5)`}>Indikator</SL>
-                <div style={{padding:12,borderRadius:12,background:`${C.orange}06`,border:`1px solid ${C.orange}15`,marginBottom:12}}>
-                  <div style={{marginBottom:10}}>
-                    <FL>Tipe Indikator</FL>
-                    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-                      {(['SMA','EMA','RSI'] as IndicatorType[]).map(t=>(
-                        <button key={t} onClick={()=>onIndicatorTypeChange(t)} disabled={disabled} style={{padding:'8px 0',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',background:indicatorType===t?`${C.orange}18`:'rgba(255,255,255,0.04)',border:`1px solid ${indicatorType===t?`${C.orange}55`:'rgba(255,255,255,0.08)'}`,color:indicatorType===t?C.orange:'rgba(255,255,255,0.5)'}}>
-                          {t}
-                        </button>
-                      ))}
-                    </div>
+              <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+                <div><FL>Tipe Indikator</FL>
+                  <div style={{ display:'flex',gap:6 }}>
+                    {(['EMA','RSI','MACD','BBANDS','STOCH'] as IndicatorType[]).map(t=>(
+                      <button key={t} disabled={disabled} onClick={()=>onIndicatorTypeChange(t)} style={{ flex:1,padding:'6px 0',borderRadius:8,fontSize:10,fontWeight:700,cursor:'pointer',background:indicatorType===t?`${C.orange}18`:C.card2,border:`1px solid ${indicatorType===t?`${C.orange}50`:C.bdr}`,color:indicatorType===t?C.orange:C.muted }}>{t}</button>
+                    ))}
                   </div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
-                    <div>
-                      <FL>Period</FL>
-                      <input type="number" className="ds-input" value={indicatorPeriod} onChange={e=>onIndicatorPeriodChange(+e.target.value||14)} disabled={disabled} min={2} max={200} step={1}/>
-                    </div>
-                    <div>
-                      <FL>Sensitivitas</FL>
-                      <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                        {[0.1,0.5,1,5,10].map(s=>(
-                          <button key={s} onClick={()=>onSensitivityChange(s)} disabled={disabled} style={{flex:1,minWidth:28,padding:'5px 0',borderRadius:6,fontSize:10,fontWeight:700,cursor:'pointer',background:indicatorSensitivity===s?`${C.orange}18`:'rgba(255,255,255,0.04)',border:`1px solid ${indicatorSensitivity===s?`${C.orange}55`:'rgba(255,255,255,0.08)'}`,color:indicatorSensitivity===s?C.orange:'rgba(255,255,255,0.5)'}}>
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {indicatorType==='RSI'&&(
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
-                      <div>
-                        <FL>Overbought</FL>
-                        <input type="number" className="ds-input" value={rsiOverbought} onChange={e=>onOverboughtChange(+e.target.value||70)} disabled={disabled} min={50} max={100}/>
-                      </div>
-                      <div>
-                        <FL>Oversold</FL>
-                        <input type="number" className="ds-input" value={rsiOversold} onChange={e=>onOversoldChange(+e.target.value||30)} disabled={disabled} min={0} max={50}/>
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <FL>Jumlah per Order</FL>
-                    <div style={{position:'relative'}}>
-                      <span style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none'}}>Rp</span>
-                      <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{paddingLeft:30}}/>
+                </div>
+                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
+                  <div><FL>Period</FL><input type="number" className="ds-input" value={indicatorPeriod} onChange={e=>onIndicatorPeriodChange(+e.target.value||14)} disabled={disabled} min={2} max={200}/></div>
+                  <div><FL>Sensitivitas</FL>
+                    <div style={{ display:'flex',gap:4 }}>
+                      {[0.1,0.5,1,5,10].map(s=>(<button key={s} disabled={disabled} onClick={()=>onSensitivityChange(s)} style={{ flex:1,padding:'6px 0',borderRadius:6,fontSize:10,fontWeight:700,cursor:'pointer',background:indicatorSensitivity===s?`${C.orange}18`:C.card2,border:`1px solid ${indicatorSensitivity===s?`${C.orange}55`:C.bdr}`,color:indicatorSensitivity===s?C.orange:C.muted }}>{s}</button>))}
                     </div>
                   </div>
                 </div>
-              </>
+                {indicatorType==='RSI'&&(
+                  <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
+                    <div><FL>Overbought</FL><input type="number" className="ds-input" value={rsiOverbought} onChange={e=>onOverboughtChange(+e.target.value||70)} disabled={disabled} min={50} max={100}/></div>
+                    <div><FL>Oversold</FL><input type="number" className="ds-input" value={rsiOversold} onChange={e=>onOversoldChange(+e.target.value||30)} disabled={disabled} min={0} max={50}/></div>
+                  </div>
+                )}
+                <div><FL>Jumlah per Order</FL>
+                  <div style={{ position:'relative' }}>
+                    <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                    <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{ paddingLeft:30 }}/>
+                  </div>
+                </div>
+              </div>
             )}
+
+            {/* Momentum patterns */}
             {mode==='momentum'&&(
-              <>
-                <Divider/>
-                <SL accent={`rgba(255,55,95,0.5)`}>Pola Candle</SL>
-                <div style={{padding:12,borderRadius:12,background:`${C.pink}06`,border:`1px solid ${C.pink}15`,marginBottom:12}}>
-                  {[
-                    {k:'candleSabit',l:'Candle Sabit',d:'Body membesar berturut-turut'},
-                    {k:'dojiTerjepit',l:'Doji Terjepit',d:'Doji setelah 3 candle panjang'},
-                    {k:'dojiPembatalan',l:'Doji Pembatalan',d:'Sinyal reversal/pembatalan'},
-                    {k:'bbSarBreak',l:'BB + SAR Break',d:'Breakout BB + konfirmasi SAR'},
-                  ].map(({k,l,d})=>(
-                    <div key={k} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:`1px solid rgba(255,55,95,0.08)`}}>
-                      <div>
-                        <p style={{fontSize:12,fontWeight:600,color:C.sub}}>{l}</p>
-                        <p style={{fontSize:10,color:C.muted}}>{d}</p>
-                      </div>
+              <div>
+                <SL accent="rgba(255,55,95,0.5)">Pola Candle</SL>
+                <div style={{ padding:12,borderRadius:12,background:`${C.pink}06`,border:`1px solid ${C.pink}15` }}>
+                  {[{k:'candleSabit',l:'Candle Sabit',d:'Body membesar berturut-turut'},{k:'dojiTerjepit',l:'Doji Terjepit',d:'Doji setelah 3 candle panjang'},{k:'dojiPembatalan',l:'Doji Pembatalan',d:'Sinyal reversal/pembatalan'},{k:'bbSarBreak',l:'BB + SAR Break',d:'Breakout BB + konfirmasi SAR'}].map(({k,l,d})=>(
+                    <div key={k} style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:`1px solid rgba(255,55,95,0.08)` }}>
+                      <div><p style={{ fontSize:12,fontWeight:600,color:C.sub }}>{l}</p><p style={{ fontSize:10,color:C.muted }}>{d}</p></div>
                       <Toggle checked={(momentumPatterns as any)[k]} onChange={v=>onMomentumPatternsChange({...momentumPatterns,[k]:v})} disabled={disabled} accent={C.pink}/>
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
+
+            {/* AI Signal info */}
             {mode==='aisignal'&&(
-              <>
-                <Divider/>
-                <div style={{marginBottom:12,padding:'10px 12px',borderRadius:10,background:`${C.sky}06`,border:`1px solid ${C.sky}20`,display:'flex',gap:8}}>
-                  <Radio style={{width:14,height:14,color:C.sky,flexShrink:0,marginTop:2}}/>
-                  <div>
-                    <p style={{fontSize:11,fontWeight:600,color:C.sky,marginBottom:4}}>Mode AI Signal</p>
-                    <p style={{fontSize:10,color:C.muted,lineHeight:1.5}}>Terima sinyal CALL/PUT dari Telegram/AI via endpoint <code style={{color:C.sky}}>/aisignal/signal</code></p>
-                  </div>
-                </div>
-                <div style={{marginBottom:14}}>
-                  <FL>Always Signal Mode</FL>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:10,background:C.faint,border:`1px solid ${C.bdr}`}}>
-                    <div>
-                      <p style={{fontSize:12,color:C.sub}}>Martingale pada sinyal berikutnya</p>
-                      <p style={{fontSize:10,color:C.muted}}>Tidak blocking, lanjut saat sinyal datang</p>
-                    </div>
-                    <Toggle checked={martingale.alwaysSignal??false} onChange={v=>set('alwaysSignal',v)} disabled={disabled} accent={C.sky}/>
-                  </div>
-                </div>
-              </>
-            )}
-            <Divider/>
-            <SL accent={`${ac}60`}>Martingale</SL>
-            <div style={{padding:12,borderRadius:12,background:`${ac}06`,border:`1px solid ${ac}12`,marginBottom:12}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:martingale.enabled?12:0}}>
+              <div style={{ padding:'10px 12px',borderRadius:10,background:`${C.sky}07`,border:`1px solid ${C.sky}20`,display:'flex',gap:8 }}>
+                <Radio style={{ width:14,height:14,color:C.sky,flexShrink:0,marginTop:2 }}/>
                 <div>
-                  <p style={{fontSize:13,fontWeight:600,color:C.sub,marginBottom:2}}>Aktifkan Martingale</p>
-                  <p style={{fontSize:10,color:C.muted}}>{mode==='ctc'?'Lipat gandakan amount · ikuti arah candle kalah':'Lipat gandakan amount setelah loss'}</p>
+                  <p style={{ fontSize:11,fontWeight:600,color:C.sky,marginBottom:4 }}>Mode AI Signal</p>
+                  <p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>Terima sinyal CALL/PUT dari Telegram/AI via endpoint <code style={{ color:C.sky }}>/aisignal/signal</code></p>
                 </div>
-                <Toggle checked={martingale.enabled} onChange={v=>set('enabled',v)} disabled={disabled} accent={ac}/>
+              </div>
+            )}
+
+            {/* Kompensasi / Martingale — dua kartu mirip Kotlin */}
+            <div>
+              <div style={{ height:1,background:C.bdr,marginBottom:16 }}/>
+              <p style={{ fontSize:12,fontWeight:600,color:C.text,marginBottom:10 }}>Kompensasi (Martingale)</p>
+              <div style={{ display:'flex',gap:8 }}>
+                {/* Toggle card */}
+                <button disabled={disabled} onClick={()=>set('enabled',!martingale.enabled)} style={{
+                  flex:1,height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'0 12px',
+                  background:martingale.enabled?`${C.cyan}18`:C.card2,border:`0.8px solid ${martingale.enabled?`${C.cyan}60`:C.bdr}`,transition:'all 0.15s',
+                }}>
+                  <div style={{ width:16,height:16,borderRadius:'50%',flexShrink:0,background:martingale.enabled?C.cyan:'transparent',border:`1.5px solid ${martingale.enabled?C.cyan:C.muted}`,display:'flex',alignItems:'center',justifyContent:'center' }}>
+                    {martingale.enabled&&<span style={{ width:6,height:6,borderRadius:'50%',background:'#fff' }}/>}
+                  </div>
+                  <span style={{ fontSize:11,fontWeight:700,color:C.text,letterSpacing:'0.02em' }}>Martingale</span>
+                </button>
+                {/* Max Steps card — opens dialog */}
+                <button disabled={disabled||!martingale.enabled} onClick={()=>{ if(martingale.enabled) setShowMartingaleDialog(true); }} style={{
+                  flex:1,height:44,borderRadius:12,cursor:martingale.enabled?'pointer':'not-allowed',
+                  display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',
+                  background:C.card2,border:`0.8px solid ${martingale.enabled&&!martingale.alwaysSignal?`${C.amber}45`:C.bdr}`,
+                  opacity:martingale.enabled?1:0.45,transition:'all 0.15s',
+                }}>
+                  <span style={{ fontSize:11,fontWeight:500,color:C.text }}>Maks. Step</span>
+                  <div style={{ display:'flex',alignItems:'center',gap:4 }}>
+                    {martingale.alwaysSignal
+                      ?<span style={{ fontSize:18,fontWeight:700,color:C.amber }}>∞</span>
+                      :<span style={{ fontSize:14,fontWeight:700,color:C.text }}>{martingale.maxStep}</span>
+                    }
+                    {martingale.enabled&&<RefreshCw style={{ width:11,height:11,color:C.amber }}/>}
+                  </div>
+                </button>
               </div>
               {martingale.enabled&&(
-                <div style={{paddingTop:12,borderTop:`1px solid ${C.bdr}`,display:'flex',flexDirection:'column',gap:10}}>
-                  <div>
-                    <FL>Max Step</FL>
-                    <div style={{display:'flex',gap:6}}>
-                      {[1,2,3,4,5].map(k=>(
-                        <button key={k} type="button" disabled={disabled} onClick={()=>set('maxStep',k)} style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',background:martingale.maxStep===k?`${ac}18`:C.faint,border:`1px solid ${martingale.maxStep===k?`${ac}50`:C.bdr}`,color:martingale.maxStep===k?ac:C.muted}}>K{k}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <FL>Multiplier</FL>
-                    <div style={{display:'flex',gap:6}}>
-                      {[1.5,2,2.5,3,5].map(m=>(
-                        <button key={m} type="button" disabled={disabled} onClick={()=>set('multiplier',m)} style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:11,fontWeight:700,cursor:'pointer',background:martingale.multiplier===m?`${ac}18`:C.faint,border:`1px solid ${martingale.multiplier===m?`${ac}50`:C.bdr}`,color:martingale.multiplier===m?ac:C.muted}}>
-                          {m}x
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Always Signal — tersedia di semua mode kecuali CTC & aisignal (aisignal punya panel sendiri) */}
-                  {mode!=='ctc'&&mode!=='aisignal'&&(
-                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:10,background:`${ac}07`,border:`1px solid ${ac}18`}}>
-                      <div>
-                        <p style={{fontSize:12,fontWeight:600,color:C.sub,marginBottom:2}}>Always Signal</p>
-                        <p style={{fontSize:10,color:C.muted}}>Martingale dilanjutkan pada signal berikutnya jika loss</p>
-                      </div>
-                      <Toggle checked={martingale.alwaysSignal??false} onChange={v=>set('alwaysSignal',v)} disabled={disabled} accent={ac}/>
-                    </div>
-                  )}
+                <div style={{ marginTop:8,display:'flex',alignItems:'center',gap:6,padding:'7px 12px',borderRadius:10,background:`${C.cyan}07`,border:`1px solid ${C.cyan}18` }}>
+                  <TrendingUp style={{ width:12,height:12,color:C.cyan,flexShrink:0 }}/>
+                  <span style={{ fontSize:11,color:C.sub }}>Multiplier: <strong style={{ color:C.cyan }}>{martingale.multiplier}×</strong></span>
+                  {martingale.alwaysSignal&&<span style={{ marginLeft:6,fontSize:10,fontWeight:700,color:C.amber,background:`${C.amber}14`,borderRadius:4,padding:'1px 6px' }}>Always Signal ON</span>}
+                  <button onClick={()=>setShowMartingaleDialog(true)} style={{ marginLeft:'auto',fontSize:10,color:C.cyan,background:'transparent',border:'none',cursor:'pointer',padding:0,fontWeight:600 }}>Edit →</button>
                 </div>
               )}
             </div>
+
+            {/* Risk Management */}
             {!isNewMode&&(
-              <>
-                <Divider/>
+              <div>
+                <div style={{ height:1,background:C.bdr,marginBottom:16 }}/>
                 <SL accent="rgba(255,69,58,0.55)">Risk Management</SL>
-                <div style={{padding:12,borderRadius:12,background:'rgba(255,69,58,0.05)',border:'1px solid rgba(255,69,58,0.12)'}}>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                    <div>
-                      <FL>Stop Loss</FL>
-                      <div style={{position:'relative'}}>
-                        <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none'}}>Rp</span>
-                        <input type="number" className="ds-input" value={stopLoss||''} onChange={e=>onSlChange(e.target.value?+e.target.value:0)} disabled={disabled} placeholder="Opsional" style={{paddingLeft:30}}/>
+                <div style={{ padding:12,borderRadius:12,background:'rgba(255,69,58,0.05)',border:'1px solid rgba(255,69,58,0.12)' }}>
+                  <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
+                    <div><FL>Stop Loss</FL>
+                      <div style={{ position:'relative' }}>
+                        <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                        <input type="number" className="ds-input" value={stopLoss||''} onChange={e=>onSlChange(e.target.value?+e.target.value:0)} disabled={disabled} placeholder="Opsional" style={{ paddingLeft:30 }}/>
                       </div>
                     </div>
-                    <div>
-                      <FL>Take Profit</FL>
-                      <div style={{position:'relative'}}>
-                        <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none'}}>Rp</span>
-                        <input type="number" className="ds-input" value={stopProfit||''} onChange={e=>onSpChange(e.target.value?+e.target.value:0)} disabled={disabled} placeholder="Opsional" style={{paddingLeft:30}}/>
+                    <div><FL>Take Profit</FL>
+                      <div style={{ position:'relative' }}>
+                        <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                        <input type="number" className="ds-input" value={stopProfit||''} onChange={e=>onSpChange(e.target.value?+e.target.value:0)} disabled={disabled} placeholder="Opsional" style={{ paddingLeft:30 }}/>
                       </div>
                     </div>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         )}
@@ -2079,7 +2271,6 @@ const SettingsCard: React.FC<{
     </>
   );
 };
-
 // ═══════════════════════════════════════════
 // CONTROL CARD
 // ═══════════════════════════════════════════
@@ -2138,67 +2329,64 @@ const ControlCard: React.FC<{
   const total = ftStatus?.totalTrades??aiStatus?.totalTrades??indicatorStatus?.totalTrades??momentumStatus?.totalTrades??0;
   const wr = total>0?Math.round((wins/total)*100):null;
 
+  // Kotlin BotControlCard: botState = RUNNING / PAUSED / STOPPED
+  const isSchedRunning2 = scheduleStatus?.botState==='RUNNING';
+  const isSchedPaused2  = scheduleStatus?.botState==='PAUSED';
+  const canPauseBot  = mode==='schedule' ? isSchedRunning2 : isActive;
+  const canResumeBot = mode==='schedule' ? isSchedPaused2  : false;
+  const canStopBot   = isActive;
+
+  // Dynamic colors: green=running, amber=paused, red=stopped
+  const stateCol = canResumeBot ? C.amber : canStopBot ? C.cyan : C.coral;
+  const stateLabel = canResumeBot ? 'Paused' : canStopBot ? 'Running' : 'Stopped';
+  const stateBg: Record<string,string> = {
+    Running: 'rgba(16,185,129,0.12)', Paused: 'rgba(255,170,0,0.12)', Stopped: 'rgba(255,77,77,0.10)',
+  };
+
   return (
-    <Card style={{borderColor:isActive?`${ac}40`:undefined}}>
-      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'10px 14px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer',minHeight:44}}>
-        {/* mode icon badge */}
-        <div style={{width:26,height:26,flexShrink:0,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}12`,border:`1px solid ${ac}25`}}>
+    <Card style={{
+      border:`1px solid ${C.bdr}`,
+      boxShadow:`0 8px 28px ${canResumeBot?`${C.amber}20`:canStopBot?`${C.cyan}18`:`${C.coral}10`},0 2px 8px rgba(0,0,0,0.22)`,
+    }}>
+      {/* ── Header: LEFT-aligned title + state pill + chevron ── */}
+      <button onClick={()=>setOpen(!open)} style={{
+        width:'100%',display:'flex',alignItems:'center',gap:10,
+        padding:'16px 18px',background:'transparent',border:'none',
+        borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer',
+        textAlign:'left',
+      }}>
+        {/* icon badge */}
+        <div style={{width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}14`,border:`1px solid ${ac}30`}}>
           <span style={{color:ac}}>{modeIcon}</span>
         </div>
-        {/* label + sub inline, single row */}
-        <div style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:5}}>
-          <span style={{fontSize:12,fontWeight:700,color:C.text,whiteSpace:'nowrap',flexShrink:0}}>{modeLabel}</span>
-          <span style={{fontSize:10,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>· {modeSub}</span>
+        {/* title — left-aligned */}
+        <div style={{flex:1,minWidth:0,textAlign:'left'}}>
+          <span style={{fontSize:16,fontWeight:700,color:C.text,display:'block',lineHeight:1.2}}>Bot Control</span>
+          <span style={{fontSize:10,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>{modeLabel} · {modeSub}</span>
         </div>
-        {/* status chip + chevron */}
-        <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
-          <span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',padding:'2px 7px',borderRadius:99,color:si.col,background:`${si.col}10`,border:`1px solid ${si.col}28`,whiteSpace:'nowrap'}}>
-            <span style={{width:4,height:4,borderRadius:'50%',background:si.col,flexShrink:0,animation:si.pulse?'ping 1.6s ease-in-out infinite':undefined,boxShadow:`0 0 4px ${si.col}`}}/>
-            {si.label}
-          </span>
-          {open?<ChevronUp style={{width:10,height:10,color:C.muted,flexShrink:0}}/>:<ChevronDown style={{width:10,height:10,color:C.muted,flexShrink:0}}/>}
+        {/* state pill */}
+        <div style={{
+          display:'flex',alignItems:'center',gap:5,
+          padding:'4px 10px',borderRadius:20,flexShrink:0,
+          background:stateBg[stateLabel]??`${C.muted}10`,
+          border:`0.5px solid ${stateCol}40`,
+        }}>
+          <span style={{
+            width:8,height:8,borderRadius:'50%',flexShrink:0,
+            background:stateCol,boxShadow:`0 0 5px ${stateCol}`,
+            animation:canStopBot&&!canResumeBot?'ping 1.6s ease-in-out infinite':undefined,
+          }}/>
+          <span style={{fontSize:11,fontWeight:700,color:stateCol}}>{stateLabel}</span>
+        </div>
+        <div style={{width:22,height:22,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:C.card2,border:`1px solid ${C.bdr}`,flexShrink:0}}>
+          {open?<ChevronUp style={{width:11,height:11,color:C.muted}}/>:<ChevronDown style={{width:11,height:11,color:C.muted}}/>}
         </div>
       </button>
+
       {open&&(
-        <div style={{padding:'12px 16px 16px'}}>
-          <div style={{display:'flex',gap:8,marginBottom:12}}>
-            {mode==='schedule'?(
-              <>
-                <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:`${C.cyan}06`,border:`1px solid ${C.cyan}10`}}>
-                  <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>Signal</span>
-                  <span style={{fontSize:22,fontWeight:700,lineHeight:'1.1',color:C.text}}>{orders.filter(o=>!o.isExecuted&&!o.isSkipped).length}</span>
-                  {(scheduleStatus as any)?.nextOrderTime&&(
-                    <span style={{display:'block',fontSize:9,color:C.cyan,marginTop:2,fontFamily:'monospace'}}>
-                      ⏱ {(scheduleStatus as any).nextOrderTime}
-                      {(scheduleStatus as any).nextOrderInSeconds!=null&&(
-                        <span style={{color:C.muted}}> ({(scheduleStatus as any).nextOrderInSeconds}s)</span>
-                      )}
-                    </span>
-                  )}
-                </div>
-                <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:C.card2,border:`1px solid ${pnlPos?'rgba(41,151,255,0.12)':'rgba(255,69,58,0.12)'}`}}>
-                  <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L Sesi</span>
-                  <span style={{fontSize:16,fontWeight:700,lineHeight:'1.1',color:pnlPos?C.cyan:C.coral}}>{pnlPos?'+':'-'}{Math.round(Math.abs(profit)/100).toLocaleString('id-ID')}</span>
-                </div>
-              </>
-            ):(
-              <>
-                <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:C.card2,border:`1px solid ${pnlPos?`${ac}12`:'rgba(255,69,58,0.12)'}`}}>
-                  <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>P&L Sesi</span>
-                  <span style={{fontSize:17,fontWeight:700,lineHeight:'1.1',color:pnlPos?ac:C.coral}}>{pnlPos?'+':'-'}{Math.round(Math.abs(profit)/100).toLocaleString('id-ID')}</span>
-                </div>
-                <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:`${ac}05`,border:`1px solid ${ac}10`}}>
-                  <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>W / L</span>
-                  <span style={{fontSize:17,fontWeight:700,lineHeight:'1.1'}}><span style={{color:C.cyan}}>{wins}</span><span style={{fontSize:12,color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>
-                </div>
-                {wr!==null&&<div style={{flex:1,borderRadius:12,padding:'10px 12px',background:`${ac}05`,border:`1px solid ${ac}10`}}>
-                  <span style={{display:'block',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>Win%</span>
-                  <span style={{fontSize:17,fontWeight:700,lineHeight:'1.1',color:wr>=50?ac:C.coral}}>{wr}%</span>
-                </div>}
-              </>
-            )}
-          </div>
-          {/* Always Signal aktif — tampilkan badge status */}
+        <div style={{padding:'16px 18px 18px',display:'flex',flexDirection:'column',gap:12}}>
+
+          {/* ── Always Signal badge ── */}
           {(()=>{
             const schAS = mode==='schedule'&&(scheduleStatus as any)?.alwaysSignalActive;
             const ftAS  = (mode==='fastrade'||mode==='ctc')&&(ftStatus as any)?.alwaysSignalActive;
@@ -2214,31 +2402,70 @@ const ControlCard: React.FC<{
               ?? (momentumStatus as any)?.alwaysSignalStep ?? 1;
             const totalLoss = (scheduleStatus as any)?.alwaysSignalLossState?.totalLoss
               ?? aiStatus?.alwaysSignalStatus?.totalLoss ?? 0;
-            return (
-              <div style={{marginBottom:10}}>
-                <AlwaysSignalBadge isActive={true} step={step} maxSteps={martingale.maxStep} totalLoss={totalLoss} accent={C.amber}/>
-              </div>
-            );
+            return <AlwaysSignalBadge isActive={true} step={step} maxSteps={martingale.maxStep} totalLoss={totalLoss} accent={C.amber}/>;
           })()}
+
+          {/* ── Error ── */}
           {error&&(
-            <div style={{display:'flex',gap:8,padding:'10px 12px',marginBottom:12,borderRadius:12,background:'rgba(255,69,58,0.07)',border:'1px solid rgba(255,69,58,0.18)'}}>
+            <div style={{display:'flex',gap:8,padding:'10px 12px',borderRadius:12,background:'rgba(255,69,58,0.07)',border:'1px solid rgba(255,69,58,0.18)'}}>
               <AlertCircle style={{width:12,height:12,flexShrink:0,marginTop:1,color:C.coral}}/>
               <p style={{fontSize:11,color:C.coral}}>{error}</p>
             </div>
           )}
-          <div style={{display:'flex',gap:8}}>
-            {!isActive&&<CtrlBtn onClick={onStart} disabled={isLoading||!canStart||isBelowMin} loading={isLoading&&!isActive} accent={ac} label={`Mulai ${modeLabel}`} icon={<PlayCircle style={{width:14,height:14}}/>} solid/>}
-            {isActive&&<CtrlBtn onClick={onStop} loading={isLoading} accent={C.coral} label="Stop" icon={<StopCircle style={{width:14,height:14}}/>}/>}
-          </div>
-          {!canStart&&!isActive&&!error&&!isBelowMin&&(
-            <p style={{marginTop:10,fontSize:10,textAlign:'center',color:C.muted}}>
-              {mode==='schedule'?'Pilih aset + tambah signal untuk memulai':'Pilih aset untuk memulai'}
-            </p>
-          )}
-          {isBelowMin&&!isActive&&(
-            <p style={{marginTop:10,fontSize:10,textAlign:'center',color:C.coral}}>
-              ✗ Amount di bawah minimum — set minimal Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}
-            </p>
+
+          {/* ── Action buttons only, no P&L ── */}
+          {isActive ? (
+            <div style={{display:'flex',gap:10}}>
+              {/* Pause / Resume */}
+              <button onClick={canResumeBot?onResume:onPause} disabled={!canPauseBot&&!canResumeBot} style={{
+                flex:1,height:48,borderRadius:14,cursor:'pointer',
+                border:`0.5px solid ${canResumeBot?C.cyan:C.amber}`,
+                background:canResumeBot?`rgba(16,185,129,0.55)`:`rgba(251,191,36,0.75)`,
+                color:'#fff',fontSize:13,fontWeight:700,letterSpacing:'0.02em',
+                display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+                boxShadow:`0 3px 10px ${canResumeBot?`${C.cyan}35`:`${C.amber}35`}`,
+                opacity:(!canPauseBot&&!canResumeBot)?0.45:1,transition:'opacity 0.2s',
+              }}>
+                {canResumeBot?<><PlayCircle style={{width:16,height:16}}/> Resume</>:<><PauseCircle style={{width:16,height:16}}/> Pause</>}
+              </button>
+              {/* Stop */}
+              <button onClick={onStop} disabled={!canStopBot||isLoading} style={{
+                flex:1,height:48,borderRadius:14,cursor:'pointer',
+                border:`0.5px solid ${C.coral}`,
+                background:`rgba(239,68,68,0.60)`,
+                color:'#fff',fontSize:13,fontWeight:700,letterSpacing:'0.02em',
+                display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+                boxShadow:`0 3px 10px ${C.coral}30`,
+                opacity:(!canStopBot||isLoading)?0.45:1,transition:'opacity 0.2s',
+              }}>
+                <StopCircle style={{width:16,height:16}}/> Stop
+              </button>
+            </div>
+          ) : (
+            /* Idle — simple start button */
+            <>
+              <button onClick={onStart} disabled={isLoading||!canStart||isBelowMin} style={{
+                width:'100%',height:50,borderRadius:14,cursor:'pointer',
+                border:`1px solid ${ac}55`,
+                background:`linear-gradient(180deg,${ac}CC,${ac}AA)`,
+                color:'#fff',fontSize:14,fontWeight:700,letterSpacing:'0.02em',
+                display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+                boxShadow:`0 4px 16px ${ac}35`,
+                opacity:(isLoading||!canStart||isBelowMin)?0.45:1,transition:'opacity 0.2s',
+              }}>
+                <PlayCircle style={{width:18,height:18}}/> Mulai {modeLabel}
+              </button>
+              {!canStart&&!error&&!isBelowMin&&(
+                <p style={{fontSize:10,textAlign:'center',color:C.muted}}>
+                  {mode==='schedule'?'Pilih aset + tambah signal untuk memulai':'Pilih aset untuk memulai'}
+                </p>
+              )}
+              {isBelowMin&&(
+                <p style={{fontSize:10,textAlign:'center',color:C.coral}}>
+                  ✗ Amount di bawah minimum — set minimal Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -2302,6 +2529,7 @@ export default function DashboardPage() {
   const [momentumPatterns,setMomentumPatterns] = useState({candleSabit:true,dojiTerjepit:true,dojiPembatalan:true,bbSarBreak:true});
 
   const [mobileSessionOpen,setMobileSessionOpen] = useState(false);
+  const [assetPickerOpen,setAssetPickerOpen] = useState(false);
   const [flash,setFlash] = useState<'win'|'lose'|null>(null);
   const prevWRef = useRef(0), prevLRef = useRef(0);
   const flashTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -2589,10 +2817,9 @@ export default function DashboardPage() {
   const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} isLoading={isLoading} flash={flash} t={t}/>;
 
   const InfoRow = (
-    <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(4,1fr)':deviceType==='tablet'?'repeat(3,1fr)':'1fr 1fr',gap:g}}>
-      <AssetCard asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}/>
+    <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(3,1fr)':deviceType==='tablet'?'repeat(2,1fr)':'1fr 1fr',gap:g}}>
+      <AssetCard asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t} onOpenPicker={()=>setAssetPickerOpen(true)} disabled={isActiveMode}/>
       <BalanceCard balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
-      {deviceType!=='mobile'&&<RealtimeClock t={t} lang={language}/>}
       {deviceType==='desktop'&&(
         <Card style={{padding:'11px 14px'}}>
           <p style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,marginBottom:5}}>{t('dashboard.tradingMode')}</p>
@@ -2655,6 +2882,16 @@ export default function DashboardPage() {
 
   return (
     <div style={{minHeight:'100%',background:colors.bg,paddingBottom:88,color:colors.text,transition:'background 0.3s, color 0.3s'}}>
+      {/* Asset Picker Modal — top level */}
+      <PickerModal
+        open={assetPickerOpen}
+        onClose={()=>setAssetPickerOpen(false)}
+        title="Pilih Aset"
+        options={assets.map(a=>({value:a.ric,label:a.name,sub:`${a.ric} · ${a.profitRate}%`,icon:a.iconUrl}))}
+        value={selectedRic}
+        searchable
+        onSelect={v=>{const a=assets.find(x=>x.ric===v);if(a)setSelectedRic(a.ric);setAssetPickerOpen(false);}}
+      />
       {/* Stop Confirmation Modal */}
       {stopConfirmOpen && (
         <div style={{position:'fixed',inset:0,zIndex:90,display:'flex',alignItems:'center',justifyContent:'center',padding:20,animation:'fade-in 0.18s ease'}}>
@@ -2706,7 +2943,6 @@ export default function DashboardPage() {
       )}
       <style>{`
         @keyframes spin        { to { transform: rotate(360deg); } }
-        @keyframes shimmer     { 0%,100%{background-position:200% 0} 50%{background-position:0% 0} }
         @keyframes pulse       { 0%,100%{opacity:1} 50%{opacity:0.5} }
         @keyframes ping        { 0%{transform:scale(1);opacity:1} 80%,100%{transform:scale(2);opacity:0} }
         @keyframes slide-up    { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
@@ -2717,10 +2953,10 @@ export default function DashboardPage() {
         @keyframes lose-flash  { 0%{box-shadow:0 0 0 0 rgba(255,69,58,0)} 15%{box-shadow:0 0 0 4px rgba(255,69,58,0.35)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)} }
 
         .ds-card {
-          background: ${isDarkMode ? 'linear-gradient(145deg, #0e1d35 0%, #0a1526 100%)' : 'linear-gradient(145deg, #FFFFFF 0%, #FAFBFC 100%)'};
-          border: 1px solid ${isDarkMode ? 'rgba(41,151,255,0.16)' : 'rgba(16,185,129,0.12)'};
+          background: ${isDarkMode ? C.card : '#ffffff'};
+          border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'};
           border-radius: 14px;
-          box-shadow: ${isDarkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'};
+          box-shadow: ${isDarkMode ? '0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)' : '0 1px 3px rgba(0,0,0,0.04)'};
           transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
         }
 
@@ -2806,7 +3042,7 @@ export default function DashboardPage() {
             {/* ── TOP INFO STRIP ─────────────────────────────────────────── */}
             <div style={{
               display:'grid',
-              gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',
+              gridTemplateColumns:'1fr 1fr 1fr 1fr',
               gap:12,
               alignItems:'stretch',
             }}>
@@ -2935,24 +3171,6 @@ export default function DashboardPage() {
                 })()}
               </div>
 
-              {/* Clock */}
-              <div style={{
-                display:'flex',alignItems:'center',gap:12,
-                padding:'12px 16px',borderRadius:14,
-                background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',
-                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,
-              }}>
-                <div style={{width:38,height:38,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(255,69,58,0.10)',border:'1px solid rgba(255,69,58,0.18)'}}>
-                  <Activity style={{width:17,height:17,color:C.coral}}/>
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:3}}>
-                    <p style={{fontSize:10,fontWeight:500,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Waktu Lokal</p>
-                    <span style={{width:4,height:4,borderRadius:'50%',background:C.coral,animation:'ping 1.6s ease-in-out infinite'}}/>
-                  </div>
-                  <RealtimeClockDesktop/>
-                </div>
-              </div>
             </div>
 
             {/* ── MAIN 2-COLUMN LAYOUT ───────────────────────────────────── */}
@@ -2967,6 +3185,19 @@ export default function DashboardPage() {
                   border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,
                   padding:4,
                 }}>
+                  {/* Clock header */}
+                  <div style={{
+                    display:'flex',alignItems:'center',justifyContent:'space-between',
+                    padding:'10px 14px 8px',
+                    borderBottom:`1px solid ${isDarkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'}`,
+                  }}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <Activity style={{width:13,height:13,color:C.coral}}/>
+                      <span style={{fontSize:10,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>Waktu Lokal</span>
+                      <span style={{width:5,height:5,borderRadius:'50%',background:C.coral,boxShadow:`0 0 5px ${C.coral}80`,animation:'ping 1.6s ease-in-out infinite'}}/>
+                    </div>
+                    <RealtimeClockDesktop/>
+                  </div>
                   <ChartCard assetSymbol={selectedRic} height={340}/>
                 </div>
 
@@ -3088,10 +3319,15 @@ export default function DashboardPage() {
             {TopCards}
             <div style={{display:'grid',gridTemplateColumns:'3fr 2fr',gap:g,alignItems:'stretch'}}>
               <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                <RealtimeClockCompact t={t} lang={language}/>
                 <Card style={{padding:10,flex:1,display:'flex',flexDirection:'column'}}>
-                  <ChartCard assetSymbol={selectedRic} height={110}/>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:7,gap:6}}>
+                  {/* Clock header inside chart card */}
+                  <div style={{
+                    marginBottom:8,paddingBottom:7,
+                    borderBottom:`1px solid ${C.bdr}`,
+                  }}>
+                    <RealtimeClockCompact t={t} lang={language}/>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6,gap:6}}>
                     {selectedRic?(
                       <div style={{display:'flex',alignItems:'center',gap:4,minWidth:0}}>
                         <span style={{width:4,height:4,borderRadius:'50%',background:modeAccent(tradingMode),opacity:0.6,flexShrink:0}}/>
@@ -3105,6 +3341,7 @@ export default function DashboardPage() {
                       {isActiveMode?t('common.active'):'Off'}
                     </span>
                   </div>
+                  <ChartCard assetSymbol={selectedRic} height={110}/>
                 </Card>
               </div>
               {/* Mode panel — compact when active, full when idle */}
@@ -3254,7 +3491,7 @@ export default function DashboardPage() {
             </div>
             {/* Asset + Balance Cards - di atas Settings */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g}}>
-              <AssetCardCompact asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}/>
+              <AssetCardCompact asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t} onOpenPicker={()=>setAssetPickerOpen(true)} disabled={isActiveMode}/>
               <BalanceCardCompact balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
             </div>
             {SettingsCardEl}

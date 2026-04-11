@@ -208,7 +208,7 @@ function HistoryPageContent() {
     formatDate(ts, language, { day: '2-digit', month: 'short' });
 
   const fmtTime = (ts: number) =>
-    formatTime(ts, language, { hour: '2-digit', minute: '2-digit', hour12: false });
+    formatTime(ts, language, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
   // ─────────────────────────────────────────────
   // SUB-COMPONENTS
@@ -262,48 +262,96 @@ function HistoryPageContent() {
   );
 
   const LogRow: React.FC<{ log: CombinedLog; last: boolean }> = ({ log, last }) => {
-    const type   = TYPE_META[log.type]   || TYPE_META.fastrade;
-    const res    = log.result ? (RESULT_META[log.result] || null) : null;
-    const isCall = log.trend === 'call';
+    const type      = TYPE_META[log.type] || TYPE_META.fastrade;
+    const res       = log.result ? (RESULT_META[log.result] || null) : null;
+    const isCall    = log.trend === 'call';
     const profitPos = (log.profit ?? 0) >= 0;
+    const pending   = !log.result;
+
+    const accentGrad = res
+      ? res.color === '#34c759'
+        ? 'linear-gradient(180deg,#34c759,#2aad4e)'
+        : res.color === '#ff3b30'
+          ? 'linear-gradient(180deg,#ff3b30,#d93025)'
+          : 'linear-gradient(180deg,#ff9500,#e08500)'
+      : 'rgba(60,60,67,0.12)';
 
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: last ? 'none' : '1px solid rgba(60,60,67,0.07)' }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: isCall ? 'rgba(52,199,89,0.10)' : 'rgba(255,59,48,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isCall ? '#34c759' : '#ff3b30' }}>
-          {isCall ? <TrendingUp size={16} strokeWidth={2} /> : <TrendingDown size={16} strokeWidth={2} />}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: type.color, background: type.bg, padding: '1px 7px', borderRadius: 5, letterSpacing: '0.03em' }}>{type.label}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: isCall ? '#34c759' : '#ff3b30' }}>{isCall ? t('history.call') : t('history.put')}</span>
-            {log.martingaleStep !== undefined && log.martingaleStep > 0 && (
-              <span style={{ fontSize: 10, color: '#ff9500', background: 'rgba(255,149,0,0.10)', padding: '1px 6px', borderRadius: 4 }}>×{log.martingaleStep}</span>
+      <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: last ? 'none' : '1px solid rgba(60,60,67,0.07)', position: 'relative' }}>
+        {/* Left accent stripe */}
+        <div style={{ width: 3, flexShrink: 0, borderRadius: '0 2px 2px 0', background: accentGrad, margin: '8px 0' }} />
+
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 11, padding: '11px 14px 11px 12px' }}>
+
+          {/* Icon bubble */}
+          <div style={{
+            width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+            background: isCall ? 'rgba(52,199,89,0.10)' : 'rgba(255,59,48,0.10)',
+            border: `1px solid ${isCall ? 'rgba(52,199,89,0.18)' : 'rgba(255,59,48,0.18)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: isCall ? '#34c759' : '#ff3b30',
+          }}>
+            {isCall ? <TrendingUp size={17} strokeWidth={2.2} /> : <TrendingDown size={17} strokeWidth={2.2} />}
+          </div>
+
+          {/* Center info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Row 1: badges + direction */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: type.color, background: type.bg, padding: '2px 7px', borderRadius: 5, border: `1px solid ${type.color}22` }}>
+                {type.label}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', color: isCall ? '#34c759' : '#ff3b30' }}>
+                {isCall ? `↑ ${t('history.call')}` : `↓ ${t('history.put')}`}
+              </span>
+              {log.martingaleStep !== undefined && log.martingaleStep > 0 && (
+                <span style={{ fontSize: 9.5, fontWeight: 700, color: '#ff9500', background: 'rgba(255,149,0,0.10)', border: '1px solid rgba(255,149,0,0.20)', padding: '1px 6px', borderRadius: 4 }}>
+                  MG ×{log.martingaleStep}
+                </span>
+              )}
+              {pending && (
+                <span style={{ fontSize: 9.5, fontWeight: 600, color: '#8e8e93', background: 'rgba(142,142,147,0.10)', border: '1px solid rgba(142,142,147,0.20)', padding: '1px 6px', borderRadius: 4 }}>
+                  {t('history.pending') || 'Pending'}
+                </span>
+              )}
+            </div>
+            {/* Row 2: time + date + note */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: '#3c3c43', fontFamily: "'SF Mono','Fira Mono',monospace", letterSpacing: '0.01em', background: 'rgba(60,60,67,0.06)', borderRadius: 5, padding: '1px 6px' }}>
+                {log.time}
+              </span>
+              <span style={{ fontSize: 10, color: '#c7c7cc' }}>•</span>
+              <span style={{ fontSize: 11, color: '#8e8e93' }}>{fmtDate(log.executedAt)}</span>
+              {log.note && (
+                <>
+                  <span style={{ fontSize: 10, color: '#c7c7cc' }}>•</span>
+                  <span style={{ fontSize: 10.5, color: '#8e8e93', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>
+                    {log.note}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right: amount + result + profit */}
+          <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.2 }}>
+              Rp {fmt(log.amount)}
+            </span>
+            {res ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', color: res.color, background: res.bg, padding: '3px 8px', borderRadius: 99, border: `1px solid ${res.color}30` }}>
+                {res.icon} {res.label}
+              </span>
+            ) : (
+              <span style={{ fontSize: 10, color: '#aeaeb2', background: 'rgba(60,60,67,0.06)', padding: '3px 8px', borderRadius: 99, border: '1px solid rgba(60,60,67,0.10)' }}>—</span>
+            )}
+            {log.profit != null && log.result && (
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: profitPos ? '#34c759' : '#ff3b30', letterSpacing: -0.2 }}>
+                {profitPos ? '+' : '−'}Rp {fmt(log.profit)}
+              </span>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, color: '#6e6e73', fontFamily: 'monospace' }}>{log.time}</span>
-            <span style={{ fontSize: 10, color: '#aeaeb2' }}>·</span>
-            <span style={{ fontSize: 11, color: '#aeaeb2' }}>{fmtDate(log.executedAt)}</span>
-            {log.note && <>
-              <span style={{ fontSize: 10, color: '#aeaeb2' }}>·</span>
-              <span style={{ fontSize: 10, color: '#aeaeb2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 80 }}>{log.note}</span>
-            </>}
-          </div>
-        </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e', marginBottom: 3 }}>Rp {fmt(log.amount)}</p>
-          {res ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: res.color, background: res.bg, padding: '2px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>
-              {res.icon}{res.label}
-            </span>
-          ) : (
-            <span style={{ fontSize: 10, color: '#c7c7cc' }}>—</span>
-          )}
-          {log.profit != null && log.result && (
-            <p style={{ fontSize: 11, fontWeight: 600, color: profitPos ? '#34c759' : '#ff3b30', marginTop: 2 }}>
-              {profitPos ? '+' : '-'}Rp {fmt(log.profit)}
-            </p>
-          )}
+
         </div>
       </div>
     );
