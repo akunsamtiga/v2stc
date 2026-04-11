@@ -177,9 +177,13 @@ export interface Translations {
     stop: string;
     running: string;
     stopped: string;
+    viewSession: string;
+    sessionPnl: string;
+    offStatus: string;
     schedule: {
       title: string;
       addSignal: string;
+      add: string;
       manageSignals: string;
       inputSignal: string;
       signalFormat: string;
@@ -187,14 +191,17 @@ export interface Translations {
       activeSignals: string;
       deleteAll: string;
       next: string;
+      nextSignal: string;
       call: string;
       put: string;
       noSignals: string;
       allCompleted: string;
+      completed: string;
     };
     fastTrade: {
       title: string;
       session: string;
+      fttSession: string;
       ctcSession: string;
       pnl: string;
       wins: string;
@@ -203,6 +210,11 @@ export interface Translations {
       phase: string;
       trend: string;
       noActiveSession: string;
+      history: string;
+      executing: string;
+      sessionPnl: string;
+      wlTotal: string;
+      status: string;
     };
     aiSignal: {
       title: string;
@@ -217,6 +229,14 @@ export interface Translations {
       now: string;
       step: string;
       waiting: string;
+      notActive: string;
+      startPrompt: string;
+      queue: string;
+      pendingSignals: string;
+      waitingTelegram: string;
+      moreItems: string;
+      status: string;
+      martingaleStep: string;
     };
     indicator: {
       title: string;
@@ -225,12 +245,20 @@ export interface Translations {
       rsi: string;
       value: string;
       monitoring: string;
+      notActive: string;
+      signalLabel: string;
+      valueLabel: string;
+      indicatorType: string;
+      amountPerOrder: string;
+      sensitivity: string;
     };
     momentum: {
       title: string;
       pattern: string;
       signalTime: string;
       scanning: string;
+      notActive: string;
+      candlePattern: string;
       patterns: {
         candleSabit: string;
         dojiTerjepit: string;
@@ -244,6 +272,62 @@ export interface Translations {
       maxStep: string;
       multiplier: string;
       alwaysSignal: string;
+      compensationMultiplier: string;
+      fixed: string;
+      pct: string;
+      alwaysSignalOn: string;
+      alwaysSignalOff: string;
+      warning: string;
+      maxCompensation: string;
+      compensation: string;
+      maxStepLabel: string;
+      rangeHint: string;
+      subtitle: string;
+    };
+    settings: {
+      title: string;
+      botActive: string;
+      subtitle: string;
+      accountConfig: string;
+      accountType: string;
+      orderDuration: string;
+      fastradeTimeframe: string;
+      tradeAmount: string;
+      automatic: string;
+      amountBelowMin: string;
+      demoDesc: string;
+      realDesc: string;
+      minAmount: string;
+      ctcInfo: string;
+      aiSignalMode: string;
+      aiSignalInfo: string;
+      sensitivity: string;
+      amountPerOrder: string;
+      optional: string;
+    };
+    stopConfirm: {
+      title: string;
+      message: string;
+      confirm: string;
+    };
+    control: {
+      start: string;
+      startPrompt: string;
+      startPromptSchedule: string;
+      amountBelowMin: string;
+    };
+    modePicker: {
+      title: string;
+      subtitle: string;
+      stopActiveFirst: string;
+    };
+    modeDesc: {
+      schedule: string;
+      fastrade: string;
+      ctc: string;
+      aisignal: string;
+      indicator: string;
+      momentum: string;
     };
     errors: {
       loadAssets: string;
@@ -252,6 +336,26 @@ export interface Translations {
       stopBot: string;
       invalidAmount: string;
       minAmount: string;
+      stopActiveFirst: string;
+      loadFailed: string;
+      startFailed: string;
+      stopFailed: string;
+      pauseFailed: string;
+      resumeFailed: string;
+      addOrderFailed: string;
+      deleteOrderFailed: string;
+    };
+    phaseMap: {
+      waitingMinute1: string;
+      fetching1: string;
+      waitingMinute2: string;
+      fetching2: string;
+      analyzing: string;
+      waitingExecSync: string;
+      executing: string;
+      waitingResult: string;
+      waitingLossDelay: string;
+      idle: string;
     };
   };
 
@@ -436,6 +540,9 @@ const translations: Record<Language, Translations> = {
       stop: 'Stop',
       running: 'Running',
       stopped: 'Stopped',
+      viewSession: 'View Session',
+      sessionPnl: 'Session P&L',
+      offStatus: 'Off',
       schedule: {
         title: 'Signal',
         addSignal: 'Add Signal',
@@ -450,6 +557,9 @@ const translations: Record<Language, Translations> = {
         put: 'PUT',
         noSignals: 'No signals',
         allCompleted: 'All signals completed',
+        add: 'Add',
+        nextSignal: 'Next Signal',
+        completed: 'completed',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -462,6 +572,12 @@ const translations: Record<Language, Translations> = {
         phase: 'Phase',
         trend: 'Trend',
         noActiveSession: 'No active session',
+        fttSession: 'FTT Session',
+        history: 'History',
+        executing: 'Executing...',
+        sessionPnl: 'Session P&L',
+        wlTotal: 'W / L / Total',
+        status: 'Status',
       },
       aiSignal: {
         title: 'AI Signal',
@@ -476,6 +592,14 @@ const translations: Record<Language, Translations> = {
         now: 'Now',
         step: 'Step',
         waiting: 'Waiting for signal...',
+        notActive: 'AI Signal mode is not active.',
+        startPrompt: 'Press Start to begin',
+        queue: 'Queue',
+        pendingSignals: 'signals pending execution',
+        waitingTelegram: 'Waiting for Telegram signal...',
+        moreItems: 'more',
+        status: 'Status',
+        martingaleStep: 'Martingale Step',
       },
       indicator: {
         title: 'Indicator',
@@ -484,12 +608,20 @@ const translations: Record<Language, Translations> = {
         rsi: 'RSI',
         value: 'Value',
         monitoring: 'Monitoring indicator...',
+        notActive: 'Indicator Bot is not active',
+        signalLabel: 'Signal',
+        valueLabel: 'Value',
+        indicatorType: 'Indicator Type',
+        amountPerOrder: 'Amount per Order',
+        sensitivity: 'Sensitivity',
       },
       momentum: {
         title: 'Momentum',
         pattern: 'Pattern',
         signalTime: 'Signal Time',
         scanning: 'Scanning candle patterns...',
+        notActive: 'Momentum Bot is not active',
+        candlePattern: 'Candle Pattern',
         patterns: {
           candleSabit: 'Candle Sabit',
           dojiTerjepit: 'Doji Terjepit',
@@ -503,6 +635,17 @@ const translations: Record<Language, Translations> = {
         maxStep: 'Max Step',
         multiplier: 'Multiplier',
         alwaysSignal: 'Always Signal',
+        compensationMultiplier: 'Compensation Multiplier',
+        fixed: 'Fixed (×)',
+        pct: 'Percent (%)',
+        alwaysSignalOn: 'Continue at every signal until WIN',
+        alwaysSignalOff: 'Execute every scheduled signal',
+        warning: '⚠ Martingale continues on next signal until WIN. Max step is ignored.',
+        maxCompensation: 'Max Compensation',
+        compensation: 'Compensation (Martingale)',
+        maxStepLabel: 'Max. Step',
+        rangeHint: 'Enter a number 1 – 10',
+        subtitle: 'Configure strategy',
       },
       errors: {
         loadAssets: 'Failed to load assets',
@@ -511,6 +654,71 @@ const translations: Record<Language, Translations> = {
         stopBot: 'Failed to stop bot',
         invalidAmount: 'Invalid amount',
         minAmount: 'Minimum amount is',
+        stopActiveFirst: 'Stop the active mode first.',
+        loadFailed: 'Failed to load data. Please refresh.',
+        startFailed: 'Failed to start',
+        stopFailed: 'Failed to stop',
+        pauseFailed: 'Failed to pause',
+        resumeFailed: 'Failed to resume',
+        addOrderFailed: 'Failed to add',
+        deleteOrderFailed: 'Failed to delete',
+      },
+      settings: {
+        title: 'Trading Settings',
+        botActive: 'Bot is active',
+        subtitle: 'Configure order & martingale',
+        accountConfig: 'Account Configuration',
+        accountType: 'Account Type',
+        orderDuration: 'Order Duration',
+        fastradeTimeframe: 'FastTrade Timeframe',
+        tradeAmount: 'Trade Amount',
+        automatic: 'Automatic',
+        amountBelowMin: 'Amount below minimum',
+        demoDesc: 'Virtual · no real funds used',
+        realDesc: 'Uses real account balance',
+        minAmount: 'Min',
+        ctcInfo: 'WIN → same direction · LOSE → martingale, direction follows losing candle',
+        aiSignalMode: 'AI Signal Mode',
+        aiSignalInfo: 'Receive CALL/PUT signals from Telegram/AI via /aisignal/signal endpoint',
+        sensitivity: 'Sensitivity',
+        amountPerOrder: 'Amount per Order',
+        optional: 'Optional',
+      },
+      stopConfirm: {
+        title: 'Stop Bot?',
+        message: 'The bot will be stopped and the current trading session will end.',
+        confirm: 'Yes, Stop',
+      },
+      control: {
+        start: 'Start',
+        startPrompt: 'Select an asset to start',
+        startPromptSchedule: 'Select asset + add signals to start',
+        amountBelowMin: 'Amount below minimum — set at least',
+      },
+      modePicker: {
+        title: 'Trading Mode',
+        subtitle: 'Select the mode you want to use',
+        stopActiveFirst: 'Stop the active mode first to switch modes',
+      },
+      modeDesc: {
+        schedule: 'Scheduled orders',
+        fastrade: 'Auto per candle (FTT)',
+        ctc: 'Copy candle · 1 minute',
+        aisignal: 'Signals from AI / Telegram',
+        indicator: 'SMA / EMA / RSI',
+        momentum: 'Candle pattern detection',
+      },
+      phaseMap: {
+        waitingMinute1: 'Waiting candle 1',
+        fetching1: 'Reading candle 1',
+        waitingMinute2: 'Waiting candle 2',
+        fetching2: 'Reading candle 2',
+        analyzing: 'Analyzing',
+        waitingExecSync: 'Syncing time',
+        executing: 'Placing order',
+        waitingResult: 'Waiting result',
+        waitingLossDelay: 'Delay after loss',
+        idle: 'Starting...',
       },
     },
     language: {
@@ -692,6 +900,9 @@ const translations: Record<Language, Translations> = {
       stop: 'Berhenti',
       running: 'Berjalan',
       stopped: 'Berhenti',
+      viewSession: 'Lihat Sesi',
+      sessionPnl: 'Sesi P&L',
+      offStatus: 'Off',
       schedule: {
         title: 'Signal',
         addSignal: 'Tambah Signal',
@@ -706,6 +917,9 @@ const translations: Record<Language, Translations> = {
         put: 'PUT',
         noSignals: 'Belum ada signal',
         allCompleted: 'Semua signal selesai',
+        add: 'Tambah',
+        nextSignal: 'Signal Berikutnya',
+        completed: 'selesai',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -718,6 +932,12 @@ const translations: Record<Language, Translations> = {
         phase: 'Fase',
         trend: 'Trend',
         noActiveSession: 'Belum ada sesi aktif',
+        fttSession: 'Sesi FastTrade',
+        history: 'Riwayat',
+        executing: 'Eksekusi...',
+        sessionPnl: 'Sesi P&L',
+        wlTotal: 'M / K / Total',
+        status: 'Status',
       },
       aiSignal: {
         title: 'AI Signal',
@@ -732,6 +952,14 @@ const translations: Record<Language, Translations> = {
         now: 'Sekarang',
         step: 'Step',
         waiting: 'Menunggu sinyal...',
+        notActive: 'Mode AI Signal tidak aktif.',
+        startPrompt: 'Tekan Start untuk memulai',
+        queue: 'Antrian',
+        pendingSignals: 'sinyal menunggu eksekusi',
+        waitingTelegram: 'Menunggu sinyal Telegram...',
+        moreItems: 'lainnya',
+        status: 'Status',
+        martingaleStep: 'Martingale Step',
       },
       indicator: {
         title: 'Indicator',
@@ -740,12 +968,20 @@ const translations: Record<Language, Translations> = {
         rsi: 'RSI',
         value: 'Nilai',
         monitoring: 'Memantau indikator...',
+        notActive: 'Indicator Bot tidak aktif',
+        signalLabel: 'Sinyal',
+        valueLabel: 'Nilai',
+        indicatorType: 'Tipe Indikator',
+        amountPerOrder: 'Jumlah per Order',
+        sensitivity: 'Sensitivitas',
       },
       momentum: {
         title: 'Momentum',
         pattern: 'Pola',
         signalTime: 'Waktu Sinyal',
         scanning: 'Memindai pola candle...',
+        notActive: 'Momentum Bot tidak aktif',
+        candlePattern: 'Pola Candle',
         patterns: {
           candleSabit: 'Candle Sabit',
           dojiTerjepit: 'Doji Terjepit',
@@ -759,6 +995,17 @@ const translations: Record<Language, Translations> = {
         maxStep: 'Max Step',
         multiplier: 'Multiplier',
         alwaysSignal: 'Always Signal',
+        compensationMultiplier: 'Perkalian Kompensasi',
+        fixed: 'Fixed (×)',
+        pct: 'Persen (%)',
+        alwaysSignalOn: 'Lanjut di setiap sinyal sampai WIN',
+        alwaysSignalOff: 'Eksekusi setiap sinyal terjadwal',
+        warning: '⚠ Martingale terus jalan di sinyal berikutnya hingga WIN. Max step diabaikan.',
+        maxCompensation: 'Maks. Kompensasi',
+        compensation: 'Kompensasi (Martingale)',
+        maxStepLabel: 'Maks. Step',
+        rangeHint: 'Masukkan angka 1 – 10',
+        subtitle: 'Konfigurasi strategi',
       },
       errors: {
         loadAssets: 'Gagal memuat aset',
@@ -767,6 +1014,71 @@ const translations: Record<Language, Translations> = {
         stopBot: 'Gagal menghentikan bot',
         invalidAmount: 'Jumlah tidak valid',
         minAmount: 'Jumlah minimum adalah',
+        stopActiveFirst: 'Hentikan mode yang aktif terlebih dahulu.',
+        loadFailed: 'Gagal memuat data. Silakan refresh.',
+        startFailed: 'Gagal memulai',
+        stopFailed: 'Gagal menghentikan',
+        pauseFailed: 'Gagal menjeda',
+        resumeFailed: 'Gagal melanjutkan',
+        addOrderFailed: 'Gagal menambah',
+        deleteOrderFailed: 'Gagal hapus',
+      },
+      settings: {
+        title: 'Pengaturan Trading',
+        botActive: 'Bot sedang aktif',
+        subtitle: 'Konfigurasi order & martingale',
+        accountConfig: 'Konfigurasi Akun',
+        accountType: 'Tipe Akun',
+        orderDuration: 'Durasi Order',
+        fastradeTimeframe: 'Timeframe FastTrade',
+        tradeAmount: 'Jumlah Trade',
+        automatic: 'Otomatis',
+        amountBelowMin: 'Amount di bawah minimum',
+        demoDesc: 'Virtual · tidak pakai dana nyata',
+        realDesc: 'Menggunakan saldo sesungguhnya',
+        minAmount: 'Min',
+        ctcInfo: 'WIN → lanjut arah sama · LOSE → martingale, arah mengikuti candle kalah',
+        aiSignalMode: 'Mode AI Signal',
+        aiSignalInfo: 'Terima sinyal CALL/PUT dari Telegram/AI via endpoint /aisignal/signal',
+        sensitivity: 'Sensitivitas',
+        amountPerOrder: 'Jumlah per Order',
+        optional: 'Opsional',
+      },
+      stopConfirm: {
+        title: 'Hentikan Bot?',
+        message: 'Bot akan dihentikan dan sesi trading saat ini akan berakhir.',
+        confirm: 'Ya, Hentikan',
+      },
+      control: {
+        start: 'Mulai',
+        startPrompt: 'Pilih aset untuk memulai',
+        startPromptSchedule: 'Pilih aset + tambah signal untuk memulai',
+        amountBelowMin: 'Amount di bawah minimum — set minimal',
+      },
+      modePicker: {
+        title: 'Mode Trading',
+        subtitle: 'Pilih mode yang ingin digunakan',
+        stopActiveFirst: 'Hentikan mode aktif terlebih dahulu untuk berpindah mode',
+      },
+      modeDesc: {
+        schedule: 'Order terjadwal',
+        fastrade: 'Auto per candle (FTT)',
+        ctc: 'Copy candle · 1 menit',
+        aisignal: 'Sinyal dari AI / Telegram',
+        indicator: 'SMA / EMA / RSI',
+        momentum: 'Deteksi pola candle',
+      },
+      phaseMap: {
+        waitingMinute1: 'Menunggu candle 1',
+        fetching1: 'Membaca candle 1',
+        waitingMinute2: 'Menunggu candle 2',
+        fetching2: 'Membaca candle 2',
+        analyzing: 'Menganalisis',
+        waitingExecSync: 'Sinkronisasi waktu',
+        executing: 'Memasang order',
+        waitingResult: 'Menunggu hasil',
+        waitingLossDelay: 'Jeda setelah loss',
+        idle: 'Memulai...',
       },
     },
     language: {
@@ -948,6 +1260,9 @@ const translations: Record<Language, Translations> = {
       stop: 'Стоп',
       running: 'Работает',
       stopped: 'Остановлено',
+      viewSession: 'Просмотр сессии',
+      sessionPnl: 'P&L сессии',
+      offStatus: 'Выкл.',
       schedule: {
         title: 'Сигнал',
         addSignal: 'Добавить сигнал',
@@ -962,6 +1277,9 @@ const translations: Record<Language, Translations> = {
         put: 'PUT',
         noSignals: 'Нет сигналов',
         allCompleted: 'Все сигналы выполнены',
+        add: 'Добавить',
+        nextSignal: 'Следующий сигнал',
+        completed: 'выполнено',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -974,6 +1292,12 @@ const translations: Record<Language, Translations> = {
         phase: 'Фаза',
         trend: 'Тренд',
         noActiveSession: 'Нет активной сессии',
+        fttSession: 'Сессия FTT',
+        history: 'История',
+        executing: 'Выполнение...',
+        sessionPnl: 'P&L сессии',
+        wlTotal: 'П / У / Итого',
+        status: 'Статус',
       },
       aiSignal: {
         title: 'AI Сигнал',
@@ -988,6 +1312,14 @@ const translations: Record<Language, Translations> = {
         now: 'Сейчас',
         step: 'Шаг',
         waiting: 'Ожидание сигнала...',
+        notActive: 'Режим AI Signal не активен.',
+        startPrompt: 'Нажмите «Пуск» для начала',
+        queue: 'Очередь',
+        pendingSignals: 'сигналов ожидают исполнения',
+        waitingTelegram: 'Ожидание сигнала Telegram...',
+        moreItems: 'ещё',
+        status: 'Статус',
+        martingaleStep: 'Шаг мартингала',
       },
       indicator: {
         title: 'Индикатор',
@@ -996,12 +1328,20 @@ const translations: Record<Language, Translations> = {
         rsi: 'RSI',
         value: 'Значение',
         monitoring: 'Мониторинг индикатора...',
+        notActive: 'Бот Indicator не активен',
+        signalLabel: 'Сигнал',
+        valueLabel: 'Значение',
+        indicatorType: 'Тип индикатора',
+        amountPerOrder: 'Сумма за ордер',
+        sensitivity: 'Чувствительность',
       },
       momentum: {
         title: 'Моментум',
         pattern: 'Паттерн',
         signalTime: 'Время сигнала',
         scanning: 'Сканирование паттернов свечей...',
+        notActive: 'Бот Momentum не активен',
+        candlePattern: 'Паттерн свечи',
         patterns: {
           candleSabit: 'Candle Sabit',
           dojiTerjepit: 'Doji Terjepit',
@@ -1015,6 +1355,17 @@ const translations: Record<Language, Translations> = {
         maxStep: 'Макс. шаг',
         multiplier: 'Множитель',
         alwaysSignal: 'Всегда сигнал',
+        compensationMultiplier: 'Множитель компенсации',
+        fixed: 'Фиксированный (×)',
+        pct: 'Процент (%)',
+        alwaysSignalOn: 'Продолжать на каждом сигнале до WIN',
+        alwaysSignalOff: 'Выполнять каждый запланированный сигнал',
+        warning: '⚠ Мартингал продолжается на следующем сигнале до WIN. Макс. шаг игнорируется.',
+        maxCompensation: 'Макс. компенсация',
+        compensation: 'Компенсация (Мартингал)',
+        maxStepLabel: 'Макс. шаг',
+        rangeHint: 'Введите число 1 – 10',
+        subtitle: 'Настроить стратегию',
       },
       errors: {
         loadAssets: 'Не удалось загрузить активы',
@@ -1023,6 +1374,71 @@ const translations: Record<Language, Translations> = {
         stopBot: 'Не удалось остановить бота',
         invalidAmount: 'Неверная сумма',
         minAmount: 'Минимальная сумма',
+        stopActiveFirst: 'Сначала остановите активный режим.',
+        loadFailed: 'Ошибка загрузки данных. Обновите страницу.',
+        startFailed: 'Ошибка запуска',
+        stopFailed: 'Ошибка остановки',
+        pauseFailed: 'Ошибка паузы',
+        resumeFailed: 'Ошибка возобновления',
+        addOrderFailed: 'Ошибка добавления',
+        deleteOrderFailed: 'Ошибка удаления',
+      },
+      settings: {
+        title: 'Настройки торговли',
+        botActive: 'Бот активен',
+        subtitle: 'Настройка ордера и мартингала',
+        accountConfig: 'Конфигурация счёта',
+        accountType: 'Тип счёта',
+        orderDuration: 'Длительность ордера',
+        fastradeTimeframe: 'Таймфрейм FastTrade',
+        tradeAmount: 'Сумма сделки',
+        automatic: 'Автоматически',
+        amountBelowMin: 'Сумма ниже минимума',
+        demoDesc: 'Виртуальный · без реальных средств',
+        realDesc: 'Использует реальный баланс',
+        minAmount: 'Мин',
+        ctcInfo: 'WIN → то же направление · LOSE → мартингал',
+        aiSignalMode: 'Режим AI Signal',
+        aiSignalInfo: 'Получать сигналы CALL/PUT от Telegram/AI',
+        sensitivity: 'Чувствительность',
+        amountPerOrder: 'Сумма за ордер',
+        optional: 'Необязательно',
+      },
+      stopConfirm: {
+        title: 'Остановить бота?',
+        message: 'Бот будет остановлен, текущая торговая сессия завершится.',
+        confirm: 'Да, остановить',
+      },
+      control: {
+        start: 'Запустить',
+        startPrompt: 'Выберите актив для начала',
+        startPromptSchedule: 'Выберите актив + добавьте сигналы',
+        amountBelowMin: 'Сумма ниже минимума — установите не менее',
+      },
+      modePicker: {
+        title: 'Режим торговли',
+        subtitle: 'Выберите режим',
+        stopActiveFirst: 'Сначала остановите активный режим',
+      },
+      modeDesc: {
+        schedule: 'Запланированные ордера',
+        fastrade: 'Авто на свечу (FTT)',
+        ctc: 'Копирование свечи · 1 мин',
+        aisignal: 'Сигналы от AI / Telegram',
+        indicator: 'SMA / EMA / RSI',
+        momentum: 'Паттерны свечей',
+      },
+      phaseMap: {
+        waitingMinute1: 'Ожидание свечи 1',
+        fetching1: 'Чтение свечи 1',
+        waitingMinute2: 'Ожидание свечи 2',
+        fetching2: 'Чтение свечи 2',
+        analyzing: 'Анализ',
+        waitingExecSync: 'Синхронизация',
+        executing: 'Размещение ордера',
+        waitingResult: 'Ожидание результата',
+        waitingLossDelay: 'Пауза после убытка',
+        idle: 'Запуск...',
       },
     },
     language: {
@@ -1204,6 +1620,9 @@ const translations: Record<Language, Translations> = {
       stop: 'Detener',
       running: 'En curso',
       stopped: 'Detenido',
+      viewSession: 'Ver Sesión',
+      sessionPnl: 'P&G de Sesión',
+      offStatus: 'Off',
       schedule: {
         title: 'Señal',
         addSignal: 'Agregar señal',
@@ -1218,6 +1637,9 @@ const translations: Record<Language, Translations> = {
         put: 'PUT',
         noSignals: 'Sin señales',
         allCompleted: 'Todas las señales completadas',
+        add: 'Agregar',
+        nextSignal: 'Siguiente Señal',
+        completed: 'completado',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -1230,6 +1652,12 @@ const translations: Record<Language, Translations> = {
         phase: 'Fase',
         trend: 'Tendencia',
         noActiveSession: 'Sin sesión activa',
+        fttSession: 'Sesión FTT',
+        history: 'Historial',
+        executing: 'Ejecutando...',
+        sessionPnl: 'P&G de Sesión',
+        wlTotal: 'G / P / Total',
+        status: 'Estado',
       },
       aiSignal: {
         title: 'Señal IA',
@@ -1244,6 +1672,14 @@ const translations: Record<Language, Translations> = {
         now: 'Ahora',
         step: 'Paso',
         waiting: 'Esperando señal...',
+        notActive: 'El modo AI Signal no está activo.',
+        startPrompt: 'Presione Inicio para comenzar',
+        queue: 'Cola',
+        pendingSignals: 'señales pendientes',
+        waitingTelegram: 'Esperando señal de Telegram...',
+        moreItems: 'más',
+        status: 'Estado',
+        martingaleStep: 'Paso Martingala',
       },
       indicator: {
         title: 'Indicador',
@@ -1252,12 +1688,20 @@ const translations: Record<Language, Translations> = {
         rsi: 'RSI',
         value: 'Valor',
         monitoring: 'Monitoreando indicador...',
+        notActive: 'Bot Indicator no está activo',
+        signalLabel: 'Señal',
+        valueLabel: 'Valor',
+        indicatorType: 'Tipo de Indicador',
+        amountPerOrder: 'Monto por Orden',
+        sensitivity: 'Sensibilidad',
       },
       momentum: {
         title: 'Momentum',
         pattern: 'Patrón',
         signalTime: 'Hora de señal',
         scanning: 'Escaneando patrones de velas...',
+        notActive: 'Bot Momentum no está activo',
+        candlePattern: 'Patrón de Vela',
         patterns: {
           candleSabit: 'Candle Sabit',
           dojiTerjepit: 'Doji Terjepit',
@@ -1271,6 +1715,17 @@ const translations: Record<Language, Translations> = {
         maxStep: 'Paso máx.',
         multiplier: 'Multiplicador',
         alwaysSignal: 'Siempre señal',
+        compensationMultiplier: 'Multiplicador de Compensación',
+        fixed: 'Fijo (×)',
+        pct: 'Porcentaje (%)',
+        alwaysSignalOn: 'Continuar en cada señal hasta WIN',
+        alwaysSignalOff: 'Ejecutar cada señal programada',
+        warning: '⚠ Martingala continúa en la siguiente señal hasta WIN. El paso máximo se ignora.',
+        maxCompensation: 'Compensación Máx.',
+        compensation: 'Compensación (Martingala)',
+        maxStepLabel: 'Paso Máx.',
+        rangeHint: 'Ingrese un número 1 – 10',
+        subtitle: 'Configurar estrategia',
       },
       errors: {
         loadAssets: 'Error al cargar activos',
@@ -1279,6 +1734,71 @@ const translations: Record<Language, Translations> = {
         stopBot: 'Error al detener bot',
         invalidAmount: 'Monto inválido',
         minAmount: 'El monto mínimo es',
+        stopActiveFirst: 'Detén el modo activo primero.',
+        loadFailed: 'Error al cargar datos. Por favor, actualiza.',
+        startFailed: 'Error al iniciar',
+        stopFailed: 'Error al detener',
+        pauseFailed: 'Error al pausar',
+        resumeFailed: 'Error al reanudar',
+        addOrderFailed: 'Error al agregar',
+        deleteOrderFailed: 'Error al eliminar',
+      },
+      settings: {
+        title: 'Configuración de Trading',
+        botActive: 'Bot activo',
+        subtitle: 'Configurar orden y martingala',
+        accountConfig: 'Configuración de Cuenta',
+        accountType: 'Tipo de Cuenta',
+        orderDuration: 'Duración de Orden',
+        fastradeTimeframe: 'Marco de Tiempo FastTrade',
+        tradeAmount: 'Monto de Operación',
+        automatic: 'Automático',
+        amountBelowMin: 'Monto por debajo del mínimo',
+        demoDesc: 'Virtual · sin fondos reales',
+        realDesc: 'Usa saldo de cuenta real',
+        minAmount: 'Mín',
+        ctcInfo: 'WIN → misma dirección · LOSE → martingala',
+        aiSignalMode: 'Modo AI Signal',
+        aiSignalInfo: 'Recibir señales CALL/PUT de Telegram/AI',
+        sensitivity: 'Sensibilidad',
+        amountPerOrder: 'Monto por Orden',
+        optional: 'Opcional',
+      },
+      stopConfirm: {
+        title: '¿Detener Bot?',
+        message: 'El bot se detendrá y la sesión de trading actual finalizará.',
+        confirm: 'Sí, Detener',
+      },
+      control: {
+        start: 'Iniciar',
+        startPrompt: 'Selecciona un activo para comenzar',
+        startPromptSchedule: 'Selecciona activo + agrega señales',
+        amountBelowMin: 'Monto por debajo del mínimo — establece al menos',
+      },
+      modePicker: {
+        title: 'Modo de Trading',
+        subtitle: 'Selecciona el modo que deseas usar',
+        stopActiveFirst: 'Detén el modo activo primero para cambiar',
+      },
+      modeDesc: {
+        schedule: 'Órdenes programadas',
+        fastrade: 'Auto por vela (FTT)',
+        ctc: 'Copia de vela · 1 minuto',
+        aisignal: 'Señales de AI / Telegram',
+        indicator: 'SMA / EMA / RSI',
+        momentum: 'Detección de patrones de velas',
+      },
+      phaseMap: {
+        waitingMinute1: 'Esperando vela 1',
+        fetching1: 'Leyendo vela 1',
+        waitingMinute2: 'Esperando vela 2',
+        fetching2: 'Leyendo vela 2',
+        analyzing: 'Analizando',
+        waitingExecSync: 'Sincronizando',
+        executing: 'Colocando orden',
+        waitingResult: 'Esperando resultado',
+        waitingLossDelay: 'Pausa tras pérdida',
+        idle: 'Iniciando...',
       },
     },
     language: {
@@ -1460,6 +1980,9 @@ const translations: Record<Language, Translations> = {
       stop: 'Berhenti',
       running: 'Sedang Berjalan',
       stopped: 'Berhenti',
+      viewSession: 'Lihat Sesi',
+      sessionPnl: 'P&L Sesi',
+      offStatus: 'Mati',
       schedule: {
         title: 'Isyarat',
         addSignal: 'Tambah Isyarat',
@@ -1474,6 +1997,9 @@ const translations: Record<Language, Translations> = {
         put: 'PUT',
         noSignals: 'Tiada isyarat',
         allCompleted: 'Semua isyarat selesai',
+        add: 'Tambah',
+        nextSignal: 'Isyarat Seterusnya',
+        completed: 'selesai',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -1486,6 +2012,12 @@ const translations: Record<Language, Translations> = {
         phase: 'Fasa',
         trend: 'Arah Aliran',
         noActiveSession: 'Tiada sesi aktif',
+        fttSession: 'Sesi FTT',
+        history: 'Sejarah',
+        executing: 'Melaksana...',
+        sessionPnl: 'P&L Sesi',
+        wlTotal: 'M / K / Jumlah',
+        status: 'Status',
       },
       aiSignal: {
         title: 'Isyarat AI',
@@ -1500,6 +2032,14 @@ const translations: Record<Language, Translations> = {
         now: 'Sekarang',
         step: 'Langkah',
         waiting: 'Menunggu isyarat...',
+        notActive: 'Mod AI Signal tidak aktif.',
+        startPrompt: 'Tekan Mula untuk bermula',
+        queue: 'Barisan',
+        pendingSignals: 'isyarat menunggu',
+        waitingTelegram: 'Menunggu isyarat Telegram...',
+        moreItems: 'lagi',
+        status: 'Status',
+        martingaleStep: 'Langkah Martingale',
       },
       indicator: {
         title: 'Penunjuk',
@@ -1508,12 +2048,20 @@ const translations: Record<Language, Translations> = {
         rsi: 'RSI',
         value: 'Nilai',
         monitoring: 'Memantau penunjuk...',
+        notActive: 'Bot Indicator tidak aktif',
+        signalLabel: 'Isyarat',
+        valueLabel: 'Nilai',
+        indicatorType: 'Jenis Penunjuk',
+        amountPerOrder: 'Jumlah per Pesanan',
+        sensitivity: 'Kepekaan',
       },
       momentum: {
         title: 'Momentum',
         pattern: 'Corak',
         signalTime: 'Masa Isyarat',
         scanning: 'Mengimbas corak lilin...',
+        notActive: 'Bot Momentum tidak aktif',
+        candlePattern: 'Corak Lilin',
         patterns: {
           candleSabit: 'Candle Sabit',
           dojiTerjepit: 'Doji Terjepit',
@@ -1527,6 +2075,17 @@ const translations: Record<Language, Translations> = {
         maxStep: 'Langkah Maks.',
         multiplier: 'Pengganda',
         alwaysSignal: 'Sentiasa Isyarat',
+        compensationMultiplier: 'Pengganda Pampasan',
+        fixed: 'Tetap (×)',
+        pct: 'Peratus (%)',
+        alwaysSignalOn: 'Teruskan pada setiap isyarat hingga WIN',
+        alwaysSignalOff: 'Laksanakan setiap isyarat berjadual',
+        warning: '⚠ Martingale teruskan pada isyarat seterusnya hingga WIN. Langkah maks diabaikan.',
+        maxCompensation: 'Pampasan Maks.',
+        compensation: 'Pampasan (Martingale)',
+        maxStepLabel: 'Langkah Maks.',
+        rangeHint: 'Masukkan nombor 1 – 10',
+        subtitle: 'Konfigurasi strategi',
       },
       errors: {
         loadAssets: 'Gagal memuatkan aset',
@@ -1535,6 +2094,71 @@ const translations: Record<Language, Translations> = {
         stopBot: 'Gagal menghentikan bot',
         invalidAmount: 'Jumlah tidak sah',
         minAmount: 'Jumlah minimum ialah',
+        stopActiveFirst: 'Hentikan mod aktif terlebih dahulu.',
+        loadFailed: 'Gagal memuatkan data. Sila muat semula.',
+        startFailed: 'Gagal memulakan',
+        stopFailed: 'Gagal menghentikan',
+        pauseFailed: 'Gagal menjeda',
+        resumeFailed: 'Gagal meneruskan',
+        addOrderFailed: 'Gagal menambah',
+        deleteOrderFailed: 'Gagal memadam',
+      },
+      settings: {
+        title: 'Tetapan Dagangan',
+        botActive: 'Bot sedang aktif',
+        subtitle: 'Konfigurasikan pesanan & martingale',
+        accountConfig: 'Konfigurasi Akaun',
+        accountType: 'Jenis Akaun',
+        orderDuration: 'Tempoh Pesanan',
+        fastradeTimeframe: 'Kerangka Masa FastTrade',
+        tradeAmount: 'Jumlah Dagangan',
+        automatic: 'Automatik',
+        amountBelowMin: 'Jumlah di bawah minimum',
+        demoDesc: 'Maya · tiada dana sebenar',
+        realDesc: 'Menggunakan baki akaun sebenar',
+        minAmount: 'Min',
+        ctcInfo: 'WIN → arah sama · LOSE → martingale',
+        aiSignalMode: 'Mod AI Signal',
+        aiSignalInfo: 'Terima isyarat CALL/PUT dari Telegram/AI',
+        sensitivity: 'Kepekaan',
+        amountPerOrder: 'Jumlah per Pesanan',
+        optional: 'Pilihan',
+      },
+      stopConfirm: {
+        title: 'Hentikan Bot?',
+        message: 'Bot akan dihentikan dan sesi dagangan semasa akan tamat.',
+        confirm: 'Ya, Hentikan',
+      },
+      control: {
+        start: 'Mula',
+        startPrompt: 'Pilih aset untuk bermula',
+        startPromptSchedule: 'Pilih aset + tambah isyarat untuk bermula',
+        amountBelowMin: 'Jumlah di bawah minimum — tetapkan sekurang-kurangnya',
+      },
+      modePicker: {
+        title: 'Mod Dagangan',
+        subtitle: 'Pilih mod yang ingin digunakan',
+        stopActiveFirst: 'Hentikan mod aktif dahulu untuk bertukar mod',
+      },
+      modeDesc: {
+        schedule: 'Pesanan berjadual',
+        fastrade: 'Auto per lilin (FTT)',
+        ctc: 'Salin lilin · 1 minit',
+        aisignal: 'Isyarat dari AI / Telegram',
+        indicator: 'SMA / EMA / RSI',
+        momentum: 'Pengesanan corak lilin',
+      },
+      phaseMap: {
+        waitingMinute1: 'Menunggu lilin 1',
+        fetching1: 'Membaca lilin 1',
+        waitingMinute2: 'Menunggu lilin 2',
+        fetching2: 'Membaca lilin 2',
+        analyzing: 'Menganalisis',
+        waitingExecSync: 'Penyegerakan masa',
+        executing: 'Meletakkan pesanan',
+        waitingResult: 'Menunggu keputusan',
+        waitingLossDelay: 'Jeda selepas rugi',
+        idle: 'Memulakan...',
       },
     },
     language: {
@@ -1716,6 +2340,9 @@ const translations: Record<Language, Translations> = {
       stop: 'रोकें',
       running: 'चल रहा है',
       stopped: 'रुका हुआ',
+      viewSession: 'सत्र देखें',
+      sessionPnl: 'सत्र P&L',
+      offStatus: 'बंद',
       schedule: {
         title: 'सिग्नल',
         addSignal: 'सिग्नल जोड़ें',
@@ -1730,6 +2357,9 @@ const translations: Record<Language, Translations> = {
         put: 'PUT',
         noSignals: 'कोई सिग्नल नहीं',
         allCompleted: 'सभी सिग्नल पूरे हुए',
+        add: 'जोड़ें',
+        nextSignal: 'अगला संकेत',
+        completed: 'पूर्ण',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -1742,6 +2372,12 @@ const translations: Record<Language, Translations> = {
         phase: 'चरण',
         trend: 'ट्रेंड',
         noActiveSession: 'कोई सक्रिय सत्र नहीं',
+        fttSession: 'FTT सत्र',
+        history: 'इतिहास',
+        executing: 'निष्पादित हो रहा है...',
+        sessionPnl: 'सत्र P&L',
+        wlTotal: 'जीत / हार / कुल',
+        status: 'स्थिति',
       },
       aiSignal: {
         title: 'AI सिग्नल',
@@ -1756,6 +2392,14 @@ const translations: Record<Language, Translations> = {
         now: 'अभी',
         step: 'चरण',
         waiting: 'सिग्नल का इंतजार...',
+        notActive: 'AI Signal मोड सक्रिय नहीं है।',
+        startPrompt: 'शुरू करने के लिए Start दबाएं',
+        queue: 'कतार',
+        pendingSignals: 'संकेत प्रतीक्षारत',
+        waitingTelegram: 'Telegram संकेत की प्रतीक्षा...',
+        moreItems: 'और',
+        status: 'स्थिति',
+        martingaleStep: 'मार्टिंगेल चरण',
       },
       indicator: {
         title: 'इंडिकेटर',
@@ -1764,12 +2408,20 @@ const translations: Record<Language, Translations> = {
         rsi: 'RSI',
         value: 'मान',
         monitoring: 'इंडिकेटर मॉनिटर हो रहा है...',
+        notActive: 'Indicator Bot सक्रिय नहीं है',
+        signalLabel: 'संकेत',
+        valueLabel: 'मान',
+        indicatorType: 'संकेतक प्रकार',
+        amountPerOrder: 'प्रति ऑर्डर राशि',
+        sensitivity: 'संवेदनशीलता',
       },
       momentum: {
         title: 'मोमेंटम',
         pattern: 'पैटर्न',
         signalTime: 'सिग्नल समय',
         scanning: 'कैंडल पैटर्न स्कैन हो रहा है...',
+        notActive: 'Momentum Bot सक्रिय नहीं है',
+        candlePattern: 'कैंडल पैटर्न',
         patterns: {
           candleSabit: 'Candle Sabit',
           dojiTerjepit: 'Doji Terjepit',
@@ -1783,6 +2435,17 @@ const translations: Record<Language, Translations> = {
         maxStep: 'अधिकतम चरण',
         multiplier: 'गुणक',
         alwaysSignal: 'हमेशा सिग्नल',
+        compensationMultiplier: 'मुआवजा गुणक',
+        fixed: 'स्थिर (×)',
+        pct: 'प्रतिशत (%)',
+        alwaysSignalOn: 'WIN तक हर संकेत पर जारी रखें',
+        alwaysSignalOff: 'हर निर्धारित संकेत पर क्रियान्वित करें',
+        warning: '⚠ मार्टिंगेल अगले संकेत पर WIN तक जारी। अधिकतम चरण अनदेखा।',
+        maxCompensation: 'अधिकतम मुआवजा',
+        compensation: 'मुआवजा (मार्टिंगेल)',
+        maxStepLabel: 'अधिकतम चरण',
+        rangeHint: '1 – 10 के बीच संख्या दर्ज करें',
+        subtitle: 'रणनीति कॉन्फ़िगर करें',
       },
       errors: {
         loadAssets: 'एसेट लोड करने में विफल',
@@ -1791,6 +2454,71 @@ const translations: Record<Language, Translations> = {
         stopBot: 'बॉट रोकने में विफल',
         invalidAmount: 'अमान्य राशि',
         minAmount: 'न्यूनतम राशि है',
+        stopActiveFirst: 'पहले सक्रिय मोड रोकें।',
+        loadFailed: 'डेटा लोड विफल। कृपया रीफ्रेश करें।',
+        startFailed: 'शुरू करने में विफल',
+        stopFailed: 'रोकने में विफल',
+        pauseFailed: 'रोकने में विफल',
+        resumeFailed: 'जारी रखने में विफल',
+        addOrderFailed: 'जोड़ने में विफल',
+        deleteOrderFailed: 'हटाने में विफल',
+      },
+      settings: {
+        title: 'ट्रेडिंग सेटिंग्स',
+        botActive: 'बॉट सक्रिय है',
+        subtitle: 'ऑर्डर और मार्टिंगेल कॉन्फ़िगर करें',
+        accountConfig: 'खाता कॉन्फ़िगरेशन',
+        accountType: 'खाता प्रकार',
+        orderDuration: 'ऑर्डर अवधि',
+        fastradeTimeframe: 'FastTrade टाइमफ्रेम',
+        tradeAmount: 'ट्रेड राशि',
+        automatic: 'स्वचालित',
+        amountBelowMin: 'राशि न्यूनतम से कम',
+        demoDesc: 'आभासी · कोई असली धन नहीं',
+        realDesc: 'वास्तविक खाता शेष का उपयोग',
+        minAmount: 'न्यून',
+        ctcInfo: 'WIN → समान दिशा · LOSE → मार्टिंगेल',
+        aiSignalMode: 'AI Signal मोड',
+        aiSignalInfo: 'Telegram/AI से CALL/PUT संकेत प्राप्त करें',
+        sensitivity: 'संवेदनशीलता',
+        amountPerOrder: 'प्रति ऑर्डर राशि',
+        optional: 'वैकल्पिक',
+      },
+      stopConfirm: {
+        title: 'बॉट रोकें?',
+        message: 'बॉट रुक जाएगा और वर्तमान ट्रेडिंग सत्र समाप्त हो जाएगा।',
+        confirm: 'हाँ, रोकें',
+      },
+      control: {
+        start: 'शुरू करें',
+        startPrompt: 'शुरू करने के लिए एक संपत्ति चुनें',
+        startPromptSchedule: 'संपत्ति चुनें + संकेत जोड़ें',
+        amountBelowMin: 'राशि न्यूनतम से कम — कम से कम सेट करें',
+      },
+      modePicker: {
+        title: 'ट्रेडिंग मोड',
+        subtitle: 'उपयोग करने वाला मोड चुनें',
+        stopActiveFirst: 'मोड बदलने के लिए पहले सक्रिय मोड रोकें',
+      },
+      modeDesc: {
+        schedule: 'निर्धारित ऑर्डर',
+        fastrade: 'प्रति कैंडल स्वचालित (FTT)',
+        ctc: 'कैंडल कॉपी · 1 मिनट',
+        aisignal: 'AI / Telegram से संकेत',
+        indicator: 'SMA / EMA / RSI',
+        momentum: 'कैंडल पैटर्न पहचान',
+      },
+      phaseMap: {
+        waitingMinute1: 'कैंडल 1 की प्रतीक्षा',
+        fetching1: 'कैंडल 1 पढ़ रहे हैं',
+        waitingMinute2: 'कैंडल 2 की प्रतीक्षा',
+        fetching2: 'कैंडल 2 पढ़ रहे हैं',
+        analyzing: 'विश्लेषण',
+        waitingExecSync: 'समय सिंक',
+        executing: 'ऑर्डर लगाना',
+        waitingResult: 'परिणाम प्रतीक्षा',
+        waitingLossDelay: 'हानि के बाद विराम',
+        idle: 'शुरू हो रहा है...',
       },
     },
     language: {
@@ -1972,6 +2700,9 @@ const translations: Record<Language, Translations> = {
       stop: 'หยุด',
       running: 'กำลังทำงาน',
       stopped: 'หยุดแล้ว',
+      viewSession: 'ดูเซสชัน',
+      sessionPnl: 'P&L เซสชัน',
+      offStatus: 'ปิด',
       schedule: {
         title: 'สัญญาณ',
         addSignal: 'เพิ่มสัญญาณ',
@@ -1986,6 +2717,9 @@ const translations: Record<Language, Translations> = {
         put: 'PUT',
         noSignals: 'ไม่มีสัญญาณ',
         allCompleted: 'สัญญาณทั้งหมดเสร็จสิ้น',
+        add: 'เพิ่ม',
+        nextSignal: 'สัญญาณถัดไป',
+        completed: 'เสร็จแล้ว',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -1998,6 +2732,12 @@ const translations: Record<Language, Translations> = {
         phase: 'เฟส',
         trend: 'แนวโน้ม',
         noActiveSession: 'ไม่มีเซสชันที่ใช้งาน',
+        fttSession: 'เซสชัน FTT',
+        history: 'ประวัติ',
+        executing: 'กำลังดำเนินการ...',
+        sessionPnl: 'P&L เซสชัน',
+        wlTotal: 'ชนะ / แพ้ / รวม',
+        status: 'สถานะ',
       },
       aiSignal: {
         title: 'สัญญาณ AI',
@@ -2012,6 +2752,14 @@ const translations: Record<Language, Translations> = {
         now: 'ตอนนี้',
         step: 'ขั้น',
         waiting: 'รอสัญญาณ...',
+        notActive: 'โหมด AI Signal ไม่ทำงาน',
+        startPrompt: 'กด Start เพื่อเริ่ม',
+        queue: 'คิว',
+        pendingSignals: 'สัญญาณรอดำเนินการ',
+        waitingTelegram: 'รอสัญญาณ Telegram...',
+        moreItems: 'เพิ่มเติม',
+        status: 'สถานะ',
+        martingaleStep: 'ขั้น Martingale',
       },
       indicator: {
         title: 'ตัวชี้วัด',
@@ -2020,12 +2768,20 @@ const translations: Record<Language, Translations> = {
         rsi: 'RSI',
         value: 'ค่า',
         monitoring: 'กำลังตรวจสอบตัวชี้วัด...',
+        notActive: 'Indicator Bot ไม่ทำงาน',
+        signalLabel: 'สัญญาณ',
+        valueLabel: 'ค่า',
+        indicatorType: 'ประเภทตัวบ่งชี้',
+        amountPerOrder: 'จำนวนต่อคำสั่ง',
+        sensitivity: 'ความไว',
       },
       momentum: {
         title: 'โมเมนตัม',
         pattern: 'รูปแบบ',
         signalTime: 'เวลาสัญญาณ',
         scanning: 'กำลังสแกนรูปแบบแท่งเทียน...',
+        notActive: 'Momentum Bot ไม่ทำงาน',
+        candlePattern: 'รูปแบบแท่งเทียน',
         patterns: {
           candleSabit: 'Candle Sabit',
           dojiTerjepit: 'Doji Terjepit',
@@ -2039,6 +2795,17 @@ const translations: Record<Language, Translations> = {
         maxStep: 'ขั้นสูงสุด',
         multiplier: 'ตัวคูณ',
         alwaysSignal: 'สัญญาณตลอดเวลา',
+        compensationMultiplier: 'ตัวคูณชดเชย',
+        fixed: 'คงที่ (×)',
+        pct: 'เปอร์เซ็นต์ (%)',
+        alwaysSignalOn: 'ดำเนินต่อทุกสัญญาณจนถึง WIN',
+        alwaysSignalOff: 'ดำเนินทุกสัญญาณที่กำหนด',
+        warning: '⚠ Martingale ดำเนินต่อในสัญญาณถัดไปจนถึง WIN ขั้นสูงสุดถูกละเว้น',
+        maxCompensation: 'ชดเชยสูงสุด',
+        compensation: 'ชดเชย (Martingale)',
+        maxStepLabel: 'ขั้นสูงสุด',
+        rangeHint: 'ป้อนตัวเลข 1 – 10',
+        subtitle: 'ตั้งค่ากลยุทธ์',
       },
       errors: {
         loadAssets: 'โหลดสินทรัพย์ล้มเหลว',
@@ -2047,6 +2814,71 @@ const translations: Record<Language, Translations> = {
         stopBot: 'หยุดบอทล้มเหลว',
         invalidAmount: 'จำนวนไม่ถูกต้อง',
         minAmount: 'จำนวนขั้นต่ำคือ',
+        stopActiveFirst: 'หยุดโหมดที่ใช้งานก่อน',
+        loadFailed: 'โหลดข้อมูลล้มเหลว กรุณารีเฟรช',
+        startFailed: 'เริ่มล้มเหลว',
+        stopFailed: 'หยุดล้มเหลว',
+        pauseFailed: 'หยุดชั่วคราวล้มเหลว',
+        resumeFailed: 'ดำเนินต่อล้มเหลว',
+        addOrderFailed: 'เพิ่มล้มเหลว',
+        deleteOrderFailed: 'ลบล้มเหลว',
+      },
+      settings: {
+        title: 'การตั้งค่าการเทรด',
+        botActive: 'บอทกำลังทำงาน',
+        subtitle: 'ตั้งค่าคำสั่งและ Martingale',
+        accountConfig: 'การตั้งค่าบัญชี',
+        accountType: 'ประเภทบัญชี',
+        orderDuration: 'ระยะเวลาคำสั่ง',
+        fastradeTimeframe: 'กรอบเวลา FastTrade',
+        tradeAmount: 'จำนวนเงินเทรด',
+        automatic: 'อัตโนมัติ',
+        amountBelowMin: 'จำนวนต่ำกว่าขั้นต่ำ',
+        demoDesc: 'เสมือน · ไม่ใช้เงินจริง',
+        realDesc: 'ใช้ยอดคงเหลือจริง',
+        minAmount: 'ขั้นต่ำ',
+        ctcInfo: 'WIN → ทิศทางเดิม · LOSE → Martingale',
+        aiSignalMode: 'โหมด AI Signal',
+        aiSignalInfo: 'รับสัญญาณ CALL/PUT จาก Telegram/AI',
+        sensitivity: 'ความไว',
+        amountPerOrder: 'จำนวนต่อคำสั่ง',
+        optional: 'ไม่บังคับ',
+      },
+      stopConfirm: {
+        title: 'หยุดบอท?',
+        message: 'บอทจะหยุดและเซสชันการเทรดปัจจุบันจะสิ้นสุด',
+        confirm: 'ใช่ หยุด',
+      },
+      control: {
+        start: 'เริ่ม',
+        startPrompt: 'เลือกสินทรัพย์เพื่อเริ่ม',
+        startPromptSchedule: 'เลือกสินทรัพย์ + เพิ่มสัญญาณ',
+        amountBelowMin: 'จำนวนต่ำกว่าขั้นต่ำ — ตั้งค่าอย่างน้อย',
+      },
+      modePicker: {
+        title: 'โหมดการเทรด',
+        subtitle: 'เลือกโหมดที่ต้องการใช้',
+        stopActiveFirst: 'หยุดโหมดที่ใช้งานก่อนเปลี่ยนโหมด',
+      },
+      modeDesc: {
+        schedule: 'คำสั่งตามกำหนด',
+        fastrade: 'อัตโนมัติต่อแท่งเทียน (FTT)',
+        ctc: 'คัดลอกแท่งเทียน · 1 นาที',
+        aisignal: 'สัญญาณจาก AI / Telegram',
+        indicator: 'SMA / EMA / RSI',
+        momentum: 'ตรวจจับรูปแบบแท่งเทียน',
+      },
+      phaseMap: {
+        waitingMinute1: 'รอแท่งเทียน 1',
+        fetching1: 'อ่านแท่งเทียน 1',
+        waitingMinute2: 'รอแท่งเทียน 2',
+        fetching2: 'อ่านแท่งเทียน 2',
+        analyzing: 'วิเคราะห์',
+        waitingExecSync: 'ซิงค์เวลา',
+        executing: 'วางคำสั่ง',
+        waitingResult: 'รอผลลัพธ์',
+        waitingLossDelay: 'หยุดชั่วคราวหลังขาดทุน',
+        idle: 'กำลังเริ่ม...',
       },
     },
     language: {
@@ -2228,6 +3060,9 @@ const translations: Record<Language, Translations> = {
       stop: 'Durdur',
       running: 'Çalışıyor',
       stopped: 'Durdu',
+      viewSession: 'Oturumu Gör',
+      sessionPnl: 'Oturum K&Z',
+      offStatus: 'Kapalı',
       schedule: {
         title: 'Sinyal',
         addSignal: 'Sinyal Ekle',
@@ -2242,6 +3077,9 @@ const translations: Record<Language, Translations> = {
         put: 'PUT',
         noSignals: 'Sinyal yok',
         allCompleted: 'Tüm sinyaller tamamlandı',
+        add: 'Ekle',
+        nextSignal: 'Sonraki Sinyal',
+        completed: 'tamamlandı',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -2254,6 +3092,12 @@ const translations: Record<Language, Translations> = {
         phase: 'Faz',
         trend: 'Trend',
         noActiveSession: 'Aktif oturum yok',
+        fttSession: 'FTT Oturumu',
+        history: 'Geçmiş',
+        executing: 'Yürütülüyor...',
+        sessionPnl: 'Oturum K&Z',
+        wlTotal: 'K / Y / Toplam',
+        status: 'Durum',
       },
       aiSignal: {
         title: 'AI Sinyali',
@@ -2268,6 +3112,14 @@ const translations: Record<Language, Translations> = {
         now: 'Şimdi',
         step: 'Adım',
         waiting: 'Sinyal bekleniyor...',
+        notActive: 'AI Signal modu aktif değil.',
+        startPrompt: 'Başlamak için Start tuşuna basın',
+        queue: 'Kuyruk',
+        pendingSignals: 'sinyal beklemede',
+        waitingTelegram: 'Telegram sinyali bekleniyor...',
+        moreItems: 'daha fazla',
+        status: 'Durum',
+        martingaleStep: 'Martingale Adımı',
       },
       indicator: {
         title: 'Gösterge',
@@ -2276,12 +3128,20 @@ const translations: Record<Language, Translations> = {
         rsi: 'RSI',
         value: 'Değer',
         monitoring: 'Gösterge izleniyor...',
+        notActive: 'Indicator Bot aktif değil',
+        signalLabel: 'Sinyal',
+        valueLabel: 'Değer',
+        indicatorType: 'Gösterge Türü',
+        amountPerOrder: 'Emir Başına Miktar',
+        sensitivity: 'Hassasiyet',
       },
       momentum: {
         title: 'Momentum',
         pattern: 'Desen',
         signalTime: 'Sinyal Saati',
         scanning: 'Mum desenleri taranıyor...',
+        notActive: 'Momentum Bot aktif değil',
+        candlePattern: 'Mum Deseni',
         patterns: {
           candleSabit: 'Candle Sabit',
           dojiTerjepit: 'Doji Terjepit',
@@ -2295,6 +3155,17 @@ const translations: Record<Language, Translations> = {
         maxStep: 'Maks. Adım',
         multiplier: 'Çarpan',
         alwaysSignal: 'Her Zaman Sinyal',
+        compensationMultiplier: 'Tazminat Çarpanı',
+        fixed: 'Sabit (×)',
+        pct: 'Yüzde (%)',
+        alwaysSignalOn: 'WIN olana kadar her sinyalde devam et',
+        alwaysSignalOff: 'Her planlanmış sinyali çalıştır',
+        warning: '⚠ Martingale WIN olana kadar sonraki sinyalde devam eder. Maks. adım yoksayılır.',
+        maxCompensation: 'Maks. Tazminat',
+        compensation: 'Tazminat (Martingale)',
+        maxStepLabel: 'Maks. Adım',
+        rangeHint: '1 – 10 arası bir sayı girin',
+        subtitle: 'Strateji yapılandır',
       },
       errors: {
         loadAssets: 'Varlıklar yüklenemedi',
@@ -2303,6 +3174,71 @@ const translations: Record<Language, Translations> = {
         stopBot: 'Bot durdurulamadı',
         invalidAmount: 'Geçersiz miktar',
         minAmount: 'Minimum miktar',
+        stopActiveFirst: 'Önce aktif modu durdurun.',
+        loadFailed: 'Veri yüklenemedi. Lütfen yenileyin.',
+        startFailed: 'Başlatma başarısız',
+        stopFailed: 'Durdurma başarısız',
+        pauseFailed: 'Duraklatma başarısız',
+        resumeFailed: 'Devam ettirme başarısız',
+        addOrderFailed: 'Ekleme başarısız',
+        deleteOrderFailed: 'Silme başarısız',
+      },
+      settings: {
+        title: 'İşlem Ayarları',
+        botActive: 'Bot aktif',
+        subtitle: 'Emir ve martingale yapılandır',
+        accountConfig: 'Hesap Yapılandırması',
+        accountType: 'Hesap Türü',
+        orderDuration: 'Emir Süresi',
+        fastradeTimeframe: 'FastTrade Zaman Dilimi',
+        tradeAmount: 'İşlem Miktarı',
+        automatic: 'Otomatik',
+        amountBelowMin: 'Miktar minimumun altında',
+        demoDesc: 'Sanal · gerçek para kullanılmaz',
+        realDesc: 'Gerçek hesap bakiyesi kullanır',
+        minAmount: 'Min',
+        ctcInfo: 'WIN → aynı yön · LOSE → martingale',
+        aiSignalMode: 'AI Signal Modu',
+        aiSignalInfo: "Telegram/AI'dan CALL/PUT sinyalleri al",
+        sensitivity: 'Hassasiyet',
+        amountPerOrder: 'Emir Başına Miktar',
+        optional: 'İsteğe Bağlı',
+      },
+      stopConfirm: {
+        title: 'Botu Durdur?',
+        message: 'Bot durdurulacak ve mevcut işlem oturumu sona erecek.',
+        confirm: 'Evet, Durdur',
+      },
+      control: {
+        start: 'Başlat',
+        startPrompt: 'Başlamak için bir varlık seçin',
+        startPromptSchedule: 'Varlık seç + sinyal ekle',
+        amountBelowMin: 'Miktar minimumun altında — en az ayarlayın',
+      },
+      modePicker: {
+        title: 'İşlem Modu',
+        subtitle: 'Kullanmak istediğiniz modu seçin',
+        stopActiveFirst: 'Mod değiştirmek için önce aktif modu durdurun',
+      },
+      modeDesc: {
+        schedule: 'Planlanmış emirler',
+        fastrade: 'Mum başına otomatik (FTT)',
+        ctc: 'Mum kopyala · 1 dakika',
+        aisignal: 'AI / Telegram sinyalleri',
+        indicator: 'SMA / EMA / RSI',
+        momentum: 'Mum deseni tespiti',
+      },
+      phaseMap: {
+        waitingMinute1: 'Mum 1 bekleniyor',
+        fetching1: 'Mum 1 okunuyor',
+        waitingMinute2: 'Mum 2 bekleniyor',
+        fetching2: 'Mum 2 okunuyor',
+        analyzing: 'Analiz ediliyor',
+        waitingExecSync: 'Zaman senkronizasyonu',
+        executing: 'Emir veriliyor',
+        waitingResult: 'Sonuç bekleniyor',
+        waitingLossDelay: 'Kayıp sonrası duraklama',
+        idle: 'Başlatılıyor...',
       },
     },
     language: {

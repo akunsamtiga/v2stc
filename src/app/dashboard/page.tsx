@@ -23,7 +23,7 @@ import {
   Settings, Trash2, X, Zap, TrendingUp, TrendingDown,
   PlayCircle, StopCircle, PauseCircle, RefreshCw, Timer, Copy,
   ArrowRight, Radio, BarChart, Waves,
-  Wallet, Clock, CreditCard,
+  Wallet, Clock, CreditCard, Eye, EyeOff,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
@@ -78,6 +78,7 @@ function getColors(isDark: boolean) {
 // Module-level colors — updated each render by DashboardPage via C = colors
 // Must be `let` so sub-components always get the current theme on re-render
 let C = getColors(true);
+let T: (k: string) => string = (k: string) => k;
 
 type TradingMode = 'schedule' | 'fastrade' | 'ctc' | 'aisignal' | 'indicator' | 'momentum';
 type FastTradeTimeframe = '1m' | '5m' | '15m' | '30m' | '1h';
@@ -191,7 +192,7 @@ const CtrlBtn: React.FC<{onClick:()=>void;disabled?:boolean;loading?:boolean;acc
     boxShadow:(!disabled&&!loading)?`0 0 14px ${accent}20`:'none',transition:'all 0.15s',
   }}>
     {loading?<RefreshCw style={{width:14,height:14,animation:'spin 0.7s linear infinite'}}/>:icon}
-    {loading?'Memproses...':label}
+    {loading?T('common.processing'):label}
   </button>
 );
 
@@ -256,7 +257,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
   const fmtDate = (d:Date) => d.toLocaleDateString(locale,{day:'2-digit',month:'short',year:'numeric'});
   const tz      = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
   const dotColor = isBotRunning ? C.cyan : C.coral;
-  const tzLabel = lang==='ru'?'ВРЕМЯ':lang==='en'?'LOCAL TIME':'WAKTU LOKAL';
+  const tzLabel = lang==='ru'?'ВРЕМЯ':lang==='en'?T('dashboard.localTime').toUpperCase():T('dashboard.localTime').toUpperCase();
   return (
     <div style={{
       width:'100%',borderRadius:14,overflow:'hidden',
@@ -482,7 +483,7 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
           <span style={{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>{t('dashboard.profitToday')}</span>
           <span style={{display:'flex',alignItems:'center',gap:5,padding:'2px 7px',borderRadius:99,background:`${col}10`,border:`1px solid ${col}22`,width:'fit-content'}}>
             <span style={{width:5,height:5,borderRadius:'50%',background:col,boxShadow:`0 0 5px ${col}`,animation:'pulse 1.8s ease-in-out infinite'}}/>
-            <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:col}}>24j</span>
+            <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:col}}>{T('dashboard.live')}</span>
           </span>
         </div>
         <div style={{width:1,alignSelf:'stretch',background:C.bdr}}/>
@@ -600,6 +601,131 @@ const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?
           )}
         </div>
         {asset && <span style={{fontSize:11,fontWeight:700,color:modeCol,flexShrink:0}}>{asset.profitRate}%</span>}
+      </div>
+    </Card>
+  );
+};
+
+// ═══════════════════════════════════════════
+// COMBINED ASSET + BALANCE CARD (Mobile — 1 card full width)
+// ═══════════════════════════════════════════
+const AssetBalanceCombinedCard: React.FC<{
+  asset?: StockityAsset | null;
+  mode: TradingMode;
+  isLoading?: boolean;
+  t: (k: string) => string;
+  onOpenPicker?: () => void;
+  disabled?: boolean;
+  balance: ProfileBalance | null;
+  accountType: 'demo' | 'real';
+}> = ({ asset, mode, isLoading, t, onOpenPicker, disabled, balance, accountType }) => {
+  const [hidden, setHidden] = useState(false);
+  const [imgErr, setImgErr] = useState(false);
+  const modeCol = modeAccent(mode);
+  const abbr = asset?.ric ? asset.ric.slice(0, 3).toUpperCase() : '—';
+  const isDemo = accountType === 'demo';
+  const rawAmount = isDemo
+    ? (balance?.demo_balance ?? balance?.balance ?? 0)
+    : (balance?.real_balance ?? balance?.balance ?? 0);
+  const amount = rawAmount / 100;
+  const balCol = isDemo ? C.amber : C.cyan;
+  const balBg  = isDemo ? 'rgba(255,159,10,0.08)' : 'rgba(16,185,129,0.08)';
+
+  return (
+    <Card style={{ padding: '10px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+
+        {/* Sisi Kiri: Aset */}
+        <button
+          type="button"
+          onClick={onOpenPicker && !disabled ? onOpenPicker : undefined}
+          disabled={disabled || !onOpenPicker}
+          style={{
+            flex: 1, minWidth: 0,
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'transparent', border: 'none', padding: 0,
+            cursor: onOpenPicker && !disabled ? 'pointer' : 'default',
+            textAlign: 'left',
+          }}
+        >
+          {onOpenPicker && !disabled && (
+            <ChevronDown style={{ width: 12, height: 12, color: modeCol, flexShrink: 0 }} />
+          )}
+          <div style={{
+            width: 32, height: 32, borderRadius: 9, overflow: 'hidden', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: `${modeCol}12`, border: `1px solid ${modeCol}28`,
+          }}>
+            {asset?.iconUrl && !imgErr ? (
+              <img src={asset.iconUrl} alt={asset.ric} crossOrigin="anonymous"
+                onError={() => setImgErr(true)}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3 }}
+              />
+            ) : (
+              <span style={{ fontWeight: 700, fontSize: 11, color: modeCol }}>{abbr}</span>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, lineHeight: 1, marginBottom: 3 }}>
+              {t('dashboard.asset')}
+            </p>
+            {isLoading ? <div style={{ height: 14, width: 60, borderRadius: 4, background: C.faint }} /> : asset ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, lineHeight: 1, color: C.text, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {asset.ric}
+                </p>
+                <span style={{ fontSize: 10, fontWeight: 700, color: modeCol, flexShrink: 0 }}>{asset.profitRate}%</span>
+              </div>
+            ) : (
+              <p style={{ fontSize: 11, color: modeCol, fontWeight: 600 }}>{t('dashboard.notSelected')}</p>
+            )}
+          </div>
+        </button>
+
+        {/* Divider Vertikal */}
+        <div style={{ width: 1, height: 36, background: C.bdr, flexShrink: 0 }} />
+
+        {/* Sisi Kanan: Saldo */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Kiri: label "Saldo + eye" & badge "Real/Demo" — 2 baris rapat */}
+          <div style={{ flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <p style={{ fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, lineHeight: '13px', margin: 0 }}>
+                {t('dashboard.balance')}
+              </p>
+              <button
+                onClick={() => setHidden(h => !h)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.muted, padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+              >
+                {hidden
+                  ? <Eye style={{ width: 10, height: 10 }} />
+                  : <EyeOff style={{ width: 10, height: 10 }} />
+                }
+              </button>
+            </div>
+            <span style={{ fontSize: 8, fontWeight: 700, padding: '0px 5px', borderRadius: 99, color: balCol, background: balBg, border: `1px solid ${balCol}30`, lineHeight: '13px', display: 'inline-block' }}>
+              {isDemo ? t('common.demo') : t('common.real')}
+            </span>
+          </div>
+
+          {/* Kanan: angka saldo — rata kanan, otomatis center vertikal karena parent align-items:center */}
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+            {isLoading ? (
+              <div style={{ height: 13, width: 60, borderRadius: 4, background: C.faint, marginLeft: 'auto' }} />
+            ) : hidden ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-end' }}>
+                {[...Array(5)].map((_, i) => (
+                  <span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: balCol, opacity: 0.4 + (i % 2) * 0.2 }} />
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: 'clamp(17px,4.5vw,24px)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: balCol, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+                {Math.round(amount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+              </p>
+            )}
+          </div>
+        </div>
+
       </div>
     </Card>
   );
@@ -873,22 +999,22 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
     <Card style={{display:'flex',flexDirection:'column'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <span style={{fontSize:12,fontWeight:600,color:C.sub}}>Signal</span>
+          <span style={{fontSize:12,fontWeight:600,color:C.sub}}>{T('dashboard.schedule.title')}</span>
           {doneCount>0&&(
             <span style={{fontSize:10,padding:'1px 7px',borderRadius:99,color:C.muted,background:'rgba(255,255,255,0.05)',border:`1px solid rgba(255,255,255,0.08)`}}>
-              {doneCount} selesai
+              {doneCount} {T('dashboard.schedule.completed')}
             </span>
           )}
         </div>
         {pendingOrders.length>0&&activeIdx>=0&&(
-          <span style={{fontSize:10,fontWeight:500,color:C.cyan}}>Berikutnya</span>
+          <span style={{fontSize:10,fontWeight:500,color:C.cyan}}></span>
         )}
       </div>
       {pendingOrders.length===0?(
         <div style={{height:120,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,gap:8}}>
           <Calendar style={{width:28,height:28,color:C.muted,opacity:0.5}}/>
           <p style={{fontSize:12,color:C.muted,textAlign:'center'}}>
-            {doneCount>0?`Semua ${doneCount} signal telah selesai`:'Belum ada signal'}
+  {doneCount>0?`${T('common.all')} ${doneCount} ${T('dashboard.schedule.title')} ${T('dashboard.schedule.completed')}`:`${T('dashboard.schedule.noSignals')}`}
           </p>
         </div>
       ):(
@@ -907,7 +1033,7 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
                   : <PauseCircle style={{width:13,height:13,color:'rgba(255,255,255,0.18)',flexShrink:0}}/>
                 }
                 <span style={{fontSize:12,fontFamily:'monospace',color:isA?C.text:C.sub,fontWeight:isA?600:400,flexShrink:0}}>{order.time}</span>
-                <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:col,background:isCall?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)',flexShrink:0}}>{isCall?'CALL':'PUT'}</span>
+                <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:col,background:isCall?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)',flexShrink:0}}>{isCall?'B':'S'}</span>
               </div>
             );
           })}
@@ -916,11 +1042,11 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
       <div style={{padding:'8px 10px',marginTop:'auto',borderTop:`1px solid ${C.bdr}`,flexShrink:0}}>
         {isRunning && onViewSession ? (
           <button onClick={onViewSession} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 0',borderRadius:8,fontSize:12,fontWeight:500,background:`${C.cyan}10`,border:`1px solid ${C.cyan}28`,color:C.cyan,cursor:'pointer'}}>
-            <Info style={{width:12,height:12}}/>Lihat Sesi
+            <Info style={{width:12,height:12}}/>{T('dashboard.viewSession')}
           </button>
         ) : (
           <button onClick={onOpenModal} disabled={isRunning} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 0',borderRadius:8,fontSize:12,fontWeight:500,background:'rgba(41,151,255,0.07)',border:`1px solid rgba(41,151,255,0.18)`,color:C.cyan,cursor:isRunning?'not-allowed':'pointer',opacity:isRunning?0.4:1}}>
-            <Plus style={{width:12,height:12}}/>{pendingOrders.length===0?'Tambah':'Kelola'}
+  <Plus style={{width:12,height:12}}/>{pendingOrders.length===0?T('dashboard.schedule.add'):T('dashboard.schedule.manageSignals')}
           </button>
         )}
       </div>
@@ -942,13 +1068,13 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
   const accent = status?.mode==='CTC'?C.violet:C.cyan;
   const isCTC  = status?.mode==='CTC';
   const phaseMap: Record<string,string> = {
-    WAITING_MINUTE_1:'Menunggu candle 1',FETCHING_1:'Membaca candle 1',
-    WAITING_MINUTE_2:'Menunggu candle 2',FETCHING_2:'Membaca candle 2',
-    ANALYZING:'Menganalisis',WAITING_EXEC_SYNC:'Sinkronisasi waktu',
-    EXECUTING:'Memasang order',WAITING_RESULT:'Menunggu hasil',
-    WAITING_LOSS_DELAY:'Jeda setelah loss',IDLE:'Memulai...',
+    WAITING_MINUTE_1:T('dashboard.phaseMap.waitingMinute1'),FETCHING_1:T('dashboard.phaseMap.fetching1'),
+    WAITING_MINUTE_2:T('dashboard.phaseMap.waitingMinute2'),FETCHING_2:T('dashboard.phaseMap.fetching2'),
+    ANALYZING:T('dashboard.phaseMap.analyzing'),WAITING_EXEC_SYNC:T('dashboard.phaseMap.waitingExecSync'),
+    EXECUTING:T('dashboard.phaseMap.executing'),WAITING_RESULT:T('dashboard.phaseMap.waitingResult'),
+    WAITING_LOSS_DELAY:T('dashboard.phaseMap.waitingLossDelay'),IDLE:T('dashboard.phaseMap.idle'),
   };
-  const phase = status?.phase||(isOn?'Running':'Standby');
+  const phase = status?.phase||(isOn?'Running':T('common.standby'));
   const trend = status?.activeTrend??status?.currentTrend;
   const pnlCol = pnl>=0?accent:C.coral;
 
@@ -966,14 +1092,14 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
           <>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
               <Zap style={{width:14,height:14,color:accent}}/>
-              <span style={{fontSize:12,fontWeight:600,color:C.sub}}>{isCTC?'Sesi CTC':'Sesi FastTrade'}</span>
+              <span style={{fontSize:12,fontWeight:600,color:C.sub}}>{isCTC?T('dashboard.fastTrade.ctcSession'):T('dashboard.fastTrade.fttSession')}</span>
             </div>
-            <StatusChip col={accent} label="Aktif" pulse/>
+<StatusChip col={accent} label={T('common.active')} pulse/>
           </>
         ) : (
-          <div style={{display:'flex',alignItems:'center',gap:5}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>
             <span style={{width:5,height:5,borderRadius:'50%',background:C.muted,opacity:0.4}}/>
-            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>Standby</span>
+            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>{T('common.standby')}</span>
           </div>
         )}
       </div>
@@ -983,19 +1109,19 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
       ):!status||!isOn?(
         <div style={{height:120,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
           <Zap style={{width:24,height:24,color:C.muted,opacity:0.4}}/>
-          <p style={{fontSize:12,color:C.muted}}>Belum ada sesi aktif</p>
+          <p style={{fontSize:12,color:C.muted,textAlign:'center'}}>{T('dashboard.fastTrade.noActiveSession')}</p>
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:240}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?accent:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
-          <Row label="Fase" right={<span style={{color:accent,fontSize:10}}>{phaseMap[phase]??phase}</span>}/>
-          {trend&&<Row label="Trend" right={<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:trend==='call'?C.cyan:C.coral,background:trend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)'}}>{trend==='call'?'↑ CALL':'↓ PUT'}</span>} border={logs.length===0}/>}
+          <Row label={T('dashboard.fastTrade.phase')} right={<span style={{color:accent,fontSize:10}}>{phaseMap[phase]??phase}</span>}/>
+          {trend&&<Row label={T('dashboard.fastTrade.trend')} right={<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:trend==='call'?C.cyan:C.coral,background:trend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)'}}>{trend==='call'?'↑ CALL':'↓ PUT'}</span>} border={logs.length===0}/>}
           {logs.length>0&&(
             <>
               <div style={{padding:'6px 12px 4px',borderBottom:`1px solid ${C.bdr}`}}>
-                <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(41,151,255,0.45)'}}>Riwayat</span>
+                <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(41,151,255,0.45)'}}>{T('dashboard.fastTrade.history')}</span>
               </div>
               {logs.slice(-4).reverse().map((log,i,arr)=>{
                 const rc=log.result==='WIN'?accent:log.result==='LOSS'||log.result==='LOSE'?C.coral:C.amber;
@@ -1026,7 +1152,7 @@ const AISignalPanel: React.FC<{
   isLoading: boolean;
   fillHeight?: boolean;
 }> = ({ status, pendingOrders, isLoading }) => {
-  const isOn   = status?.botState === 'RUNNING' || status?.isActive === true;
+  const isOn   = status?.botState === 'RUNNING' || (!status?.botState && status?.isActive === true);
   const pnl    = status?.sessionPnL ?? status?.stats?.sessionPnL ?? 0;
   const wins   = status?.totalWins  ?? status?.stats?.wins   ?? 0;
   const losses = status?.totalLosses ?? status?.stats?.losses ?? 0;
@@ -1055,7 +1181,7 @@ const AISignalPanel: React.FC<{
  
   const formatCountdown = (executionTime: number): string => {
     const ms = executionTime - now;
-    if (ms <= 0) return 'Eksekusi...';
+    if (ms <= 0) return T('dashboard.phaseMap.executing');
     const sec = Math.ceil(ms / 1000);
     if (sec < 60) return `${sec}d`;
     const m = Math.floor(sec / 60);
@@ -1106,12 +1232,12 @@ const AISignalPanel: React.FC<{
               <Radio style={{ width: 14, height: 14, color: C.sky }} />
               <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>AI Signal</span>
             </div>
-            <StatusChip col={C.sky} label="Aktif" pulse />
+            <StatusChip col={C.sky} label={T('common.active')} pulse />
           </>
         ) : (
-          <div style={{display:'flex',alignItems:'center',gap:5}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>
             <span style={{width:5,height:5,borderRadius:'50%',background:C.muted,opacity:0.4}}/>
-            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>Standby</span>
+            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>{T('common.standby')}</span>
           </div>
         )}
       </div>
@@ -1140,9 +1266,9 @@ const AISignalPanel: React.FC<{
             <Radio style={{ width: 22, height: 22, color: C.muted, opacity: 0.4 }} />
           </div>
           <p style={{ fontSize: 12, color: C.muted, textAlign: 'center', lineHeight: 1.5 }}>
-            Mode AI Signal tidak aktif.<br />
+            {T('dashboard.aiSignal.notActive')}<br />
             <span style={{ fontSize: 10, color: `${C.muted}88` }}>
-              Tekan Start untuk memulai
+              {T('dashboard.aiSignal.startPrompt')}
             </span>
           </p>
         </div>
@@ -1179,7 +1305,7 @@ const AISignalPanel: React.FC<{
  
           {/* ── P&L + W/L + WR ── */}
           <Row
-            label="Sesi P&L"
+            label={T('dashboard.fastTrade.sessionPnl')}
             right={
               <span style={{ color: pnlCol, fontFamily: 'monospace', fontWeight: 700 }}>
                 {pnl >= 0 ? '+' : '-'}{Math.round(Math.abs(pnl) / 100).toLocaleString('id-ID')}
@@ -1187,7 +1313,7 @@ const AISignalPanel: React.FC<{
             }
           />
           <Row
-            label="W / L / Total"
+            label={T('dashboard.fastTrade.wlTotal')}
             right={
               <span style={{ fontFamily: 'monospace', fontSize: 11 }}>
                 <span style={{ color: C.cyan, fontWeight: 700 }}>{wins}</span>
@@ -1199,7 +1325,7 @@ const AISignalPanel: React.FC<{
             }
           />
           <Row
-            label="Win Rate"
+            label={T('dashboard.fastTrade.winRate')}
             right={wr !== null
               ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1268,14 +1394,14 @@ const AISignalPanel: React.FC<{
               }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: `${C.sky}80`, display: 'block', marginBottom: 2 }}>
-                  Status
+                  {T('dashboard.aiSignal.status')}
                 </span>
                 <span style={{ fontSize: 10, color: C.sky, lineHeight: 1.4, display: 'block' }}>
                   {alwaysSignal?.isActive
-                    ? alwaysSignal.status || `Martingale Step ${alwaysSignal.currentStep}/${alwaysSignal.maxSteps}`
+                    ? alwaysSignal.status || `${T('dashboard.aiSignal.martingaleStep')} ${alwaysSignal.currentStep}/${alwaysSignal.maxSteps}`
                     : pendingOrders.length > 0
-                    ? `${pendingOrders.length} sinyal menunggu eksekusi`
-                    : 'Menunggu sinyal Telegram...'}
+                    ? `${pendingOrders.length} ${T('dashboard.aiSignal.pendingSignals')}`
+                    : T('dashboard.aiSignal.waitingTelegram')}
                 </span>
               </div>
             </div>
@@ -1290,7 +1416,7 @@ const AISignalPanel: React.FC<{
                 borderTop: `1px solid ${C.bdr}`, borderBottom: `1px solid ${C.bdr}`,
               }}>
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: `${C.sky}60` }}>
-                  Antrian
+                  {T('dashboard.aiSignal.queue')}
                 </span>
                 <span style={{ fontSize: 9, fontWeight: 700, color: C.sky, background: `${C.sky}12`, padding: '1px 6px', borderRadius: 99, border: `1px solid ${C.sky}25` }}>
                   {pendingOrders.length}
@@ -1350,7 +1476,7 @@ const AISignalPanel: React.FC<{
  
               {pendingOrders.length > 5 && (
                 <div style={{ padding: '5px 12px', textAlign: 'center' }}>
-                  <span style={{ fontSize: 9, color: C.muted }}>+{pendingOrders.length - 5} lainnya</span>
+                  <span style={{ fontSize: 9, color: C.muted }}>+{pendingOrders.length - 5} {T('dashboard.aiSignal.moreItems')}</span>
                 </div>
               )}
             </div>
@@ -1372,7 +1498,7 @@ const AISignalPanel: React.FC<{
                   }} />
                 ))}
               </div>
-              <span style={{ fontSize: 10, color: `${C.muted}88` }}>Menunggu sinyal masuk...</span>
+              <span style={{ fontSize: 10, color: `${C.muted}88` }}>{T('dashboard.aiSignal.waitingTelegram')}</span>
             </div>
           )}
         </div>
@@ -1411,14 +1537,14 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
           <>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
               <BarChart style={{width:14,height:14,color:C.orange}}/>
-              <span style={{fontSize:12,fontWeight:600,color:C.sub}}>Indicator <span style={{color:C.orange}}>— {indType}</span></span>
+              <span style={{fontSize:12,fontWeight:600,color:C.sub}}>{T('dashboard.indicator.title')} <span style={{color:C.orange}}>— {indType}</span></span>
             </div>
-            <StatusChip col={C.orange} label="Aktif" pulse/>
+<StatusChip col={C.orange} label={T('common.active')} pulse/>
           </>
         ) : (
-          <div style={{display:'flex',alignItems:'center',gap:5}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>
             <span style={{width:5,height:5,borderRadius:'50%',background:C.muted,opacity:0.4}}/>
-            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>Standby</span>
+            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>{T('common.standby')}</span>
           </div>
         )}
       </div>
@@ -1427,17 +1553,17 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
       ):!isOn?(
         <div style={{height:120,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
           <BarChart style={{width:24,height:24,color:C.muted,opacity:0.4}}/>
-          <p style={{fontSize:12,color:C.muted}}>Indicator Bot tidak aktif</p>
+          <p style={{fontSize:12,color:C.muted,textAlign:'center'}}>{T('dashboard.indicator.notActive')}</p>
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:240}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?C.orange:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
-          <Row label="Status" right={<span style={{color:C.orange,fontSize:10}}>{status?.lastStatus||'Memantau indikator...'}</span>}/>
-          <Row label="Sinyal" right={lastTrend?<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:lastTrend==='call'?C.cyan:C.coral,background:lastTrend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)'}}>{lastTrend==='call'?'↑ CALL':'↓ PUT'}</span>:<span style={{color:C.muted}}>—</span>}/>
+          <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.orange,fontSize:10}}>{status?.lastStatus||T('dashboard.indicator.monitoring')}</span>}/>
+          <Row label={T('dashboard.indicator.signalLabel')} right={lastTrend?<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:lastTrend==='call'?C.cyan:C.coral,background:lastTrend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)'}}>{lastTrend==='call'?'↑ CALL':'↓ PUT'}</span>:<span style={{color:C.muted}}>—</span>}/>
           {status?.currentIndicatorValue!=null&&(
-            <Row label={`Nilai ${indType}`} right={<span style={{color:C.orange,fontFamily:'monospace'}}>{status.currentIndicatorValue.toFixed(4)}</span>} border={false}/>
+            <Row label={`${T('dashboard.indicator.valueLabel')} ${indType}`} right={<span style={{color:C.orange,fontFamily:'monospace'}}>{status.currentIndicatorValue.toFixed(4)}</span>} border={false}/>
           )}
         </div>
       )}
@@ -1481,12 +1607,12 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
               <Waves style={{width:14,height:14,color:C.pink}}/>
               <span style={{fontSize:12,fontWeight:600,color:C.sub}}>Momentum</span>
             </div>
-            <StatusChip col={C.pink} label="Aktif" pulse/>
+<StatusChip col={C.pink} label={T('common.active')} pulse/>
           </>
         ) : (
-          <div style={{display:'flex',alignItems:'center',gap:5}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>
             <span style={{width:5,height:5,borderRadius:'50%',background:C.muted,opacity:0.4}}/>
-            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>Standby</span>
+            <span style={{fontSize:11,fontWeight:600,color:C.muted,letterSpacing:'0.04em'}}>{T('common.standby')}</span>
           </div>
         )}
       </div>
@@ -1495,25 +1621,25 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
       ):!isOn?(
         <div style={{height:120,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
           <Waves style={{width:24,height:24,color:C.muted,opacity:0.4}}/>
-          <p style={{fontSize:12,color:C.muted}}>Momentum Bot tidak aktif</p>
+          <p style={{fontSize:12,color:C.muted,textAlign:'center'}}>{T('dashboard.momentum.notActive')}</p>
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:240}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?C.pink:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
-          <Row label="Status" right={<span style={{color:C.pink,fontSize:10}}>{status?.lastStatus||'Memindai pola candle...'}</span>}/>
+          <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.pink,fontSize:10}}>{status?.lastStatus||T('dashboard.momentum.scanning')}</span>}/>
           {status?.lastDetectedPattern?(
             <Row
-              label="Pola"
+              label={T('dashboard.momentum.pattern')}
               border={!status.lastSignalTime}
               right={<span style={{color:C.pink,fontSize:10,fontWeight:700}}>{PATTERN_LABELS[status.lastDetectedPattern]??status.lastDetectedPattern}</span>}
             />
           ):(
-            <Row label="Pola" right={<span style={{color:C.muted}}>—</span>} border={false}/>
+<Row label={T('dashboard.momentum.pattern')} right={<span style={{color:C.muted}}>—</span>} border={false}/>
           )}
           {status?.lastSignalTime&&(
-            <Row label="Waktu sinyal" right={<span style={{color:C.muted,fontFamily:'monospace',fontSize:10}}>{new Date(status.lastSignalTime).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>} border={false}/>
+            <Row label={T('dashboard.momentum.signalTime')} right={<span style={{color:C.muted,fontFamily:'monospace',fontSize:10}}>{new Date(status.lastSignalTime).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>} border={false}/>
           )}
         </div>
       )}
@@ -1545,8 +1671,8 @@ const MobileSessionSheet: React.FC<{
 }) => {
   const ac = modeAccent(mode);
   const modeLabel: Record<TradingMode,string> = {
-    schedule:'Signal', fastrade:'Sesi FTT', ctc:'Sesi CTC',
-    aisignal:'AI Signal', indicator:'Indicator', momentum:'Momentum',
+    schedule:T('dashboard.schedule.title'), fastrade:T('dashboard.fastTrade.fttSession'), ctc:T('dashboard.fastTrade.ctcSession'),
+    aisignal:'AI Signal', indicator:T('dashboard.indicator.title'), momentum:T('dashboard.momentum.title'),
   };
 
   if (!open) return null;
@@ -1622,12 +1748,12 @@ const ModePickerModal: React.FC<{
   if (!open) return null;
 
   const MODES = [
-    { v: 'schedule'  as TradingMode, label: 'Signal',    icon: <Calendar  style={{ width: 16, height: 16 }} />, accent: C.cyan,   desc: 'Order terjadwal' },
-    { v: 'fastrade'  as TradingMode, label: 'FastTrade', icon: <Zap       style={{ width: 16, height: 16 }} />, accent: C.cyan,   desc: 'Auto per candle (FTT)' },
-    { v: 'ctc'       as TradingMode, label: 'CTC',       icon: <Copy      style={{ width: 16, height: 16 }} />, accent: C.violet, desc: 'Copy candle · 1 menit' },
-    { v: 'aisignal'  as TradingMode, label: 'AI Signal', icon: <Radio     style={{ width: 16, height: 16 }} />, accent: C.sky,    desc: 'Sinyal dari AI / Telegram' },
-    { v: 'indicator' as TradingMode, label: 'Indicator', icon: <BarChart  style={{ width: 16, height: 16 }} />, accent: C.orange, desc: 'SMA / EMA / RSI' },
-    { v: 'momentum'  as TradingMode, label: 'Momentum',  icon: <Waves     style={{ width: 16, height: 16 }} />, accent: C.pink,   desc: 'Deteksi pola candle' },
+    { v: 'schedule'  as TradingMode, label: 'Signal',    icon: <Calendar  style={{ width: 16, height: 16 }} />, accent: C.cyan,   desc: T('dashboard.modeDesc.schedule') },
+    { v: 'fastrade'  as TradingMode, label: 'FastTrade', icon: <Zap       style={{ width: 16, height: 16 }} />, accent: C.cyan,   desc: T('dashboard.modeDesc.fastrade') },
+    { v: 'ctc'       as TradingMode, label: 'CTC',       icon: <Copy      style={{ width: 16, height: 16 }} />, accent: C.violet, desc: T('dashboard.modeDesc.ctc') },
+    { v: 'aisignal'  as TradingMode, label: 'AI Signal', icon: <Radio     style={{ width: 16, height: 16 }} />, accent: C.sky,    desc: T('dashboard.modeDesc.aisignal') },
+    { v: 'indicator' as TradingMode, label: 'Indicator', icon: <BarChart  style={{ width: 16, height: 16 }} />, accent: C.orange, desc: T('dashboard.modeDesc.indicator') },
+    { v: 'momentum'  as TradingMode, label: 'Momentum',  icon: <Waves     style={{ width: 16, height: 16 }} />, accent: C.pink,   desc: T('dashboard.modeDesc.momentum') },
   ];
 
   return (
@@ -1688,7 +1814,7 @@ const ModePickerModal: React.FC<{
                   <div style={{display:'flex',alignItems:'center',gap:5}}>
                     <span style={{display:'block',fontSize:14,fontWeight:600,color:isAct?accent:C.sub}}>{label}</span>
                     {isLock&&!isAct&&(
-                      <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:6,color:C.coral,background:'rgba(255,69,58,0.10)',border:'1px solid rgba(255,69,58,0.22)',letterSpacing:'0.04em',flexShrink:0}}>🔒 Aktif</span>
+        <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:6,color:C.coral,background:'rgba(255,69,58,0.10)',border:'1px solid rgba(255,69,58,0.22)',letterSpacing:'0.04em',flexShrink:0}}>🔒 {T('common.active')}</span>
                     )}
                   </div>
                   <span style={{display:'block',fontSize:11,color:C.muted,marginTop:1}}>{desc}</span>
@@ -1702,7 +1828,7 @@ const ModePickerModal: React.FC<{
           {blockedModes.length > 0 && (
             <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:10,background:'rgba(255,159,10,0.06)',border:'1px solid rgba(255,159,10,0.22)',marginTop:2}}>
               <Info style={{width:11,height:11,color:C.amber,flexShrink:0}}/>
-              <span style={{fontSize:11,color:C.amber}}>Hentikan mode aktif terlebih dahulu untuk berpindah mode</span>
+              <span style={{fontSize:11,color:C.amber}}>{T('dashboard.modePicker.stopActiveFirst')}</span>
             </div>
           )}
         </div>
@@ -1745,16 +1871,17 @@ const ModeSessionPanel: React.FC<{
   fillHeight?: boolean;
   compact?: boolean;
   onViewSession?: () => void;
+  startStopButton?: React.ReactNode;
 }> = ({
   mode, onModeChange, locked, blockedModes,
   orders, logs, onOpenModal, isRunning,
   ftStatus, ftLogs, ftLoading,
   aiStatus, aiPending,
-  indicatorStatus, momentumStatus, fillHeight, compact, onViewSession,
+  indicatorStatus, momentumStatus, fillHeight, compact, onViewSession, startStopButton,
 }) => {
   const [modePickerOpen, setModePickerOpen] = useState(false);
 
-  const MODES = [
+  const MODE_LIST = [
     { v: 'schedule'  as TradingMode, label: 'Signal',    icon: <Calendar  style={{ width: 12, height: 12 }} />, accent: C.cyan,   desc: 'Order terjadwal' },
     { v: 'fastrade'  as TradingMode, label: 'FastTrade', icon: <Zap       style={{ width: 12, height: 12 }} />, accent: C.cyan,   desc: 'Auto per candle (FTT)' },
     { v: 'ctc'       as TradingMode, label: 'CTC',       icon: <Copy      style={{ width: 12, height: 12 }} />, accent: C.violet, desc: 'Copy candle 1m' },
@@ -1763,14 +1890,16 @@ const ModeSessionPanel: React.FC<{
     { v: 'momentum'  as TradingMode, label: 'Momentum',  icon: <Waves     style={{ width: 12, height: 12 }} />, accent: C.pink,   desc: 'Pola candle otomatis' },
   ];
 
-  const active = MODES.find(m => m.v === mode)!;
+  const active = MODE_LIST.find(m => m.v === mode)!;
   const ac = modeAccent(mode);
 
   return (
-    <div style={{
+    <Card style={{
       display: 'flex', flexDirection: 'column',
-      height: fillHeight ? '100%' : undefined,
-      gap: 6, minWidth: 0, width: '100%',
+      minWidth: 0, width: '100%',
+      overflow: 'hidden',
+      padding: 0,
+      background: locked ? undefined : C.card2,
     }}>
       {/* Mode picker modal */}
       <ModePickerModal
@@ -1782,34 +1911,35 @@ const ModeSessionPanel: React.FC<{
         blockedModes={blockedModes}
       />
 
-      <div style={{ position: 'relative', flexShrink: 0 }}>
+      {/* Mode picker button — di dalam card, sebagai header */}
+      <div style={{ position: 'relative', flexShrink: 0, padding: '10px 12px', borderBottom: `1px solid ${C.bdr}` }}>
         <button
           type="button"
           onClick={() => setModePickerOpen(true)}
-          className="mode-picker-shimmer"
           style={{
             width: '100%', display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between', padding: '8px 12px',
-            borderRadius: 12, cursor: 'pointer',
-            background: C.card2,
+            justifyContent: 'space-between', padding: '7px 10px',
+            borderRadius: 10, cursor: 'pointer',
+            background: `${ac}10`,
             border: `1px solid ${ac}30`,
           }}
         >
-          {/* inner bg mask for conic border cutout */}
-          <div className="mode-picker-shimmer-inner" style={{background:C.card2}}/>
-          {/* diagonal light sweep */}
-          <div className="mode-picker-shimmer-sweep"/>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, position:'relative', zIndex:2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, overflow: 'hidden' }}>
             <span style={{
-              width: 20, height: 20, borderRadius: 6,
+              width: 20, height: 20, borderRadius: 6, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: `${ac}18`, color: ac,
             }}>
               {active.icon}
             </span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: ac }}>{active.label}</span>
+            <span style={{
+              fontWeight: 600, color: ac,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              fontSize: 'clamp(9px, 2.5vw, 12px)',
+              minWidth: 0, flex: 1,
+            }}>{active.label}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, position:'relative', zIndex:2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {locked && (
               <span style={{
                 fontSize: 9, padding: '1px 6px', borderRadius: 99,
@@ -1818,14 +1948,13 @@ const ModeSessionPanel: React.FC<{
                 Aktif
               </span>
             )}
-            <ChevronDown style={{
-              width: 11, height: 11, color: C.muted,
-            }} />
+            <ChevronDown style={{ width: 11, height: 11, color: C.muted }} />
           </div>
         </button>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* Konten panel — di dalam card yang sama */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '8px 12px 12px' }}>
         {mode === 'schedule' && (
           <SchedulePanel
             orders={orders} logs={logs} onOpenModal={onOpenModal}
@@ -1848,9 +1977,14 @@ const ModeSessionPanel: React.FC<{
         {mode === 'momentum' && (
           <MomentumPanel status={momentumStatus} isLoading={false} fillHeight={fillHeight} />
         )}
-
       </div>
-    </div>
+      {/* Injected start/stop button (mobile only) */}
+      {startStopButton && (
+        <div style={{ padding: '0 12px 12px', flexShrink: 0 }}>
+          {startStopButton}
+        </div>
+      )}
+    </Card>
   );
 };
 
@@ -1891,8 +2025,8 @@ const MartingaleDialog: React.FC<{
         {/* Header */}
         <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:`1px solid ${C.bdr}` }}>
           <div>
-            <p style={{ fontSize:17,fontWeight:700,color:C.text,letterSpacing:'-0.02em',margin:0 }}>Martingale</p>
-            <p style={{ fontSize:12,color:C.muted,margin:'2px 0 0' }}>Configure strategy</p>
+            <p style={{ fontSize:17,fontWeight:700,color:C.text,letterSpacing:'-0.02em',margin:0 }}>{T('dashboard.martingale.title')}</p>
+            <p style={{ fontSize:12,color:C.muted,margin:'2px 0 0' }}>{T('dashboard.martingale.subtitle')}</p>
           </div>
           <button onClick={onClose} style={{ width:32,height:32,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:C.card2,border:`1px solid ${C.bdr}`,cursor:'pointer' }}>
             <X style={{ width:15,height:15,color:C.sub }}/>
@@ -1903,7 +2037,7 @@ const MartingaleDialog: React.FC<{
           {/* Maks. Kompensasi */}
           <div style={{ paddingTop:18 }}>
             <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
-              <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:0 }}>Maks. Kompensasi</p>
+              <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:0 }}>{T('dashboard.martingale.maxCompensation')}</p>
               {martingale.alwaysSignal && (
                 <span style={{ fontSize:10,fontWeight:600,color:C.amber,background:`${C.amber}14`,borderRadius:6,padding:'2px 8px',border:`1px solid ${C.amber}28` }}>∞ override</span>
               )}
@@ -1929,13 +2063,13 @@ const MartingaleDialog: React.FC<{
                 style={{ height:44,padding:'0 18px',borderRadius:10,cursor:'pointer',fontSize:12,fontWeight:600,background:C.cyan,color:'#fff',border:'none',opacity:(!customInput||parseInt(customInput)<1||parseInt(customInput)>10)?0.4:1 }}>Set</button>
             </div>
             {customInput&&(parseInt(customInput)<1||parseInt(customInput)>10)&&(
-              <p style={{ fontSize:10,color:C.coral,marginTop:4 }}>Masukkan angka 1 – 10</p>
+              <p style={{ fontSize:10,color:C.coral,marginTop:4 }}>{T('dashboard.martingale.rangeHint')}</p>
             )}
           </div>
           <div style={{ height:1,background:C.bdr,margin:'18px 0' }}/>
           {/* Perkalian Kompensasi */}
           <div>
-            <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:'0 0 10px' }}>Perkalian Kompensasi</p>
+            <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:'0 0 10px' }}>{T('dashboard.martingale.compensationMultiplier')}</p>
             <div style={{ display:'flex',gap:3,padding:3,borderRadius:10,background:C.card2,marginBottom:10 }}>
               {(['fixed','pct'] as const).map(t => {
                 const sel = multType === t;
@@ -1974,8 +2108,8 @@ const MartingaleDialog: React.FC<{
               <div style={{ height:1,background:C.bdr,margin:'18px 0' }}/>
               <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
                 <div>
-                  <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:'0 0 2px' }}>Always Signal</p>
-                  <p style={{ fontSize:11,color:C.muted,margin:0 }}>{martingale.alwaysSignal?'Lanjut di setiap sinyal sampai WIN':'Eksekusi setiap sinyal terjadwal'}</p>
+                  <p style={{ fontSize:13,fontWeight:600,color:C.text,margin:'0 0 2px' }}>{T('dashboard.martingale.alwaysSignal')}</p>
+                  <p style={{ fontSize:11,color:C.muted,margin:0 }}>{martingale.alwaysSignal?T('dashboard.martingale.alwaysSignalOn'):T('dashboard.martingale.alwaysSignalOff')}</p>
                 </div>
                 <Toggle checked={martingale.alwaysSignal??false} onChange={v=>set('alwaysSignal',v)} accent={C.amber}/>
               </div>
@@ -2032,23 +2166,21 @@ const SettingsCard: React.FC<{
   return (
     <>
       <MartingaleDialog open={showMartingaleDialog} onClose={()=>setShowMartingaleDialog(false)} martingale={martingale} onMartingaleChange={onMartingaleChange} mode={mode}/>
-      <PickerModal open={pickerOpen==='actype'} onClose={()=>setPickerOpen(null)} title="Tipe Akun" options={acOpts} value={isDemo?'demo':'real'} onSelect={v=>onDemoChange(v==='demo')}/>
-      <PickerModal open={pickerOpen==='duration'} onClose={()=>setPickerOpen(null)} title="Durasi Order" options={durationOpts} value={String(duration)} onSelect={v=>onDurationChange(+v)}/>
-      <PickerModal open={pickerOpen==='ftTf'} onClose={()=>setPickerOpen(null)} title="Timeframe FastTrade" options={FT_TF.map(t=>({value:t.value,label:t.label}))} value={ftTf} onSelect={v=>onFtTfChange(v as FastTradeTimeframe)}/>
+      <PickerModal open={pickerOpen==='actype'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.accountType')} options={acOpts} value={isDemo?'demo':'real'} onSelect={v=>onDemoChange(v==='demo')}/>
+      <PickerModal open={pickerOpen==='duration'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.orderDuration')} options={durationOpts} value={String(duration)} onSelect={v=>onDurationChange(+v)}/>
+      <PickerModal open={pickerOpen==='ftTf'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.fastradeTimeframe')} options={FT_TF.map(t=>({value:t.value,label:t.label}))} value={ftTf} onSelect={v=>onFtTfChange(v as FastTradeTimeframe)}/>
 
       <Card style={{ opacity:disabled?0.65:1, border:`1px solid ${C.bdr}`, boxShadow:`0 8px 24px rgba(0,0,0,0.22)` }}>
         {/* Header */}
-        <button onClick={()=>setOpen(!open)} style={{ width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 18px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer' }}>
-          <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+        <button onClick={()=>setOpen(!open)} style={{ width:'100%',display:'flex',alignItems:'center',gap:10,padding:'16px 18px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer',textAlign:'left' }}>
             <div style={{ width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}14`,border:`1px solid ${ac}30` }}>
               <Settings style={{ width:16,height:16,color:ac }}/>
             </div>
-            <div>
-              <span style={{ fontSize:16,fontWeight:700,color:C.text,display:'block',lineHeight:1.2 }}>Pengaturan Trading</span>
-              {disabled ? <span style={{ fontSize:10,color:C.amber,fontWeight:600 }}>⚡ Bot sedang aktif</span>
-                        : <span style={{ fontSize:10,color:C.muted }}>Konfigurasi order &amp; martingale</span>}
+            <div style={{ flex:1,minWidth:0,textAlign:'left' }}>
+              <span style={{ fontSize:16,fontWeight:700,color:C.text,display:'block',lineHeight:1.2 }}>{T('dashboard.settings.title')}</span>
+              {disabled ? <span style={{ fontSize:10,color:C.amber,fontWeight:600,display:'block' }}>⚡ {T('dashboard.settings.botActive')}</span>
+                        : <span style={{ fontSize:10,color:C.muted,display:'block' }}>{T('dashboard.settings.subtitle')}</span>}
             </div>
-          </div>
           <div style={{ display:'flex',alignItems:'center',gap:8 }}>
             <span style={{ fontSize:10,padding:'3px 9px',borderRadius:99,background:`${ac}12`,color:ac,border:`1px solid ${ac}28`,fontWeight:600 }}>{modeLabel}</span>
             <div style={{ width:24,height:24,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:C.card2,border:`1px solid ${C.bdr}` }}>
@@ -2062,53 +2194,48 @@ const SettingsCard: React.FC<{
 
             {/* Konfigurasi Akun */}
             <div>
-              <p style={{ fontSize:12,fontWeight:600,color:C.text,margin:'0 0 10px' }}>Konfigurasi Akun</p>
+              <p style={{ fontSize:12,fontWeight:600,color:C.text,margin:'0 0 10px' }}>{T('dashboard.settings.accountConfig')}</p>
               <div style={{ display:'flex',gap:8 }}>
+                {/* Akun Real/Demo */}
                 <button disabled={disabled} onClick={()=>setPickerOpen('actype')} style={{
-                  flex:'0 0 40%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'0 12px',
-                  background:`${acctCol}16`,border:`0.8px solid ${acctCol}55`,transition:'all 0.15s',
+                  flex:'0 0 auto',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',
+                  background:`${acctCol}16`,border:`0.8px solid ${acctCol}55`,transition:'all 0.15s',minWidth:0,
                 }}>
-                  <Wallet style={{ width:16,height:16,color:acctCol,flexShrink:0 }}/>
-                  <span style={{ fontSize:12,fontWeight:700,color:C.text,flex:1,textAlign:'left' }}>{isDemo?'Demo':'Real'}</span>
-                  <ChevronDown style={{ width:14,height:14,color:C.text,flexShrink:0 }}/>
+                  <Wallet style={{ width:14,height:14,color:acctCol,flexShrink:0 }}/>
+                  <span style={{ fontSize:11,fontWeight:700,color:C.text,whiteSpace:'nowrap' }}>{isDemo?'Demo':'Real'}</span>
+                  <ChevronDown style={{ width:12,height:12,color:C.text,flexShrink:0 }}/>
                 </button>
-                <div style={{ flex:'1 1 0' }}>
+                {/* Durasi / Timeframe */}
+                <div style={{ flex:'0 0 auto',minWidth:0 }}>
                   {!isNewMode&&(mode==='fastrade'
-                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'0 12px',background:C.card2,border:`0.8px solid ${C.bdr}` }}>
-                       <Clock style={{ width:15,height:15,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:12,fontWeight:600,color:C.text,flex:1,textAlign:'left' }}>{FT_TF.find(t=>t.value===ftTf)?.label||''}</span><ChevronDown style={{ width:14,height:14,color:C.muted }}/>
+                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
+                       <Clock style={{ width:13,height:13,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:11,fontWeight:600,color:C.text,flex:1,textAlign:'left',whiteSpace:'nowrap' }}>{FT_TF.find(t=>t.value===ftTf)?.label||''}</span><ChevronDown style={{ width:12,height:12,color:C.muted,flexShrink:0 }}/>
                      </button>
                     :mode==='ctc'
-                    ?<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',gap:8,padding:'0 12px',background:C.faint,border:`0.8px solid ${C.bdr}` }}>
-                       <Copy style={{ width:14,height:14,color:C.violet }}/><span style={{ fontSize:12,color:C.violet }}>1 Menit (fixed)</span>
+                    ?<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.faint,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
+                       <Copy style={{ width:13,height:13,color:C.violet }}/><span style={{ fontSize:11,color:C.violet,whiteSpace:'nowrap' }}>1 Menit</span>
                      </div>
-                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'0 12px',background:C.card2,border:`0.8px solid ${C.bdr}` }}>
-                       <Clock style={{ width:15,height:15,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:12,fontWeight:600,color:C.text,flex:1,textAlign:'left' }}>{durationOpts.find(d=>d.value===String(duration))?.label||''}</span><ChevronDown style={{ width:14,height:14,color:C.muted }}/>
+                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
+                       <Clock style={{ width:13,height:13,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:11,fontWeight:600,color:C.text,flex:1,textAlign:'left',whiteSpace:'nowrap' }}>{durationOpts.find(d=>d.value===String(duration))?.label||''}</span><ChevronDown style={{ width:12,height:12,color:C.muted,flexShrink:0 }}/>
                      </button>
                   )}
-                  {isNewMode&&<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',padding:'0 12px',background:C.card2,border:`0.8px solid ${C.bdr}` }}><span style={{ fontSize:11,color:C.muted }}>Mode otomatis</span></div>}
+                  {isNewMode&&<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}` }}><span style={{ fontSize:11,color:C.muted }}>{T('dashboard.settings.automatic')}</span></div>}
+                </div>
+                {/* Mata Uang */}
+                <div style={{ flex:1,height:44,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'0 10px',background:`rgba(255,255,255,0.06)`,border:`0.8px solid rgba(255,255,255,0.15)`,minWidth:0 }}>
+                  <span style={{ fontSize:14,lineHeight:1,flexShrink:0 }}>🇮🇩</span>
+                  <span style={{ fontSize:8,fontWeight:700,color:'rgba(255,255,255,0.7)',background:`rgba(255,255,255,0.10)`,borderRadius:4,padding:'1px 5px',border:`1px solid rgba(255,255,255,0.18)`,flexShrink:0,whiteSpace:'nowrap' }}>AUTO</span>
                 </div>
               </div>
-              {mode==='ctc'&&<div style={{ marginTop:8,padding:'9px 12px',borderRadius:10,background:'rgba(191,90,242,0.07)',border:'1px solid rgba(191,90,242,0.2)',display:'flex',gap:8 }}><Copy style={{ width:13,height:13,color:C.violet,flexShrink:0,marginTop:1 }}/><p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>WIN → lanjut arah sama · LOSE → martingale, arah mengikuti candle kalah</p></div>}
-            </div>
-
-            {/* Mata Uang AUTO */}
-            <div>
-              <p style={{ fontSize:12,fontWeight:600,color:C.text,marginBottom:8 }}>Mata Uang</p>
-              <div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 12px',background:`${C.cyan}10`,border:`0.8px solid ${C.cyan}30` }}>
-                <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-                  <CreditCard style={{ width:16,height:16,color:C.cyan }}/><span style={{ fontSize:12,fontWeight:700,color:C.text }}>IDR 🇮🇩</span>
-                </div>
-                <span style={{ fontSize:9,fontWeight:700,color:C.cyan,background:`${C.cyan}18`,borderRadius:4,padding:'2px 7px',border:`1px solid ${C.cyan}30` }}>AUTO</span>
-              </div>
-              <p style={{ fontSize:10,color:C.muted,marginTop:5 }}>Mata uang otomatis mengikuti akun {isDemo?'Demo':'Real'}</p>
+              {mode==='ctc'&&<div style={{ marginTop:8,padding:'9px 12px',borderRadius:10,background:'rgba(191,90,242,0.07)',border:'1px solid rgba(191,90,242,0.2)',display:'flex',gap:8 }}><Copy style={{ width:13,height:13,color:C.violet,flexShrink:0,marginTop:1 }}/><p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>{T('dashboard.settings.ctcInfo')}</p></div>}
             </div>
 
             {/* Jumlah Trade */}
             {mode!=='indicator'&&(
               <div>
                 <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8 }}>
-                  <p style={{ fontSize:12,fontWeight:600,color:C.text,margin:0 }}>Jumlah Trade</p>
-                  <span style={{ fontSize:10,color:C.muted }}>Min: Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}</span>
+                  <p style={{ fontSize:12,fontWeight:600,color:C.text,margin:0 }}>{T('dashboard.settings.tradeAmount')}</p>
+                  <span style={{ fontSize:10,color:C.muted }}>{T('dashboard.settings.minAmount')}: Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}</span>
                 </div>
                 <div style={{ display:'flex',gap:8 }}>
                   <div style={{ flex:1,position:'relative' }}>
@@ -2137,14 +2264,14 @@ const SettingsCard: React.FC<{
                     )}
                   </div>
                 </div>
-                {isBelowMin&&<p style={{ fontSize:10,color:C.coral,marginTop:4 }}>⚠ Amount di bawah minimum</p>}
+                {isBelowMin&&<p style={{ fontSize:10,color:C.coral,marginTop:4 }}>⚠ {T('dashboard.settings.amountBelowMin')}</p>}
               </div>
             )}
 
             {/* Indicator specific */}
             {mode==='indicator'&&(
               <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
-                <div><FL>Tipe Indikator</FL>
+                <div><FL>{T('dashboard.indicator.indicatorType')}</FL>
                   <div style={{ display:'flex',gap:6 }}>
                     {(['EMA','RSI','MACD','BBANDS','STOCH'] as IndicatorType[]).map(t=>(
                       <button key={t} disabled={disabled} onClick={()=>onIndicatorTypeChange(t)} style={{ flex:1,padding:'6px 0',borderRadius:8,fontSize:10,fontWeight:700,cursor:'pointer',background:indicatorType===t?`${C.orange}18`:C.card2,border:`1px solid ${indicatorType===t?`${C.orange}50`:C.bdr}`,color:indicatorType===t?C.orange:C.muted }}>{t}</button>
@@ -2153,7 +2280,7 @@ const SettingsCard: React.FC<{
                 </div>
                 <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
                   <div><FL>Period</FL><input type="number" className="ds-input" value={indicatorPeriod} onChange={e=>onIndicatorPeriodChange(+e.target.value||14)} disabled={disabled} min={2} max={200}/></div>
-                  <div><FL>Sensitivitas</FL>
+                  <div><FL>{T('dashboard.indicator.sensitivity')}</FL>
                     <div style={{ display:'flex',gap:4 }}>
                       {[0.1,0.5,1,5,10].map(s=>(<button key={s} disabled={disabled} onClick={()=>onSensitivityChange(s)} style={{ flex:1,padding:'6px 0',borderRadius:6,fontSize:10,fontWeight:700,cursor:'pointer',background:indicatorSensitivity===s?`${C.orange}18`:C.card2,border:`1px solid ${indicatorSensitivity===s?`${C.orange}55`:C.bdr}`,color:indicatorSensitivity===s?C.orange:C.muted }}>{s}</button>))}
                     </div>
@@ -2165,7 +2292,7 @@ const SettingsCard: React.FC<{
                     <div><FL>Oversold</FL><input type="number" className="ds-input" value={rsiOversold} onChange={e=>onOversoldChange(+e.target.value||30)} disabled={disabled} min={0} max={50}/></div>
                   </div>
                 )}
-                <div><FL>Jumlah per Order</FL>
+                <div><FL>{T('dashboard.indicator.amountPerOrder')}</FL>
                   <div style={{ position:'relative' }}>
                     <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
                     <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{ paddingLeft:30 }}/>
@@ -2177,7 +2304,7 @@ const SettingsCard: React.FC<{
             {/* Momentum patterns */}
             {mode==='momentum'&&(
               <div>
-                <SL accent="rgba(255,55,95,0.5)">Pola Candle</SL>
+                <SL accent="rgba(255,55,95,0.5)">{T('dashboard.momentum.candlePattern')}</SL>
                 <div style={{ padding:12,borderRadius:12,background:`${C.pink}06`,border:`1px solid ${C.pink}15` }}>
                   {[{k:'candleSabit',l:'Candle Sabit',d:'Body membesar berturut-turut'},{k:'dojiTerjepit',l:'Doji Terjepit',d:'Doji setelah 3 candle panjang'},{k:'dojiPembatalan',l:'Doji Pembatalan',d:'Sinyal reversal/pembatalan'},{k:'bbSarBreak',l:'BB + SAR Break',d:'Breakout BB + konfirmasi SAR'}].map(({k,l,d})=>(
                     <div key={k} style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:`1px solid rgba(255,55,95,0.08)` }}>
@@ -2203,7 +2330,7 @@ const SettingsCard: React.FC<{
             {/* Kompensasi / Martingale — dua kartu mirip Kotlin */}
             <div>
               <div style={{ height:1,background:C.bdr,marginBottom:16 }}/>
-              <p style={{ fontSize:12,fontWeight:600,color:C.text,marginBottom:10 }}>Kompensasi (Martingale)</p>
+              <p style={{ fontSize:12,fontWeight:600,color:C.text,marginBottom:10 }}>{T('dashboard.martingale.compensation')}</p>
               <div style={{ display:'flex',gap:8 }}>
                 {/* Toggle card */}
                 <button disabled={disabled} onClick={()=>set('enabled',!martingale.enabled)} style={{
@@ -2222,7 +2349,7 @@ const SettingsCard: React.FC<{
                   background:C.card2,border:`0.8px solid ${martingale.enabled&&!martingale.alwaysSignal?`${C.amber}45`:C.bdr}`,
                   opacity:martingale.enabled?1:0.45,transition:'all 0.15s',
                 }}>
-                  <span style={{ fontSize:11,fontWeight:500,color:C.text }}>Maks. Step</span>
+                  <span style={{ fontSize:11,fontWeight:500,color:C.text }}>{T('dashboard.martingale.maxStepLabel')}</span>
                   <div style={{ display:'flex',alignItems:'center',gap:4 }}>
                     {martingale.alwaysSignal
                       ?<span style={{ fontSize:18,fontWeight:700,color:C.amber }}>∞</span>
@@ -2292,7 +2419,7 @@ const ControlCard: React.FC<{
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
   const isFtRunning = ftStatus?.isRunning??false;
-  const isAIRunning = aiStatus?.isActive??false;
+  const isAIRunning = aiStatus?.botState === 'RUNNING' || (!aiStatus?.botState && aiStatus?.isActive === true);
   const isIndRunning = indicatorStatus?.isRunning??false;
   const isMomRunning = momentumStatus?.isRunning??false;
   const ac = modeAccent(mode);
@@ -2309,7 +2436,7 @@ const ControlCard: React.FC<{
   // Auto-collapse when bot becomes active
   useEffect(()=>{ if(isActive) setOpen(false); },[isActive]);
 
-  const si = isActive ? {label:'Aktif',col:ac,pulse:true} : {label:'Standby',col:C.muted,pulse:false};
+  const si = isActive ? {label:T('common.active'),col:ac,pulse:true} : {label:T('common.standby'),col:C.muted,pulse:false};
 
   const modeIcon = {
     schedule:<Calendar style={{width:14,height:14}}/>,
@@ -2457,12 +2584,12 @@ const ControlCard: React.FC<{
               </button>
               {!canStart&&!error&&!isBelowMin&&(
                 <p style={{fontSize:10,textAlign:'center',color:C.muted}}>
-                  {mode==='schedule'?'Pilih aset + tambah signal untuk memulai':'Pilih aset untuk memulai'}
+                  {mode==='schedule'?T('dashboard.control.startPromptSchedule'):T('dashboard.control.startPrompt')}
                 </p>
               )}
               {isBelowMin&&(
                 <p style={{fontSize:10,textAlign:'center',color:C.coral}}>
-                  ✗ Amount di bawah minimum — set minimal Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}
+                  ✗ {T('dashboard.control.amountBelowMin')} Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}
                 </p>
               )}
             </>
@@ -2483,6 +2610,7 @@ export default function DashboardPage() {
   const colors = useMemo(() => getColors(isDarkMode), [isDarkMode]);
   // ✅ FIX: Update module-level C so all sub-components use the correct theme
   C = colors;
+  T = t;
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
 
@@ -2594,7 +2722,7 @@ export default function DashboardPage() {
 
         if (ftData?.isRunning) {
           setTradingMode(ftData.mode === 'CTC' ? 'ctc' : 'fastrade');
-        } else if (aiData?.isActive) {
+        } else if (aiData?.botState === 'RUNNING' || (!aiData?.botState && aiData?.isActive)) {
           setTradingMode('aisignal');
         } else if (indData?.isRunning) {
           setTradingMode('indicator');
@@ -2606,7 +2734,7 @@ export default function DashboardPage() {
       }
     }catch(e:any){
       if(e?.status===401){router.push('/login');return;}
-      if(!silent&&isMounted.current)setError('Gagal memuat data. Silakan refresh.');
+      if(!silent&&isMounted.current)setError(T('dashboard.errors.loadFailed'));
     }finally{if(!silent&&isMounted.current)setIsLoading(false);}
   },[router]);
 
@@ -2651,7 +2779,7 @@ export default function DashboardPage() {
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
   const isFtRunning = ftStatus?.isRunning??false;
-  const isAIRunning = aiStatus?.isActive??false;
+  const isAIRunning = aiStatus?.botState === 'RUNNING' || (!aiStatus?.botState && aiStatus?.isActive === true);
   const isIndRunning = indicatorStatus?.isRunning??false;
   const isMomRunning = momentumStatus?.isRunning??false;
 
@@ -2707,7 +2835,7 @@ export default function DashboardPage() {
 
   const handleModeChange = (m:TradingMode)=>{
     if(m===tradingMode)return;
-    if(blockedModes.includes(m)){showBlock('Hentikan mode yang aktif terlebih dahulu.');return;}
+    if(blockedModes.includes(m)){showBlock(T('dashboard.modePicker.stopActiveFirst'));return;}
     setTradingMode(m);setError(null);
   };
 
@@ -2759,7 +2887,7 @@ export default function DashboardPage() {
         await api.momentumStart();
       }
       await loadAll(true);
-    }catch(e:any){setError(e?.message??'Gagal memulai');}
+    }catch(e:any){setError(e?.message??T('dashboard.errors.startFailed'));}
     finally{setActionLoading(false);}
   };
 
@@ -2779,12 +2907,12 @@ export default function DashboardPage() {
       else if(tradingMode==='indicator') await api.indicatorStop();
       else if(tradingMode==='momentum') await api.momentumStop();
       await loadAll(true);
-    }catch(e:any){setError(e?.message??'Gagal menghentikan');}
+    }catch(e:any){setError(e?.message??T('dashboard.errors.stopFailed'));}
     finally{setActionLoading(false);}
   };
 
-  const handlePause  = async()=>{setActionLoading(true);try{await api.schedulePause();await loadAll(true);}catch(e:any){setError(e?.message??'Gagal menjeda');}finally{setActionLoading(false);}};
-  const handleResume = async()=>{setActionLoading(true);try{await api.scheduleResume();await loadAll(true);}catch(e:any){setError(e?.message??'Gagal melanjutkan');}finally{setActionLoading(false);}};
+  const handlePause  = async()=>{setActionLoading(true);try{await api.schedulePause();await loadAll(true);}catch(e:any){setError(e?.message??T('dashboard.errors.pauseFailed'));}finally{setActionLoading(false);}};
+  const handleResume = async()=>{setActionLoading(true);try{await api.scheduleResume();await loadAll(true);}catch(e:any){setError(e?.message??T('dashboard.errors.resumeFailed'));}finally{setActionLoading(false);}};
 
   const handleAddOrders = async(input:string)=>{
     const validLines = input
@@ -2807,7 +2935,7 @@ export default function DashboardPage() {
       const newOrders=await api.getOrders();
       setScheduleOrders(newOrders);
     }
-    catch(e:any){setError(e?.message??'Gagal menambah');}
+    catch(e:any){setError(e?.message??T('dashboard.errors.addOrderFailed'));}
     finally{setAddOrderLoading(false);}
   };
 
@@ -2834,7 +2962,7 @@ export default function DashboardPage() {
     </div>
   );
 
-  const ModeSession = (fillH:boolean, compact?:boolean, onViewSession?:()=>void) => (
+  const ModeSession = (fillH:boolean, compact?:boolean, onViewSession?:()=>void, startStopButton?:React.ReactNode) => (
     <ModeSessionPanel
       mode={tradingMode} onModeChange={handleModeChange} locked={isActiveMode} blockedModes={blockedModes}
       orders={scheduleOrders} logs={scheduleLogs} onOpenModal={()=>setOrderModalOpen(true)} isRunning={isSchedRunning}
@@ -2845,6 +2973,7 @@ export default function DashboardPage() {
       fillHeight={fillH}
       compact={compact}
       onViewSession={onViewSession}
+      startStopButton={startStopButton}
     />
   );
 
@@ -2880,13 +3009,48 @@ export default function DashboardPage() {
     />
   );
 
+  const ac = modeAccent(tradingMode);
+  const mobileStartStopBtn = (
+    <button
+      onClick={isActiveMode ? handleStop : handleStart}
+      disabled={actionLoading || (!isActiveMode && !canStart)}
+      style={{
+        width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,
+        padding:'9px 0',borderRadius:10,
+        background: actionLoading
+          ? (isActiveMode ? `${C.coral}20` : `${ac}20`)
+          : isActiveMode
+            ? `linear-gradient(135deg,${C.coral}d0,${C.coral}90)`
+            : `linear-gradient(135deg,${ac}d0,${ac}90)`,
+        border:`1px solid ${isActiveMode ? C.coral : ac}55`,
+        color:'#fff',
+        fontSize:12,fontWeight:800,letterSpacing:'0.05em',
+        cursor: actionLoading || (!isActiveMode && !canStart) ? 'not-allowed' : 'pointer',
+        opacity: !isActiveMode && !canStart ? 0.45 : 1,
+        boxShadow: actionLoading ? 'none' : isActiveMode
+          ? `0 3px 12px ${C.coral}40`
+          : `0 3px 12px ${ac}40`,
+        transition:'all 0.2s ease',
+      }}
+    >
+      {actionLoading
+        ? <div style={{width:12,height:12,border:`2px solid rgba(255,255,255,0.3)`,borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/>
+        : isActiveMode
+          ? <StopCircle style={{width:13,height:13}}/>
+          : <PlayCircle style={{width:13,height:13}}/>
+      }
+      {actionLoading ? T('common.loading') : isActiveMode ? T('dashboard.stop')+' Bot' : T('dashboard.start')+' Bot'}
+    </button>
+  );
+
+
   return (
     <div style={{minHeight:'100%',background:colors.bg,paddingBottom:88,color:colors.text,transition:'background 0.3s, color 0.3s'}}>
       {/* Asset Picker Modal — top level */}
       <PickerModal
         open={assetPickerOpen}
         onClose={()=>setAssetPickerOpen(false)}
-        title="Pilih Aset"
+        title={T('dashboard.selectAsset')}
         options={assets.map(a=>({value:a.ric,label:a.name,sub:`${a.ric} · ${a.profitRate}%`,icon:a.iconUrl}))}
         value={selectedRic}
         searchable
@@ -2909,9 +3073,9 @@ export default function DashboardPage() {
               <div style={{width:52,height:52,borderRadius:16,background:'rgba(255,69,58,0.12)',border:'1px solid rgba(255,69,58,0.25)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px'}}>
                 <StopCircle style={{width:24,height:24,color:C.coral}}/>
               </div>
-              <p style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:6}}>Hentikan Bot?</p>
+              <p style={{fontSize:17,fontWeight:700,color:C.text,marginBottom:6}}>{T('dashboard.stopConfirm.title')}</p>
               <p style={{fontSize:13,color:C.muted,lineHeight:1.5}}>
-                Bot akan dihentikan dan sesi trading saat ini akan berakhir.
+                {T('dashboard.stopConfirm.message')}
               </p>
             </div>
             {/* Action buttons — Apple-style */}
@@ -2925,7 +3089,7 @@ export default function DashboardPage() {
                   cursor:'pointer',letterSpacing:'-0.01em',
                 }}
               >
-                Ya, Hentikan
+                {T('dashboard.stopConfirm.confirm')}
               </button>
               <button
                 onClick={()=>setStopConfirmOpen(false)}
@@ -2935,7 +3099,7 @@ export default function DashboardPage() {
                   cursor:'pointer',letterSpacing:'-0.01em',
                 }}
               >
-                Batal
+                {T('common.cancel')}
               </button>
             </div>
           </div>
@@ -2999,7 +3163,7 @@ export default function DashboardPage() {
         onAdd={handleAddOrders}
         onDelete={async(id)=>{
           try{await api.deleteOrder(id);setScheduleOrders(p=>p.filter(o=>o.id!==id));}
-          catch(e:any){setError(e?.message??'Gagal hapus');}
+          catch(e:any){setError(e?.message??T('dashboard.errors.deleteOrderFailed'));}
         }}
         onClear={async()=>{await api.clearOrders();setScheduleOrders([]);}}
         loading={addOrderLoading}
@@ -3066,9 +3230,9 @@ export default function DashboardPage() {
                   }
                 </div>
                 <div style={{minWidth:0,flex:1}}>
-                  <p style={{fontSize:10,fontWeight:500,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>Aset</p>
+                  <p style={{fontSize:10,fontWeight:500,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>{T('dashboard.asset')}</p>
                   <p style={{fontSize:14,fontWeight:700,color:C.text,lineHeight:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                    {selectedAsset?.ric ?? <span style={{color:C.muted,fontWeight:400,fontSize:12}}>Belum dipilih</span>}
+  {selectedAsset?.ric ?? <span style={{color:C.muted,fontWeight:400,fontSize:12}}>{T('dashboard.notSelected')}</span>}
                   </p>
                   {selectedAsset&&<p style={{fontSize:10,color:C.muted,marginTop:2}}>{selectedAsset.profitRate}% profit rate</p>}
                 </div>
@@ -3130,7 +3294,7 @@ export default function DashboardPage() {
                     {{schedule:'Signal',fastrade:'FastTrade',ctc:'CTC',aisignal:'AI Signal',indicator:'Indicator',momentum:'Momentum'}[tradingMode]}
                   </p>
                   <p style={{fontSize:10,marginTop:2,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
-                    {isActiveMode?'● Berjalan':'○ Standby'}
+                    {isActiveMode?'● '+T('dashboard.running'):'○ '+T('common.standby')}
                   </p>
                 </div>
               </div>
@@ -3317,36 +3481,37 @@ export default function DashboardPage() {
               />
             </div>
             {TopCards}
-            <div style={{display:'grid',gridTemplateColumns:'3fr 2fr',gap:g,alignItems:'stretch'}}>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                <Card style={{padding:10,flex:1,display:'flex',flexDirection:'column'}}>
-                  {/* Clock header inside chart card */}
-                  <div style={{
-                    marginBottom:8,paddingBottom:7,
-                    borderBottom:`1px solid ${C.bdr}`,
-                  }}>
-                    <RealtimeClockCompact t={t} lang={language}/>
-                  </div>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6,gap:6}}>
-                    {selectedRic?(
-                      <div style={{display:'flex',alignItems:'center',gap:4,minWidth:0}}>
-                        <span style={{width:4,height:4,borderRadius:'50%',background:modeAccent(tradingMode),opacity:0.6,flexShrink:0}}/>
-                        <span style={{fontSize:9,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{selectedRic}</span>
-                      </div>
-                    ):(
-                      <span style={{fontSize:9,color:C.muted}}>—</span>
-                    )}
-                    <span style={{display:'flex',alignItems:'center',gap:4,fontSize:9,fontWeight:600,flexShrink:0,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
-                      <span style={{width:5,height:5,borderRadius:'50%',background:isActiveMode?modeAccent(tradingMode):C.muted,flexShrink:0}}/>
-                      {isActiveMode?t('common.active'):'Off'}
-                    </span>
-                  </div>
+            <div style={{display:'flex',flexDirection:'row',gap:g,alignItems:'stretch'}}>
+              {/* LEFT: chart card — stretches to match right column height */}
+              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0}}>
+                {/* Clock header inside chart card */}
+                <div style={{
+                  marginBottom:8,
+                  flexShrink:0,
+                }}>
+                  <RealtimeClockCompact t={t} lang={language}/>
+                </div>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6,gap:6,flexShrink:0}}>
+                  {selectedRic?(
+                    <div style={{display:'flex',alignItems:'center',gap:4,minWidth:0}}>
+                      <span style={{width:4,height:4,borderRadius:'50%',background:modeAccent(tradingMode),opacity:0.6,flexShrink:0}}/>
+                      <span style={{fontSize:9,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{selectedRic}</span>
+                    </div>
+                  ):(
+                    <span style={{fontSize:9,color:C.muted}}>—</span>
+                  )}
+                  <span style={{display:'flex',alignItems:'center',gap:4,fontSize:9,fontWeight:600,flexShrink:0,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
+                    <span style={{width:5,height:5,borderRadius:'50%',background:isActiveMode?modeAccent(tradingMode):C.muted,flexShrink:0}}/>
+{isActiveMode?t('common.active'):T('dashboard.offStatus')}
+                  </span>
+                </div>
+                <div style={{flex:1,minHeight:0,position:'relative'}}>
                   <ChartCard assetSymbol={selectedRic} height={110}/>
-                </Card>
-              </div>
-              {/* Mode panel — compact when active, full when idle */}
+                </div>
+              </Card>
+              {/* RIGHT: Mode panel — flex:2, drives the row height on mode change */}
               {isActiveMode && tradingMode !== 'schedule' ? (
-                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
                   {/* mode selector button (read-only style) */}
                   <div style={{
                     display:'flex',alignItems:'center',justifyContent:'space-between',
@@ -3361,7 +3526,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <span style={{fontSize:9,padding:'1px 6px',borderRadius:99,color:modeAccent(tradingMode),background:`${modeAccent(tradingMode)}14`,border:`1px solid ${modeAccent(tradingMode)}28`}}>
-                      Aktif
+{T('common.active')}
                     </span>
                   </div>
                   {/* P&L + Mini Stats + Lihat Sesi — unified card (non-schedule modes) */}
@@ -3370,11 +3535,11 @@ export default function DashboardPage() {
                     background:C.card2,
                     border:`1px solid ${modeAccent(tradingMode)}28`,
                     display:'flex',flexDirection:'column',gap:7,
-                    flex:1,
+                    flex:1,minHeight:0,
                   }}>
                     {/* P&L */}
                     <div>
-                      <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.1em',display:'block',marginBottom:2}}>Sesi P&L</span>
+                      <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.1em',display:'block',marginBottom:2}}>{T('dashboard.sessionPnl')}</span>
                       <span style={{
                         fontSize:13,fontWeight:800,fontFamily:'monospace',letterSpacing:'-0.02em',
                         color:sessionPnL>=0?modeAccent(tradingMode):C.coral,
@@ -3449,14 +3614,16 @@ export default function DashboardPage() {
                         fontSize:10,fontWeight:700,letterSpacing:'0.04em',
                         cursor:'pointer',
                       }}
-                    >
+>
                       <Info style={{width:11,height:11}}/>
-                      Lihat Sesi
+                      {T('dashboard.viewSession')}
                     </button>
+                    {/* Start / Stop toggle button */}
+                    {mobileStartStopBtn}
                   </div>
                 </div>
               ) : isActiveMode && tradingMode === 'schedule' ? (
-                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
                   {/* Schedule aktif: tampilkan list seperti idle + tombol Lihat Sesi di bawah */}
                   {/* Always Signal badge jika aktif */}
                   {(scheduleStatus as any)?.alwaysSignalActive && (
@@ -3482,18 +3649,21 @@ export default function DashboardPage() {
                     </div>
                   )}
                   <div style={{flex:1}}>
-                    {ModeSession(true, true, ()=>setMobileSessionOpen(true))}
+                    {ModeSession(true, true, ()=>setMobileSessionOpen(true), mobileStartStopBtn)}
                   </div>
                 </div>
               ) : (
-                ModeSession(true, true, ()=>setMobileSessionOpen(true))
+                <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
+                  {ModeSession(true, true, ()=>setMobileSessionOpen(true), mobileStartStopBtn)}
+                </div>
               )}
             </div>
-            {/* Asset + Balance Cards - di atas Settings */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g}}>
-              <AssetCardCompact asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t} onOpenPicker={()=>setAssetPickerOpen(true)} disabled={isActiveMode}/>
-              <BalanceCardCompact balance={balance} accountType={isDemo?'demo':'real'} isLoading={isLoading} t={t}/>
-            </div>
+            {/* Asset + Balance — 1 card gabungan full width */}
+            <AssetBalanceCombinedCard
+              asset={selectedAsset} mode={tradingMode} isLoading={isLoading} t={t}
+              onOpenPicker={()=>setAssetPickerOpen(true)} disabled={isActiveMode}
+              balance={balance} accountType={isDemo?'demo':'real'}
+            />
             {SettingsCardEl}
             {ControlCardEl}
           </div>

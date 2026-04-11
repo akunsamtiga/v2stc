@@ -294,7 +294,7 @@
                   fontFamily: "-apple-system, 'SF Pro Text', BlinkMacSystemFont, sans-serif",
                   whiteSpace: 'nowrap',
                 }}>
-                  Design Prototype 1
+                  Design Prototype 2
                 </span>
               </div>
             </div>
