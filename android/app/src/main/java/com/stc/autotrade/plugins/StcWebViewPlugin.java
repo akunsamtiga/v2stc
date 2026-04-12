@@ -87,8 +87,10 @@ public class StcWebViewPlugin extends Plugin {
     public void close(PluginCall call) {
         getActivity().runOnUiThread(() -> {
             if (webViewDialog != null) { webViewDialog.dismiss(); webViewDialog = null; }
+            // ✅ FIX: resolve() di dalam runOnUiThread — dialog pasti sudah dismiss
+            // sebelum JS promise selesai, sehingga modal React langsung terlihat.
+            call.resolve();
         });
-        call.resolve();
     }
 
     // ─── showWebViewDialog ────────────────────────────────────────────────────
@@ -266,6 +268,9 @@ public class StcWebViewPlugin extends Plugin {
                 if (pageUrl != null) {
                     android.util.Log.d("StcWebView", "Page finished: " + pageUrl);
                     checkForSuccess(pageUrl, dialog, overlay);
+                    // ✅ TAMBAHAN: cek cookie token setiap halaman selesai load —
+                    // jika token sudah ada, langsung tutup tanpa perlu URL berubah.
+                    checkForToken(pageUrl, dialog, overlay);
                 }
             }
         });
@@ -341,13 +346,15 @@ public class StcWebViewPlugin extends Plugin {
         dialog.setOnDismissListener(d -> {
             webViewDialog  = null;
             currentWebView = null;
-            mainHandler.removeCallbacksAndMessages(null);
             if (!successAlreadyFired) {
+                // Hanya cancel pending dan kirim browserFinished jika bukan karena sukses
+                mainHandler.removeCallbacksAndMessages(null);
                 JSObject data = new JSObject();
                 data.put("finished",  true);
                 data.put("cancelled", true);
                 notifyListeners("browserFinished", data);
             }
+            // Jika successAlreadyFired, biarkan postDelayed resolve tetap berjalan
         });
 
         dialog.show();
@@ -367,10 +374,7 @@ public class StcWebViewPlugin extends Plugin {
         return currentBase.equals(initialBase);
     }
 
-    // ─── checkForSuccess ──────────────────────────────────────────────────────
-    // Deteksi sukses dengan 2 cara:
-    //   1. URL cocok dengan SUCCESS_URL_PATTERNS
-    //   2. URL berubah dari halaman registrasi ke halaman lain (domain berbeda / path berbeda)
+    // ─── checkForSuccess — deteksi sukses dari perubahan URL ─────────────────
     private void checkForSuccess(String url, Dialog dialog, View overlay) {
         if (successAlreadyFired) return;
         if (url == null || url.isEmpty() || url.equals("about:blank")) return;
@@ -387,25 +391,81 @@ public class StcWebViewPlugin extends Plugin {
         }
 
         // Cara 2: URL berubah ke domain/path berbeda dari initialUrl
-        // Ini menangkap kasus redirect ke platform trading setelah registrasi
         boolean urlChanged = false;
         if (!initialUrl.isEmpty()) {
             String initialBase = initialUrl.split("\\?")[0].toLowerCase();
             String currentBase = url.split("\\?")[0].toLowerCase();
-            // Berbeda path = berhasil registrasi
             urlChanged = !currentBase.equals(initialBase) && !currentBase.contains("about:");
         }
 
         if (!matchPattern && !urlChanged) return;
 
-        android.util.Log.d("StcWebView", "✅ Success detected! URL: " + url +
-                " (matchPattern=" + matchPattern + ", urlChanged=" + urlChanged + ")");
+        fireSuccess(url, dialog, overlay, "url_change");
+    }
 
-        successAlreadyFired = true;
-        mainHandler.post(() -> overlay.setVisibility(View.GONE));
+    // ─── checkForToken — deteksi sukses dari keberadaan token di cookie ──────
+    // Dipanggil di onPageFinished — jika token sudah ada di cookie meski URL
+    // belum berubah, webview langsung ditutup dan popup sukses ditampilkan.
+    private void checkForToken(String url, Dialog dialog, View overlay) {
+        if (successAlreadyFired) return;
+        if (url == null || url.equals("about:blank")) return;
 
-        // Ambil cookies dari semua domain Stockity
         CookieManager cm  = CookieManager.getInstance();
+        String cookies    = collectCookies(cm, url);
+        String token      = extractCookieValue(cookies, AUTH_COOKIE_NAMES);
+
+        if (token != null && !token.isEmpty()) {
+            android.util.Log.d("StcWebView", "✅ Token ditemukan di cookie! Menutup webview...");
+            fireSuccess(url, dialog, overlay, "token_found");
+        }
+    }
+
+    // ─── fireSuccess — tutup dialog DULU, resolve JS sesudahnya ──────────────
+    // Ini satu-satunya titik yang boleh resolve savedCall dengan success=true.
+    // Urutan: dismiss dialog → tunggu window fokus kembali → resolve JS.
+    // Dengan urutan ini, saat React render modal sukses, native Dialog
+    // sudah pasti hilang dari layar.
+    private void fireSuccess(String url, Dialog dialog, View overlay, String reason) {
+        if (successAlreadyFired) return;
+        successAlreadyFired = true;
+
+        android.util.Log.d("StcWebView", "🚀 fireSuccess: reason=" + reason + " url=" + url);
+
+        CookieManager cm  = CookieManager.getInstance();
+        String cookies    = collectCookies(cm, url);
+        String authToken  = extractCookieValue(cookies, AUTH_COOKIE_NAMES);
+        String deviceId   = extractCookieValue(cookies, DEVICE_COOKIE_NAMES);
+        if (authToken == null) authToken = "";
+        if (deviceId  == null) deviceId  = "";
+
+        android.util.Log.d("StcWebView", "authToken: " + authToken);
+
+        final String fToken   = authToken;
+        final String fDevice  = deviceId;
+        final String fCookies = cookies;
+        final String fUrl     = url;
+
+        // ✅ KUNCI: Dismiss dialog SEGERA di UI thread (callbacks WebViewClient
+        // sudah berjalan di UI thread, jadi tidak perlu post()).
+        // Setelah dialog hilang, Activity window fokus kembali ke Capacitor WebView.
+        overlay.setVisibility(View.GONE);
+        if (dialog.isShowing()) dialog.dismiss();
+
+        // Resolve JS setelah jeda singkat — memberi waktu Activity window
+        // untuk benar-benar aktif kembali sebelum React merender modal.
+        mainHandler.postDelayed(() -> {
+            JSObject res = new JSObject();
+            res.put("url",       fUrl);
+            res.put("authToken", fToken);
+            res.put("deviceId",  fDevice);
+            res.put("cookies",   fCookies);
+            res.put("success",   true);
+            if (savedCall != null) savedCall.resolve(res);
+        }, 150);
+    }
+
+    // ─── collectCookies — kumpulkan semua cookie dari domain Stockity ─────────
+    private String collectCookies(CookieManager cm, String currentUrl) {
         String cookies = "";
         String[] domains = {
                 "https://stockity.id",
@@ -417,33 +477,13 @@ public class StcWebViewPlugin extends Plugin {
             String c = cm.getCookie(domain);
             if (c != null && !c.isEmpty()) cookies += c + "; ";
         }
-        // Juga coba domain dari URL saat ini
         try {
-            java.net.URL parsedUrl = new java.net.URL(url);
+            java.net.URL parsedUrl = new java.net.URL(currentUrl);
             String currentDomain   = parsedUrl.getProtocol() + "://" + parsedUrl.getHost();
             String c = cm.getCookie(currentDomain);
             if (c != null && !c.isEmpty()) cookies += c + "; ";
         } catch (Exception ignored) {}
-
-        String authToken = extractCookieValue(cookies, AUTH_COOKIE_NAMES);
-        String deviceId  = extractCookieValue(cookies, DEVICE_COOKIE_NAMES);
-        if (authToken == null) authToken = "";
-        if (deviceId  == null) deviceId  = "";
-
-        android.util.Log.d("StcWebView", "Cookies: " + cookies);
-        android.util.Log.d("StcWebView", "authToken: " + authToken);
-
-        JSObject res = new JSObject();
-        res.put("url",       url);
-        res.put("authToken", authToken);
-        res.put("deviceId",  deviceId);
-        res.put("cookies",   cookies);
-        res.put("success",   true);
-        if (savedCall != null) savedCall.resolve(res);
-
-        mainHandler.postDelayed(() -> {
-            if (dialog.isShowing()) dialog.dismiss();
-        }, 500);
+        return cookies;
     }
 
     // ─── injectAutoClickScript ────────────────────────────────────────────────

@@ -17,23 +17,21 @@ export default function WebViewPage() {
     let cancelled = false;
 
     (async () => {
-      // Web: buka tab baru, langsung balik
       if (!isNative()) {
         window.open(TRADE_URL, '_blank', 'noopener,noreferrer');
         router.back();
         return;
       }
 
-      // Native: buka via StcWebViewPlugin
       try {
-        const { stcWebView } = await import('@/plugins/StcWebViewPlugin');
+        const { Browser } = await import('@capacitor/browser');
 
-        const handle = await stcWebView.addListenerBrowserFinished(() => {
+        const handle = await Browser.addListener('browserFinished', () => {
           if (!cancelled) router.back();
         });
 
         setStatus('active');
-        await stcWebView.open({ url: TRADE_URL });
+        await Browser.open({ url: TRADE_URL, presentationStyle: 'fullscreen' });
         handle.remove();
         if (!cancelled) router.back();
       } catch (e) {
@@ -45,7 +43,6 @@ export default function WebViewPage() {
     return () => { cancelled = true; };
   }, [router]);
 
-  // Native: layar hitam bersih selama WebView terbuka di atas
   return (
     <div style={{
       position: 'fixed', inset: 0,

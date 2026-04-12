@@ -477,12 +477,12 @@ export default function RegisterPage() {
     try {
       const result = await stcWebView.open({ url: registrationUrl.current });
 
-      // ✅ FIX 1: Tutup WebView native secara eksplisit SEBELUM merender UI React.
-      // Tanpa ini, WebView tetap tampil di atas dan menutupi dialog success/landing.
+      // ✅ FIX: Tutup WebView native. Dengan fix Java, close() baru resolve
+      // SETELAH dismiss selesai — jadi saat setPhase('success') jalan,
+      // native Dialog sudah pasti tidak ada di layar.
       await stcWebView.close().catch(() => {});
 
       if (result.success) {
-        // Native plugin mendeteksi success URL → tampilkan dialog berhasil
         capturedToken.current  = result.authToken  || '';
         capturedDevice.current = result.deviceId   || await getOrCreateDeviceId();
         setPhase('success');
