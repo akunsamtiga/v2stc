@@ -2109,7 +2109,7 @@ const ModeSessionPanel: React.FC<{
       minWidth: 0, width: '100%',
       overflow: 'hidden',
       padding: 0,
-      background: locked ? undefined : C.card2,
+      background: C.card2,
       boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`,
     }}>
       {/* Mode picker modal */}
