@@ -2109,7 +2109,7 @@ const ModeSessionPanel: React.FC<{
       minWidth: 0, width: '100%',
       overflow: 'hidden',
       padding: 0,
-      background: C.card2,
+      background: locked ? undefined : C.card2,
       boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`,
     }}>
       {/* Mode picker modal */}
@@ -3661,16 +3661,177 @@ export default function DashboardPage() {
 
         {/* ── TABLET ── */}
         {deviceType==='tablet'&&(
-          <div style={{display:'flex',flexDirection:'column',gap:g}}>
-            {InfoRow}
-            {TopCards}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g,alignItems:'stretch'}}>
-              <Card style={{padding:12}}><ChartCard assetSymbol={selectedRic} height={220}/></Card>
-              {ModeSession(true)}
+          <div style={{display:'flex',flexDirection:'column',gap:14,paddingTop:14}}>
+
+            {/* ── ROW 1: Top info strip — 4 tiles ── */}
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+
+              {/* Asset */}
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
+                <div style={{width:34,height:34,borderRadius:9,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`}}>
+                  {selectedAsset?.iconUrl
+                    ?<img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:5}}/>
+                    :<span style={{fontSize:11,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'—'}</span>
+                  }
+                </div>
+                <div style={{minWidth:0,flex:1}}>
+                  <p style={{fontSize:9,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>{T('dashboard.asset')}</p>
+                  <p style={{fontSize:13,fontWeight:700,color:C.text,lineHeight:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {selectedAsset?.ric??<span style={{color:C.muted,fontWeight:400,fontSize:11}}>{T('dashboard.notSelected')}</span>}
+                  </p>
+                  {selectedAsset&&<p style={{fontSize:9,color:C.muted,marginTop:2}}>{selectedAsset.profitRate}% profit</p>}
+                </div>
+              </div>
+
+              {/* Balance */}
+              {(()=>{
+                const rawAmt=isDemo?(balance?.demo_balance??balance?.balance??0):(balance?.real_balance??balance?.balance??0);
+                const amt=rawAmt/100;
+                const col=isDemo?C.amber:C.cyan;
+                return (
+                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`}}>
+                    <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
+                      <Wallet style={{width:15,height:15,color:col}}/>
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:3}}>
+                        <p style={{fontSize:9,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Saldo</p>
+                        <span style={{fontSize:7,fontWeight:700,padding:'1px 4px',borderRadius:99,color:col,background:`${col}10`,border:`1px solid ${col}25`}}>{isDemo?'Demo':'Real'}</span>
+                      </div>
+                      {isLoading?<div style={{height:15,width:80,borderRadius:4,background:C.faint}}/>
+                        :<p style={{fontSize:14,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{Math.round(amt).toLocaleString('id-ID')}</p>
+                      }
+                      <p style={{fontSize:9,color:C.muted,marginTop:2}}>{balance?.currency??'IDR'}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Mode + Status */}
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}25`:isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,transition:'all 0.3s ease'}}>
+                <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`,position:'relative'}}>
+                  <span style={{color:modeAccent(tradingMode)}}>
+                    {{schedule:<Calendar style={{width:15,height:15}}/>,fastrade:<Zap style={{width:15,height:15}}/>,ctc:<Copy style={{width:15,height:15}}/>,aisignal:<Radio style={{width:15,height:15}}/>,indicator:<BarChart style={{width:15,height:15}}/>,momentum:<Waves style={{width:15,height:15}}/>}[tradingMode]}
+                  </span>
+                  {isActiveMode&&<span style={{position:'absolute',top:-3,right:-3,width:7,height:7,borderRadius:'50%',background:modeAccent(tradingMode),boxShadow:`0 0 5px ${modeAccent(tradingMode)}`,animation:'ping 1.6s ease-in-out infinite'}}/>}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{fontSize:9,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>Mode</p>
+                  <p style={{fontSize:13,fontWeight:700,color:isActiveMode?modeAccent(tradingMode):C.text,lineHeight:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                    {{schedule:'Signal',fastrade:'FastTrade',ctc:'CTC',aisignal:'AI Signal',indicator:'Indicator',momentum:'Momentum'}[tradingMode]}
+                  </p>
+                  <p style={{fontSize:9,marginTop:2,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
+                    {isActiveMode?'● '+T('dashboard.running'):'○ '+T('common.standby')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Today P&L */}
+              {(()=>{
+                const pnl=todayProfitData?.totalPnL??profitToday;
+                const isPos=pnl>=0;
+                const col=isPos?C.cyan:C.coral;
+                const wr=todayProfitData?.winRate;
+                return (
+                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`}}>
+                    <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
+                      {isPos?<TrendingUp style={{width:15,height:15,color:col}}/>:<TrendingDown style={{width:15,height:15,color:col}}/>}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
+                        <p style={{fontSize:9,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Profit Hari Ini</p>
+                        {wr!=null&&<span style={{fontSize:8,fontWeight:700,color:wr>=50?C.cyan:C.coral}}>{wr.toFixed(0)}% WR</span>}
+                      </div>
+                      {isLoading?<div style={{height:15,width:80,borderRadius:4,background:C.faint}}/>
+                        :<p style={{fontSize:14,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                          {isPos?'+':'−'}{Math.round(Math.abs(pnl/100)).toLocaleString('id-ID')}
+                        </p>
+                      }
+                      <p style={{fontSize:9,color:C.muted,marginTop:2}}>
+                        {todayProfitData?`${todayProfitData.totalTrades} trade · ${todayProfitData.totalWins}W ${todayProfitData.totalLosses}L`:'24 jam terakhir'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:g}}>
-              {SettingsCardEl}
-              {ControlCardEl}
+
+            {/* ── ROW 2: Main 2-column — Chart + Sidebar ── */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 288px',gap:12,alignItems:'start'}}>
+
+              {/* LEFT: Chart hero + session stat strip */}
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+
+                {/* Chart card — clock header compact, tidak melebar */}
+                <div style={{borderRadius:16,overflow:'hidden',background:isDarkMode?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.95)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,padding:4}}>
+                  {/* Clock header — compact, left-aligned, tidak space-between */}
+                  <div style={{
+                    display:'flex',alignItems:'center',gap:10,
+                    padding:'9px 14px 9px',
+                    borderBottom:`1px solid ${isDarkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'}`,
+                  }}>
+                    {/* Kiri: label + dot */}
+                    <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+                      <Activity style={{width:11,height:11,color:isActiveMode?modeAccent(tradingMode):C.coral}}/>
+                      <span style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.10em',color:C.muted}}>Waktu Lokal</span>
+                      <span style={{width:5,height:5,borderRadius:'50%',flexShrink:0,background:isActiveMode?modeAccent(tradingMode):C.coral,boxShadow:`0 0 5px ${isActiveMode?modeAccent(tradingMode):C.coral}90`,animation:'ping 1.6s ease-in-out infinite'}}/>
+                    </div>
+                    {/* Divider vertikal */}
+                    <div style={{width:1,height:20,background:isDarkMode?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)',flexShrink:0}}/>
+                    {/* Clock — inline, compact, tidak stretching */}
+                    <div style={{flexShrink:0}}>
+                      <RealtimeClockDesktop/>
+                    </div>
+                  </div>
+                  <ChartCard assetSymbol={selectedRic} height={280}/>
+                </div>
+
+                {/* Session stat strip — 4 mini tiles */}
+                <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+                  {(()=>{
+                    const ac=modeAccent(tradingMode);
+                    const wins=ftStatus?.totalWins??aiStatus?.totalWins??indicatorStatus?.totalWins??momentumStatus?.totalWins??0;
+                    const losses=ftStatus?.totalLosses??aiStatus?.totalLosses??indicatorStatus?.totalLosses??momentumStatus?.totalLosses??0;
+                    const total=wins+losses;
+                    const wr=total>0?Math.round((wins/total)*100):null;
+                    const pnlPos=sessionPnL>=0;
+                    const nextT=(scheduleStatus as any)?.nextOrderTime;
+                    const nextS=(scheduleStatus as any)?.nextOrderInSeconds;
+                    const asActive=(scheduleStatus as any)?.alwaysSignalActive||(ftStatus as any)?.alwaysSignalActive||aiStatus?.alwaysSignalStatus?.isActive||(indicatorStatus as any)?.alwaysSignalActive||(momentumStatus as any)?.alwaysSignalActive;
+                    const asStep=(scheduleStatus as any)?.alwaysSignalStep??(ftStatus as any)?.alwaysSignalStep??aiStatus?.alwaysSignalStatus?.currentStep??(indicatorStatus as any)?.alwaysSignalStep??(momentumStatus as any)?.alwaysSignalStep??0;
+                    const statCards=[
+                      {label:'Sesi P&L',icon:<TrendingUp style={{width:13,height:13}}/>,value:isLoading?null:(pnlPos?'+':'−')+'Rp '+Math.round(Math.abs(sessionPnL/100)).toLocaleString('id-ID'),col:pnlPos?ac:C.coral},
+                      {label:'W / L',icon:<BarChart2 style={{width:13,height:13}}/>,value:isLoading?null:`${wins} / ${losses}`,col:wins>losses?ac:losses>wins?C.coral:C.muted},
+                      {label:'Win Rate',icon:<Activity style={{width:13,height:13}}/>,value:isLoading?null:wr!=null?`${wr}%`:'—',col:wr!=null?(wr>=50?ac:C.coral):C.muted},
+                      asActive&&asStep>0
+                        ?{label:'Always Signal',icon:<Zap style={{width:13,height:13}}/>,value:`K${asStep}/${martingale.maxStep}`,col:C.amber}
+                        :nextT
+                        ?{label:'Signal Berikutnya',icon:<Timer style={{width:13,height:13}}/>,value:`${nextT}${nextS!=null?' · '+nextS+'s':''}`,col:ac}
+                        :{label:'Mode',icon:<Radio style={{width:13,height:13}}/>,value:({schedule:'Signal',fastrade:'FTT',ctc:'CTC',aisignal:'AI Signal',indicator:'Indicator',momentum:'Momentum'} as Record<string,string>)[tradingMode],col:ac},
+                    ];
+                    return statCards.map((s,i)=>(
+                      <div key={i} style={{padding:'11px 13px',borderRadius:12,background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`}}>
+                        <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
+                          <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
+                          <span style={{fontSize:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</span>
+                        </div>
+                        {s.value==null
+                          ?<div style={{height:14,width:'70%',borderRadius:4,background:C.faint}}/>
+                          :<p style={{fontSize:14,fontWeight:700,color:s.col,fontFamily:'monospace',letterSpacing:'-0.01em',lineHeight:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.value}</p>
+                        }
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* RIGHT: Sticky sidebar */}
+              <div style={{display:'flex',flexDirection:'column',gap:12,position:'sticky',top:16}}>
+                {ModeSession(false)}
+                {SettingsCardEl}
+                {ControlCardEl}
+              </div>
+
             </div>
           </div>
         )}
