@@ -919,6 +919,20 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   const doneOrders    = orders.filter(o=>o.isExecuted||o.isSkipped);
   const sortedOrders  = [...pendingOrders,...doneOrders];
 
+  // ── Riwayat sesi sebelumnya: logs yang orderId-nya tidak ada di orders saat ini ──
+  // Ini adalah execution logs dari sesi/run yang sudah selesai/clear
+  const currentOrderIds  = new Set(orders.map(o => o.id));
+  const currentOrderTimes = new Set(orders.map(o => o.time));
+  const prevSessionLogs = logs
+    .filter(l => {
+      // Exclude jika log ini sudah direpresentasikan oleh order yang ada sekarang
+      if (l.orderId && currentOrderIds.has(l.orderId)) return false;
+      if (l.time && currentOrderTimes.has(l.time) && orders.some(o=>o.isExecuted&&o.time===l.time)) return false;
+      return true;
+    })
+    .sort((a,b) => (b.executedAt??0) - (a.executedAt??0))
+    .slice(0, 3);
+
   if(!open) return null;
 
   // ── Match log untuk order: cari lewat orderId atau waktu ─────────
@@ -1122,223 +1136,121 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                   </button>
                 </div>
               ) : (
-                <div style={{display:'flex',flexDirection:'column',gap:0,paddingTop:8}}>
+                <div style={{display:'flex',flexDirection:'column',gap:6,paddingTop:8}}>
 
-                  {/* ── Summary bar — only when there are done orders ── */}
-                  {doneOrders.length > 0 && (()=>{
-                    const wins   = doneOrders.filter(o=>getResult(o)==='WIN').length;
-                    const losses = doneOrders.filter(o=>getResult(o)==='LOSS').length;
-                    const total  = wins + losses;
-                    const wr     = total > 0 ? Math.round((wins/total)*100) : null;
-                    const totalProfit = doneOrders.reduce((acc,o)=>{
-                      const p = getLog(o)?.profit ?? 0;
-                      return acc + p;
-                    }, 0);
-                    return (
-                      <div style={{
-                        display:'grid',gridTemplateColumns:`1fr 1fr${wr!==null?' 1fr':''} 1fr`,
-                        gap:6,marginBottom:12,
-                        padding:'10px 12px',borderRadius:12,
-                        background:C.card2,border:`1px solid ${C.bdr}`,
-                      }}>
-                        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                          <span style={{fontSize:16,fontWeight:800,color:C.cyan,fontFamily:'monospace',lineHeight:1}}>{wins}</span>
-                          <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>WIN</span>
-                        </div>
-                        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                          <span style={{fontSize:16,fontWeight:800,color:C.coral,fontFamily:'monospace',lineHeight:1}}>{losses}</span>
-                          <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>LOSS</span>
-                        </div>
-                        {wr !== null && (
-                          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                            <span style={{fontSize:16,fontWeight:800,color:wr>=50?C.cyan:C.coral,fontFamily:'monospace',lineHeight:1}}>{wr}%</span>
-                            <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>WIN RATE</span>
-                          </div>
-                        )}
-                        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                          <span style={{
-                            fontSize:14,fontWeight:800,fontFamily:'monospace',lineHeight:1,
-                            color:totalProfit>=0?C.cyan:C.coral,
+                  {/* ── 3 RIWAYAT TERAKHIR (di atas) ── */}
+                  {prevSessionLogs.length > 0 && (
+                    <>
+                      <p style={{fontSize:9,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:C.muted,margin:'0 0 2px'}}>Riwayat Sebelumnya</p>
+                      {prevSessionLogs.map(l=>{
+                        const isWin  = /^win$/i.test(l.result??'');
+                        const isLoss = /^los/i.test(l.result??'');
+                        const isBuy  = l.trend==='call';
+                        const col    = isWin ? C.cyan : isLoss ? C.coral : C.muted;
+                        return (
+                          <div key={l.id} style={{
+                            display:'flex',alignItems:'center',gap:10,
+                            padding:'8px 12px',borderRadius:10,
+                            background:isWin?`${C.cyan}08`:isLoss?`${C.coral}08`:C.card2,
+                            border:`1px solid ${isWin?`${C.cyan}28`:isLoss?`${C.coral}28`:C.bdr}`,
+                            opacity:0.85,
                           }}>
-                            {totalProfit>=0?'+':''}{Math.round(Math.abs(totalProfit)/100).toLocaleString('id-ID')}
-                          </span>
-                          <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>P&amp;L</span>
+                            <span style={{fontSize:14,fontWeight:800,color:col,lineHeight:1,width:16,textAlign:'center'}}>
+                              {isWin?'✓':isLoss?'✗':'·'}
+                            </span>
+                            <span style={{fontSize:13,fontWeight:600,color:C.text,fontFamily:'monospace'}}>{l.time||'--:--'}</span>
+                            <span style={{fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:5,background:isBuy?`${C.cyan}18`:`${C.coral}18`,color:isBuy?C.cyan:C.coral}}>{isBuy?'BUY':'SELL'}</span>
+                            {(isWin||isLoss)&&<span style={{fontSize:9,fontWeight:700,color:col}}>{isWin?'WIN':'LOSS'}</span>}
+                            {l.martingaleStep!=null&&l.martingaleStep>0&&(
+                              <span style={{fontSize:9,color:C.amber,fontWeight:600}}>K{l.martingaleStep}</span>
+                            )}
+                            {l.profit!=null&&(
+                              <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',color:l.profit>=0?C.cyan:C.coral}}>
+                                {l.profit>=0?'+':''}{Math.round(l.profit/100).toLocaleString('id-ID')}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                      <div style={{height:1,background:C.bdr,margin:'2px 0 4px'}}/>
+                    </>
+                  )}
+
+                  {/* ── PENDING ORDERS ── */}
+                  {pendingOrders.map((o,i)=>{
+                    const isBuy = o.trend==='call';
+                    return (
+                      <div key={o.id} style={{
+                        display:'flex',alignItems:'center',padding:'10px 12px',gap:10,
+                        borderRadius:12,background:C.card2,
+                        border:`1px solid rgba(16,185,129,0.45)`,
+                      }}>
+                        <div style={{
+                          width:22,height:22,borderRadius:'50%',flexShrink:0,
+                          display:'flex',alignItems:'center',justifyContent:'center',
+                          background:'rgba(16,185,129,0.10)',border:`1px solid rgba(16,185,129,0.22)`,
+                        }}>
+                          <span style={{fontSize:10,fontWeight:600,color:C.cyan}}>{i+1}</span>
                         </div>
+                        <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
+                        <span style={{
+                          fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,
+                          background:isBuy?`${C.cyan}22`:`${C.coral}22`,
+                          color:isBuy?C.cyan:C.coral,
+                          border:`1px solid ${isBuy?C.cyan:C.coral}35`,
+                        }}>{isBuy?'BUY':'SELL'}</span>
+                        <span style={{fontSize:10,color:C.muted,marginLeft:'auto'}}>Menunggu…</span>
+                        {!isRunning && (
+                          <button onClick={()=>onDelete(o.id)} style={{
+                            width:28,height:28,borderRadius:'50%',flexShrink:0,
+                            display:'flex',alignItems:'center',justifyContent:'center',
+                            background:`${C.coral}18`,border:'none',cursor:'pointer',color:C.coral,
+                          }}>
+                            <Trash2 style={{width:12,height:12}}/>
+                          </button>
+                        )}
                       </div>
                     );
-                  })()}
+                  })}
 
-                  {/* ── PENDING SECTION ── */}
-                  {pendingOrders.length > 0 && (
-                    <>
-                      <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:6}}>
-                        <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.cyan}}>Menunggu</span>
-                        <span style={{fontSize:9,fontWeight:600,padding:'1px 6px',borderRadius:99,background:`${C.cyan}14`,color:C.cyan,border:`1px solid ${C.cyan}30`}}>{pendingOrders.length}</span>
-                        <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.cyan}30,transparent)`}}/>
+                  {/* ── DONE ORDERS (sesi ini) ── */}
+                  {doneOrders.map(o=>{
+                    const isBuy  = o.trend==='call';
+                    const isSkip = o.isSkipped;
+                    const res    = getResult(o);
+                    const log    = getLog(o);
+                    const ms     = o.martingaleState ?? (log?.martingaleStep!=null?{currentStep:log.martingaleStep,maxSteps:0} as any:null);
+                    const profit = log?.profit;
+                    const col    = isSkip?C.amber:res==='WIN'?C.cyan:res==='LOSS'?C.coral:C.muted;
+                    return (
+                      <div key={o.id} style={{
+                        display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
+                        borderRadius:12,
+                        background:isSkip?`${C.amber}0c`:res==='WIN'?`${C.cyan}0c`:res==='LOSS'?`${C.coral}0c`:C.card2,
+                        border:`1px solid ${isSkip?`${C.amber}30`:res==='WIN'?`${C.cyan}35`:res==='LOSS'?`${C.coral}35`:C.bdr}`,
+                      }}>
+                        <span style={{fontSize:14,fontWeight:800,color:col,width:16,textAlign:'center',lineHeight:1}}>
+                          {isSkip?'⊘':res==='WIN'?'✓':res==='LOSS'?'✗':'·'}
+                        </span>
+                        <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
+                        <span style={{fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:5,background:isBuy?`${C.cyan}18`:`${C.coral}18`,color:isBuy?C.cyan:C.coral}}>{isBuy?'BUY':'SELL'}</span>
+                        {isSkip?(
+                          <span style={{fontSize:9,fontWeight:700,color:C.amber}}>SKIP</span>
+                        ):res?(
+                          <span style={{fontSize:9,fontWeight:700,color:col}}>{res}</span>
+                        ):null}
+                        {ms&&(ms.currentStep??0)>0&&(
+                          <span style={{fontSize:9,color:C.amber,fontWeight:600}}>K{ms.currentStep}{ms.maxSteps>0?`/${ms.maxSteps}`:''}</span>
+                        )}
+                        {profit!=null&&(
+                          <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',color:profit>=0?C.cyan:C.coral}}>
+                            {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
+                          </span>
+                        )}
                       </div>
-                      <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:doneOrders.length>0?14:0}}>
-                        {pendingOrders.map((o,i)=>{
-                          const isBuy = o.trend==='call';
-                          return (
-                            <div key={o.id} style={{
-                              display:'flex',alignItems:'center',padding:'10px 12px',gap:10,
-                              borderRadius:12,
-                              background:C.card2,
-                              border:`1px solid rgba(16,185,129,0.45)`,
-                              boxShadow:`inset 0 0 0 0.5px rgba(16,185,129,0.10)`,
-                            }}>
-                              <div style={{
-                                width:22,height:22,borderRadius:'50%',flexShrink:0,
-                                display:'flex',alignItems:'center',justifyContent:'center',
-                                background:'rgba(16,185,129,0.10)',border:`1px solid rgba(16,185,129,0.22)`,
-                              }}>
-                                <span style={{fontSize:10,fontWeight:600,color:C.cyan}}>{i+1}</span>
-                              </div>
-                              <div style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:7}}>
-                                <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
-                                <span style={{
-                                  fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,
-                                  background:isBuy?`${C.cyan}22`:`${C.coral}22`,
-                                  color:isBuy?C.cyan:C.coral,letterSpacing:'0.05em',
-                                  border:`1px solid ${isBuy?C.cyan:C.coral}35`,
-                                }}>{isBuy?'BUY':'SELL'}</span>
-                                <span style={{fontSize:10,color:C.muted,marginLeft:'auto'}}>Menunggu…</span>
-                              </div>
-                              {!isRunning && (
-                                <button
-                                  onClick={()=>onDelete(o.id)}
-                                  style={{
-                                    width:30,height:30,borderRadius:'50%',flexShrink:0,
-                                    display:'flex',alignItems:'center',justifyContent:'center',
-                                    background:`${C.coral}18`,border:'none',cursor:'pointer',color:C.coral,
-                                  }}
-                                >
-                                  <Trash2 style={{width:12,height:12}}/>
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
+                    );
+                  })}
 
-                  {/* ── HISTORY / DONE SECTION ── */}
-                  {doneOrders.length > 0 && (
-                    <>
-                      <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:6}}>
-                        <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.sub}}>Riwayat</span>
-                        <span style={{fontSize:9,fontWeight:600,padding:'1px 6px',borderRadius:99,background:'rgba(255,255,255,0.06)',color:C.sub,border:`1px solid ${C.bdr}`}}>{doneOrders.length}</span>
-                        <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.bdr},transparent)`}}/>
-                      </div>
-                      <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                        {doneOrders.map((o)=>{
-                          const isBuy   = o.trend==='call';
-                          const isSkip  = o.isSkipped;
-                          const res     = getResult(o);
-                          const log     = getLog(o);
-                          const ms      = o.martingaleState ??
-                            (log?.martingaleStep != null
-                              ? { currentStep: log.martingaleStep, isActive: true, maxSteps: 0, totalLoss: 0, totalRecovered: 0, isCompleted: false } as any
-                              : null);
-                          const profit  = log?.profit;
-                          const accentCol = isSkip ? C.amber : res==='WIN' ? C.cyan : res==='LOSS' ? C.coral : C.muted;
-                          const bgCol     = isSkip ? `${C.amber}0c` : res==='WIN' ? `${C.cyan}0c` : res==='LOSS' ? `${C.coral}0c` : C.card2;
-                          const bdrCol    = isSkip ? `${C.amber}30` : res==='WIN' ? `${C.cyan}38` : res==='LOSS' ? `${C.coral}38` : C.bdr;
-                          return (
-                            <div key={o.id} style={{
-                              display:'flex',alignItems:'stretch',
-                              borderRadius:12,overflow:'hidden',
-                              background:bgCol,border:`1px solid ${bdrCol}`,
-                            }}>
-                              {/* Left accent strip */}
-                              <div style={{width:4,flexShrink:0,background:accentCol,opacity:0.7}}/>
-                              <div style={{flex:1,display:'flex',alignItems:'center',padding:'10px 12px',gap:10}}>
-                                {/* Result icon */}
-                                <div style={{
-                                  width:32,height:32,borderRadius:'50%',flexShrink:0,
-                                  display:'flex',alignItems:'center',justifyContent:'center',
-                                  background:`${accentCol}18`,border:`1px solid ${accentCol}35`,
-                                  fontSize:15,lineHeight:1,color:accentCol,fontWeight:800,
-                                }}>
-                                  {isSkip ? '⊘' : res==='WIN' ? '✓' : res==='LOSS' ? '✗' : <Clock style={{width:13,height:13,color:C.muted}}/>}
-                                </div>
-                                <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:4}}>
-                                  {/* Row 1: time + direction + result chip + profit */}
-                                  <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                                    <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
-                                    <span style={{
-                                      fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:6,
-                                      background:isBuy?`${C.cyan}22`:`${C.coral}22`,
-                                      color:isBuy?C.cyan:C.coral,letterSpacing:'0.05em',
-                                      border:`1px solid ${isBuy?C.cyan:C.coral}35`,
-                                    }}>{isBuy?'BUY':'SELL'}</span>
-                                    {isSkip ? (
-                                      <span style={{
-                                        fontSize:9,fontWeight:800,padding:'2px 8px',borderRadius:6,
-                                        background:`${C.amber}18`,color:C.amber,
-                                        border:`1px solid ${C.amber}45`,letterSpacing:'0.07em',
-                                      }}>⊘ SKIP</span>
-                                    ) : res ? (
-                                      <span style={{
-                                        fontSize:10,fontWeight:800,padding:'2px 9px',borderRadius:6,
-                                        background:res==='WIN'?`${C.cyan}1e`:`${C.coral}1e`,
-                                        color:res==='WIN'?C.cyan:C.coral,
-                                        border:`1px solid ${res==='WIN'?C.cyan:C.coral}45`,
-                                        letterSpacing:'0.07em',
-                                      }}>{res==='WIN'?'✓ WIN':'✗ LOSS'}</span>
-                                    ) : (
-                                      <span style={{fontSize:9,color:C.muted}}>Selesai</span>
-                                    )}
-                                    {profit != null && (
-                                      <span style={{
-                                        fontSize:11,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',
-                                        color:profit>=0?C.cyan:C.coral,
-                                      }}>
-                                        {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {/* Row 2: Martingale step + loss/recovered */}
-                                  {ms && (ms.currentStep ?? 0) > 0 && (
-                                    <div style={{display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
-                                      <span style={{
-                                        fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:5,
-                                        background:`${C.amber}18`,color:C.amber,
-                                        border:`1px solid ${C.amber}40`,letterSpacing:'0.05em',
-                                      }}>
-                                        ⚡ Martingale K{ms.currentStep}{ms.maxSteps>0?`/${ms.maxSteps}`:''}
-                                      </span>
-                                      {(ms.totalLoss ?? 0) > 0 && (
-                                        <span style={{fontSize:9,color:C.coral,fontFamily:'monospace',fontWeight:600}}>
-                                          −{Math.round(Math.abs(ms.totalLoss)/100).toLocaleString('id-ID')}
-                                        </span>
-                                      )}
-                                      {(ms.totalRecovered ?? 0) > 0 && (
-                                        <span style={{fontSize:9,color:C.cyan,fontFamily:'monospace',fontWeight:600}}>
-                                          +{Math.round(ms.totalRecovered/100).toLocaleString('id-ID')} rec
-                                        </span>
-                                      )}
-                                      {ms.isCompleted && (
-                                        <span style={{
-                                          fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,
-                                          background:`${C.cyan}14`,color:C.cyan,border:`1px solid ${C.cyan}30`,
-                                        }}>SELESAI</span>
-                                      )}
-                                    </div>
-                                  )}
-                                  {/* Skip reason */}
-                                  {isSkip && (o as any).skipReason && (
-                                    <span style={{fontSize:10,color:C.amber,opacity:0.8}}>{(o as any).skipReason}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
                 </div>
               )}
             </>
