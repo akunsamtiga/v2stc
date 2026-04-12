@@ -524,6 +524,9 @@ export const ChartCard: React.FC<ChartCardProps> = ({ assetSymbol, height = 400 
         position: 'absolute',
         inset: 0,
         transition: 'background 0.3s',
+        border: isDarkMode
+          ? '1px solid rgba(16,185,129,0.30)'
+          : '1px solid rgba(5,150,105,0.22)',
       }
     : {
         background: bg,
@@ -534,6 +537,9 @@ export const ChartCard: React.FC<ChartCardProps> = ({ assetSymbol, height = 400 
         minHeight: deviceType === 'tablet' ? 300 : height,
         position: 'relative',
         transition: 'background 0.3s',
+        border: isDarkMode
+          ? '1px solid rgba(16,185,129,0.28)'
+          : '1px solid rgba(5,150,105,0.20)',
       };
 
   return (

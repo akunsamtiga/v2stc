@@ -72,8 +72,8 @@ function HistoryPageContent() {
   const getResultLabel = (result: ResultFilter): string => {
     const labels: Record<ResultFilter, string> = {
       all: t('history.all'),
-      win: t('history.win'),
-      loss: t('history.loss'),
+      win: 'Profit',
+      loss: 'Loss',
       draw: t('history.draw'),
     };
     return labels[result];
@@ -222,9 +222,9 @@ function HistoryPageContent() {
   };
 
   const RESULT_META = {
-    WIN:  { label: t('history.win'),  color: '#34c759', bg: 'rgba(52,199,89,0.10)',   icon: <CheckCircle  size={11} /> },
-    LOSE: { label: t('history.loss'), color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
-    LOSS: { label: t('history.loss'), color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
+    WIN:  { label: 'Profit', color: '#34c759', bg: 'rgba(52,199,89,0.10)',   icon: <CheckCircle  size={11} /> },
+    LOSE: { label: 'Loss',   color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
+    LOSS: { label: 'Loss',   color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
     DRAW: { label: t('history.draw'), color: '#ff9500', bg: 'rgba(255,149,0,0.10)',   icon: <MinusCircle  size={11} /> },
   };
 
@@ -302,7 +302,7 @@ function HistoryPageContent() {
                 {type.label}
               </span>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', color: isCall ? '#34c759' : '#ff3b30' }}>
-                {isCall ? `↑ ${t('history.call')}` : `↓ ${t('history.put')}`}
+                {isCall ? `↑ Buy` : `↓ Sell`}
               </span>
               {log.martingaleStep !== undefined && log.martingaleStep > 0 && (
                 <span style={{ fontSize: 9.5, fontWeight: 700, color: '#ff9500', background: 'rgba(255,149,0,0.10)', border: '1px solid rgba(255,149,0,0.20)', padding: '1px 6px', borderRadius: 4 }}>
@@ -420,8 +420,8 @@ function HistoryPageContent() {
                 )}
               </div>
               {[
-                { label: t('history.win'), value: stats.wins, color: '#34c759' },
-                { label: t('history.loss'), value: stats.losses, color: '#ff3b30' },
+                { label: 'Profit', value: stats.wins, color: '#34c759' },
+                { label: 'Loss', value: stats.losses, color: '#ff3b30' },
                 { label: t('history.draw'), value: stats.draws, color: '#ff9500' },
               ].map(({ label, value, color }, i, arr) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none' }}>
@@ -481,7 +481,7 @@ function HistoryPageContent() {
                 <StatTile 
                   label={t('history.totalTrades')} 
                   value={isLoading ? '—' : stats.totalTrades} 
-                  sub={isLoading ? '' : `${stats.wins}${t('history.win')[0]} · ${stats.losses}${t('history.loss')[0]}${stats.draws > 0 ? ` · ${stats.draws}${t('history.draw')[0]}` : ''}`} 
+                  sub={isLoading ? '' : `${stats.wins}P · ${stats.losses}L${stats.draws > 0 ? ` · ${stats.draws}${t('history.draw')[0]}` : ''}`} 
                   color="#007aff" 
                   icon={<BarChart3 size={14} />} 
                 />

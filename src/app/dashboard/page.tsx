@@ -2481,6 +2481,10 @@ const SettingsCard: React.FC<{
   const [pickerOpen,setPickerOpen] = useState<string|null>(null);
   const [amtDrop,setAmtDrop] = useState(false);
   const [showMartingaleDialog, setShowMartingaleDialog] = useState(false);
+  // Local string state for amount input — avoids iOS number-input editing issues
+  const [amtStr, setAmtStr] = useState(amount > 0 ? String(amount) : '');
+  // Sync amtStr when amount changes externally (e.g. quick-pick)
+  useEffect(()=>{ setAmtStr(amount > 0 ? String(amount) : ''); },[amount]);
   useEffect(()=>{ if(disabled) setOpen(false); },[disabled]);
   const set = (k:keyof MartingaleConfig,v:any) => onMartingaleChange({...martingale,[k]:v});
   const assetOpts: PickerOpt[] = assets.map(a=>({value:a.ric,label:a.name,sub:`${a.ric} · ${a.profitRate}%`,icon:a.iconUrl}));
@@ -2570,7 +2574,24 @@ const SettingsCard: React.FC<{
                 <div style={{ display:'flex',gap:8 }}>
                   <div style={{ flex:1,position:'relative' }}>
                     <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
-                    <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{ paddingLeft:30,borderColor:isBelowMin?C.coral:undefined }}/>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
+                      className="ds-input"
+                      value={amtStr}
+                      onChange={e=>{
+                        const raw = e.target.value.replace(/[^0-9]/g,'');
+                        setAmtStr(raw);
+                        onAmountChange(raw ? parseInt(raw, 10) : 0);
+                      }}
+                      onFocus={e=>e.target.select()}
+                      onBlur={()=>{ if(!amtStr||amtStr==='0') setAmtStr(''); }}
+                      disabled={disabled}
+                      placeholder={IDR_MIN_DISPLAY.toLocaleString('id-ID')}
+                      style={{ paddingLeft:30, borderColor:isBelowMin?C.coral:undefined, fontSize:16 }}
+                    />
                   </div>
                   <div style={{ position:'relative',flexShrink:0 }}>
                     <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer',boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)` }}>
@@ -2625,7 +2646,24 @@ const SettingsCard: React.FC<{
                 <div><FL>{T('dashboard.indicator.amountPerOrder')}</FL>
                   <div style={{ position:'relative' }}>
                     <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
-                    <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{ paddingLeft:30 }}/>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
+                      className="ds-input"
+                      value={amtStr}
+                      onChange={e=>{
+                        const raw = e.target.value.replace(/[^0-9]/g,'');
+                        setAmtStr(raw);
+                        onAmountChange(raw ? parseInt(raw, 10) : 0);
+                      }}
+                      onFocus={e=>e.target.select()}
+                      onBlur={()=>{ if(!amtStr||amtStr==='0') setAmtStr(''); }}
+                      disabled={disabled}
+                      placeholder={IDR_MIN_DISPLAY.toLocaleString('id-ID')}
+                      style={{ paddingLeft:30, fontSize:16 }}
+                    />
                   </div>
                 </div>
               </div>
@@ -3967,7 +4005,7 @@ export default function DashboardPage() {
             {TopCards}
             <div style={{display:'flex',flexDirection:'row',gap:g,alignItems:'stretch'}}>
               {/* LEFT: chart card — stretches to match right column height */}
-              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${C.bdr}`,boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`}}>
+              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${isDarkMode?'rgba(16,185,129,0.38)':'rgba(5,150,105,0.28)'}`,boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`}}>
                 {/* Clock header inside chart card */}
                 <div style={{
                   marginBottom:8,
