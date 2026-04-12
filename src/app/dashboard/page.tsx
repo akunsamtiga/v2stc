@@ -261,9 +261,9 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
   return (
     <div style={{
       width:'100%',borderRadius:14,overflow:'hidden',
-      background:C.card,
+      background:C.bg,
       border:`1px solid rgba(16,185,129,0.38)`,
-      boxShadow:`0 3px 14px rgba(0,0,0,0.22)`,
+      boxShadow:`0 2px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.25)`,
       padding:'10px 12px 8px',
       display:'flex',flexDirection:'column',gap:5,
     }}>
@@ -648,9 +648,7 @@ const AssetBalanceCombinedCard: React.FC<{
             textAlign: 'left',
           }}
         >
-          {onOpenPicker && !disabled && (
-            <ChevronDown style={{ width: 12, height: 12, color: modeCol, flexShrink: 0 }} />
-          )}
+
           <div style={{
             width: 32, height: 32, borderRadius: 9, overflow: 'hidden', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -670,11 +668,11 @@ const AssetBalanceCombinedCard: React.FC<{
               {t('dashboard.asset')}
             </p>
             {isLoading ? <div style={{ height: 14, width: 60, borderRadius: 4, background: C.faint }} /> : asset ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, lineHeight: 1, color: C.text, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap', minWidth: 0 }}>
+                <p style={{ fontSize: 'clamp(10px,3.2vw,14px)', fontWeight: 700, lineHeight: 1, color: C.text, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                   {asset.ric}
                 </p>
-                <span style={{ fontSize: 10, fontWeight: 700, color: modeCol, flexShrink: 0 }}>{asset.profitRate}%</span>
+                <span style={{ fontSize: 'clamp(8px,2.5vw,10px)', fontWeight: 700, color: modeCol, flexShrink: 0 }}>{asset.profitRate}%</span>
               </div>
             ) : (
               <p style={{ fontSize: 11, color: modeCol, fontWeight: 600 }}>{t('dashboard.notSelected')}</p>
@@ -719,7 +717,7 @@ const AssetBalanceCombinedCard: React.FC<{
                 ))}
               </div>
             ) : (
-              <p style={{ fontSize: 'clamp(17px,4.5vw,24px)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: balCol, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+              <p style={{ fontSize: 'clamp(11px,3.5vw,20px)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: balCol, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
                 {Math.round(amount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
               </p>
             )}
@@ -876,72 +874,268 @@ const PickerBtn: React.FC<{
 };
 
 // ═══════════════════════════════════════════
-// ORDER INPUT MODAL (Schedule)
+// ORDER INPUT MODAL (Schedule) — Kotlin ScheduleDialog style
 // ═══════════════════════════════════════════
-const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>Promise<void>;loading:boolean}> =
-({open,onClose,orders,onAdd,onDelete,onClear,loading}) => {
-  const [input,setInput] = useState('');
+const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>Promise<void>;loading:boolean;isRunning?:boolean}> =
+({open,onClose,orders,onAdd,onDelete,onClear,loading,isRunning}) => {
+  const [input,setInput]           = useState('');
   const [clearLoading,setClearLoading] = useState(false);
+  const [view,setView]             = useState<'list'|'input'>('list');
 
   const handleClear = async () => {
-    if(!window.confirm('Hapus semua signal?')) return;
+    if(!window.confirm('Hapus semua signal pending?')) return;
     setClearLoading(true);
-    try { await onClear(); onClose(); }
+    try { await onClear(); }
     finally { setClearLoading(false); }
   };
 
+  const handleAdd = async () => {
+    if(!input.trim()) return;
+    await onAdd(input);
+    setInput('');
+    setView('list');
+  };
+
   const isBusy = loading || clearLoading;
+  const pendingOrders = orders.filter(o=>!o.isExecuted&&!o.isSkipped);
+  const doneOrders    = orders.filter(o=>o.isExecuted||o.isSkipped);
+  const sortedOrders  = [...pendingOrders,...doneOrders];
 
   if(!open) return null;
 
+  // ── Item colours ────────────────────────────────────────────────
+  const itemBg   = (o:ScheduleOrder) => o.isSkipped?`${C.amber}0d`:o.isExecuted?`${C.cyan}0d`:`${C.card2}`;
+  const itemBdr  = (o:ScheduleOrder) => o.isSkipped?`${C.amber}33`:o.isExecuted?`${C.cyan}33`:C.bdr;
+  const statusTx = (o:ScheduleOrder) => o.isSkipped?'Dilewati':o.isExecuted?'Selesai':'Menunggu...';
+  const statusCl = (o:ScheduleOrder) => o.isSkipped?C.amber:o.isExecuted?C.cyan:C.muted;
+
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',animation:'fade-in 0.15s ease'}}>
-      <div onClick={isBusy?undefined:onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)',cursor:isBusy?'not-allowed':'default'}}/>
-      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:'80%',display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:16,border:`1px solid ${C.bdr}`,overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
-          <div>
-            <h2 style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:2}}>Input Signal</h2>
-            <p style={{fontSize:11,color:C.muted}}>Format: <span style={{fontWeight:600,color:C.cyan}}>09:30 call</span> / <span style={{color:C.coral}}>14:00 put</span> / <span style={{fontWeight:600,color:C.cyan}}>09.30 B</span> / <span style={{color:C.coral}}>14.00 S</span> · satu per baris</p>
+      {/* Backdrop */}
+      <div onClick={isBusy?undefined:onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',cursor:isBusy?'not-allowed':'default'}}/>
+
+      {/* Modal card — Kotlin: fillMaxWidth(0.96f) fillMaxHeight(0.88f) */}
+      <div style={{
+        position:'relative',width:'100%',maxWidth:460,height:'88dvh',maxHeight:640,
+        display:'flex',flexDirection:'column',
+        background:C.bg,
+        borderRadius:24,
+        border:`0.4px solid rgba(52,211,153,0.40)`,
+        boxShadow:'0 32px 80px rgba(0,0,0,0.70), 0 8px 24px rgba(0,0,0,0.50)',
+        overflow:'hidden',
+        animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
+      }}>
+
+        {/* ── Header — vertical gradient surface→cardBackground ── */}
+        <div style={{
+          flexShrink:0,
+          background:`linear-gradient(180deg,${C.card2} 0%,${C.card} 100%)`,
+          padding:'16px 24px',
+          display:'flex',flexDirection:'column',gap:8,
+        }}>
+          {/* Row 1: title + close */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <p style={{fontSize:20,fontWeight:600,color:C.text,letterSpacing:'-0.02em',margin:0}}>
+              {view==='list'?'Scheduled Orders':'Input Signal'}
+            </p>
+            <button
+              onClick={view==='input'?()=>setView('list'):onClose}
+              disabled={isBusy}
+              style={{
+                width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
+                background:C.card2,border:`1px solid ${C.bdr}`,
+                color:C.sub,cursor:isBusy?'not-allowed':'pointer',opacity:isBusy?0.4:1,
+              }}
+            >
+              <X style={{width:16,height:16}}/>
+            </button>
           </div>
-          <button onClick={isBusy?undefined:onClose} disabled={isBusy} style={{width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'rgba(255,255,255,0.4)',cursor:isBusy?'not-allowed':'pointer',opacity:isBusy?0.4:1}}>
-            <X style={{width:13,height:13}}/>
-          </button>
+
+          {/* Row 2: subtitle */}
+          <p style={{fontSize:13,color:C.sub,margin:0}}>
+            {view==='list'
+              ? 'Manage pending trades · History preserved'
+              : `Format: 09:30 B · 14:00 S · satu per baris`}
+          </p>
+
+          {/* Row 3: action buttons (only in list view, only if orders exist) */}
+          {view==='list' && orders.length>0 && (
+            <div style={{display:'flex',gap:8,marginTop:2}}>
+              {/* Input Signal */}
+              <button
+                onClick={()=>setView('input')}
+                disabled={isRunning}
+                style={{
+                  flex:1,height:36,display:'flex',alignItems:'center',justifyContent:'center',gap:6,
+                  borderRadius:12,cursor:isRunning?'not-allowed':'pointer',
+                  background:`${C.cyan}1a`,border:`1px solid ${C.cyan}4d`,color:C.cyan,
+                  fontSize:12,fontWeight:500,
+                  opacity:isRunning?0.35:1,
+                }}
+              >
+                <Plus style={{width:15,height:15}}/>Input Signal
+              </button>
+              {/* Clear Pending */}
+              <button
+                onClick={handleClear}
+                disabled={isBusy||pendingOrders.length===0||isRunning}
+                style={{
+                  flex:1,height:36,display:'flex',alignItems:'center',justifyContent:'center',gap:6,
+                  borderRadius:12,cursor:(isBusy||pendingOrders.length===0||isRunning)?'not-allowed':'pointer',
+                  background:`${C.coral}1a`,border:`1px solid ${C.coral}33`,color:C.coral,
+                  fontSize:12,fontWeight:500,
+                  opacity:(isBusy||pendingOrders.length===0||isRunning)?0.35:1,
+                }}
+              >
+                {clearLoading
+                  ? <RefreshCw style={{width:13,height:13,animation:'spin 0.7s linear infinite'}}/>
+                  : <Trash2 style={{width:14,height:14}}/>
+                }
+                Clear Pending
+              </button>
+            </div>
+          )}
         </div>
-        <div style={{flex:1,overflowY:'auto',padding:'14px 16px'}}>
-          {orders.length>0&&(
-            <div style={{marginBottom:14}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                <span style={{fontSize:12,fontWeight:500,color:C.sub}}>{orders.length} signal aktif</span>
-                <button onClick={handleClear} disabled={isBusy} style={{display:'flex',alignItems:'center',gap:4,fontSize:11,color:clearLoading?C.muted:C.coral,background:'transparent',border:'none',cursor:isBusy?'not-allowed':'pointer',opacity:isBusy?0.5:1,transition:'opacity 0.15s'}}>
-                  {clearLoading
-                    ? <><RefreshCw style={{width:10,height:10,animation:'spin 0.7s linear infinite'}}/>Menghapus...</>
-                    : <><Trash2 style={{width:10,height:10}}/>Hapus semua</>
-                  }
-                </button>
+
+        {/* ── Content ── */}
+        <div style={{flex:1,overflowY:'auto',background:C.bg,padding:'4px 20px 16px',WebkitOverflowScrolling:'touch' as any}}>
+
+          {/* INPUT VIEW */}
+          {view==='input' && (
+            <div style={{display:'flex',flexDirection:'column',gap:12,paddingTop:12}}>
+              <div style={{padding:'8px 12px',borderRadius:10,background:`${C.cyan}08`,border:`1px solid ${C.cyan}20`}}>
+                <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.6}}>
+                  Contoh: <span style={{color:C.cyan,fontWeight:600}}>09:30 call</span> · <span style={{color:C.coral}}>14:15 put</span> · <span style={{color:C.cyan,fontWeight:600}}>09.30 B</span> · <span style={{color:C.coral}}>14.15 S</span>
+                </p>
               </div>
-              <div style={{maxHeight:130,overflowY:'auto',borderRadius:8,border:`1px solid ${C.bdr}`,background:C.card2}}>
-                {orders.map((o,i)=>(
-                  <div key={o.id} className="schedule-item" style={{display:'flex',alignItems:'center',gap:10,padding:'7px 12px',borderBottom:i<orders.length-1?`1px solid ${C.bdr}`:'none'}}>
-                    <span style={{fontSize:13,fontWeight:500,flex:1,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
-                    <span style={{fontSize:10,fontWeight:600,padding:'2px 8px',borderRadius:6,color:o.trend==='call'?C.cyan:C.coral,background:o.trend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)'}}>{o.trend==='call'?'CALL':'PUT'}</span>
-                    {!o.isExecuted&&<button onClick={()=>onDelete(o.id)} style={{background:'transparent',border:'none',cursor:'pointer',color:C.muted,padding:'2px 4px'}}><X style={{width:12,height:12}}/></button>}
-                  </div>
-                ))}
+              <textarea
+                className="ds-input"
+                autoFocus
+                value={input}
+                onChange={e=>setInput(e.target.value)}
+                placeholder={"09:00 B\n09.30 S\n10:00 B\n14:00 S"}
+                rows={9}
+                style={{resize:'vertical'}}
+              />
+              <div style={{display:'flex',gap:8}}>
+                <button
+                  onClick={handleAdd}
+                  disabled={!input.trim()||isBusy}
+                  style={{
+                    flex:1,height:44,display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+                    borderRadius:12,fontSize:13,fontWeight:600,
+                    background:input.trim()?`${C.cyan}20`:'rgba(255,255,255,0.04)',
+                    border:`1px solid ${input.trim()?`${C.cyan}50`:C.bdr}`,
+                    color:input.trim()?C.cyan:C.muted,
+                    cursor:(!input.trim()||isBusy)?'not-allowed':'pointer',
+                    opacity:isBusy?0.5:1,
+                  }}
+                >
+                  {loading?<RefreshCw style={{width:13,height:13,animation:'spin 0.7s linear infinite'}}/>:<Plus style={{width:14,height:14}}/>}
+                  {loading?'Menambahkan...':'Tambah'}
+                </button>
+                <button
+                  onClick={()=>setView('list')}
+                  disabled={isBusy}
+                  style={{
+                    padding:'0 20px',height:44,borderRadius:12,fontSize:13,fontWeight:500,
+                    background:'rgba(255,255,255,0.05)',border:`1px solid ${C.bdr}`,
+                    color:C.sub,cursor:isBusy?'not-allowed':'pointer',
+                  }}
+                >Batal</button>
               </div>
             </div>
           )}
-          <div style={{marginBottom:10}}>
-            <p style={{fontSize:11,marginBottom:7,padding:'5px 10px',borderRadius:8,color:C.muted,background:C.faint}}>
-              Contoh: <span style={{color:C.cyan}}>09:30 call</span> · <span style={{color:C.coral}}>14:15 put</span> · <span style={{color:C.cyan}}>09.30 B</span> · <span style={{color:C.coral}}>14.15 S</span>
-            </p>
-            <textarea className="ds-input" value={input} onChange={e=>setInput(e.target.value)} placeholder={"09:00 call\n09.30 B\n10:00 put\n10.03 S"} rows={7}/>
-          </div>
-        </div>
-        <div style={{display:'flex',gap:10,padding:'10px 16px',borderTop:`1px solid ${C.bdr}`,flexShrink:0}}>
-          <button onClick={()=>onAdd(input).then(()=>{setInput('');onClose();})} disabled={!input.trim()||isBusy} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'11px 0',borderRadius:8,fontSize:13,fontWeight:600,background:input.trim()?`rgba(41,151,255,0.12)`:'rgba(255,255,255,0.04)',border:`1px solid ${input.trim()?'rgba(41,151,255,0.3)':C.bdr}`,color:input.trim()?C.cyan:C.muted,cursor:(input.trim()&&!isBusy)?'pointer':'not-allowed',opacity:isBusy?0.5:1}}>
-            <Plus style={{width:13,height:13}}/>{loading?'Menambahkan...':'Tambah'}
-          </button>
-          <button onClick={onClose} disabled={isBusy} style={{padding:'11px 20px',borderRadius:8,fontSize:13,fontWeight:500,background:'rgba(255,255,255,0.05)',border:`1px solid ${C.bdr}`,color:isBusy?C.muted:C.sub,cursor:isBusy?'not-allowed':'pointer',opacity:isBusy?0.4:1}}>Tutup</button>
+
+          {/* LIST VIEW */}
+          {view==='list' && (
+            <>
+              {sortedOrders.length===0 ? (
+                /* Empty state — Kotlin: large circle icon + texts */
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',gap:24,paddingTop:40}}>
+                  <div style={{
+                    width:88,height:88,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
+                    background:`${C.card2}66`,border:`1px solid ${C.bdr}`,
+                  }}>
+                    <Calendar style={{width:36,height:36,color:C.muted}}/>
+                  </div>
+                  <div style={{textAlign:'center',display:'flex',flexDirection:'column',gap:12}}>
+                    <p style={{fontSize:20,fontWeight:600,color:C.text,letterSpacing:'-0.01em',margin:0}}>No Scheduled Orders</p>
+                    <p style={{fontSize:15,color:C.sub,margin:0,lineHeight:1.55}}>
+                      Schedule orders to execute automatically<br/>at your specified times.
+                    </p>
+                  </div>
+                  <button
+                    onClick={()=>setView('input')}
+                    style={{
+                      display:'flex',alignItems:'center',gap:7,padding:'12px 28px',borderRadius:14,
+                      background:`${C.cyan}18`,border:`1px solid ${C.cyan}45`,
+                      color:C.cyan,fontSize:13,fontWeight:600,cursor:'pointer',
+                    }}
+                  >
+                    <Plus style={{width:15,height:15}}/>Input Signal
+                  </button>
+                </div>
+              ) : (
+                /* Order list — Kotlin: LazyColumn with ScheduleListItem */
+                <div style={{display:'flex',flexDirection:'column',gap:6,paddingTop:8}}>
+                  {sortedOrders.map((o,i)=>{
+                    const isBuy   = o.trend==='call';
+                    const isDone  = o.isExecuted;
+                    const isSkip  = o.isSkipped;
+                    const canDel  = !isDone && !isSkip;
+                    return (
+                      <div key={o.id} style={{
+                        display:'flex',alignItems:'center',padding:12,gap:12,
+                        borderRadius:12,
+                        background:itemBg(o),
+                        border:`1px solid ${itemBdr(o)}`,
+                      }}>
+                        {/* Number badge — Kotlin: 24dp circle */}
+                        <div style={{
+                          width:24,height:24,borderRadius:'50%',flexShrink:0,
+                          display:'flex',alignItems:'center',justifyContent:'center',
+                          background:'rgba(255,255,255,0.06)',
+                        }}>
+                          <span style={{fontSize:11,fontWeight:500,color:C.sub}}>{i+1}</span>
+                        </div>
+
+                        {/* Middle: time + badge + status */}
+                        <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:3}}>
+                          <div style={{display:'flex',alignItems:'center',gap:8}}>
+                            <span style={{fontSize:14,fontWeight:600,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
+                            {/* BUY/SELL solid badge — Kotlin: filled background white text */}
+                            <span style={{
+                              fontSize:9,fontWeight:700,
+                              padding:'2px 6px',borderRadius:6,
+                              background:isBuy?C.cyan:C.coral,
+                              color:'#fff',
+                              letterSpacing:'0.04em',
+                            }}>{isBuy?'BUY':'SELL'}</span>
+                          </div>
+                          <span style={{fontSize:11,fontWeight:500,color:statusCl(o)}}>{statusTx(o)}</span>
+                        </div>
+
+                        {/* Delete button — Kotlin: 32dp circle errorColor tinted */}
+                        {canDel && !isRunning && (
+                          <button
+                            onClick={()=>onDelete(o.id)}
+                            style={{
+                              width:32,height:32,borderRadius:'50%',flexShrink:0,
+                              display:'flex',alignItems:'center',justifyContent:'center',
+                              background:`${C.coral}1a`,border:'none',cursor:'pointer',color:C.coral,
+                            }}
+                          >
+                            <Trash2 style={{width:13,height:13}}/>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -997,6 +1191,7 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
 
   return (
     <Card style={{display:'flex',flexDirection:'column'}}>
+      {!compact&&(
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <span style={{fontSize:12,fontWeight:600,color:C.sub}}>{T('dashboard.schedule.title')}</span>
@@ -1010,6 +1205,7 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
           <span style={{fontSize:10,fontWeight:500,color:C.cyan}}></span>
         )}
       </div>
+      )}
       {pendingOrders.length===0?(
         <div style={{height:120,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,gap:8}}>
           <Calendar style={{width:28,height:28,color:C.muted,opacity:0.5}}/>
@@ -1018,37 +1214,48 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
           </p>
         </div>
       ):(
-        <div ref={listRef} style={{overflowY:'auto',overflowX:'hidden',maxHeight:compact?140:210,flex:'none'}}>
-          {pendingOrders.map((order,i)=>{
+        <>
+        <div ref={listRef} style={{overflowY:'auto',overflowX:'hidden',maxHeight:compact?100:210,flex:'none'}}>
+          {(compact?pendingOrders.slice(0,2):pendingOrders).map((order,i,arr)=>{
             const isA=i===activeIdx, isCall=order.trend==='call', col=isCall?C.cyan:C.coral;
+            const iconSz = compact?11:13;
+            const timeFz = compact?'clamp(9px,2.8vw,11px)':'12px';
+            const badgeFz = compact?'clamp(8px,2.4vw,10px)':'10px';
+            const badgePad = compact?'2px 5px':'2px 7px';
+            const itemPad = compact?'5px 10px':'8px 12px';
+            const itemGap = compact?5:8;
             return (
               <div key={order.id} ref={el=>{itemRefs.current[i]=el;}} className="schedule-item" style={{
-                display:'flex',alignItems:'center',gap:8,padding:'8px 12px',
-                borderBottom:i<pendingOrders.length-1?`1px solid ${C.bdr}`:'none',
+                display:'flex',alignItems:'center',gap:itemGap,padding:itemPad,
+                borderBottom:i<arr.length-1?`1px solid ${C.bdr}`:'none',
                 background:isA?(isCall?'rgba(41,151,255,0.04)':'rgba(255,69,58,0.04)'):'transparent',
                 minWidth:0,overflow:'hidden',
               }}>
                 {isA
-                  ? <PlayCircle style={{width:13,height:13,color:col,flexShrink:0}}/>
-                  : <PauseCircle style={{width:13,height:13,color:'rgba(255,255,255,0.18)',flexShrink:0}}/>
+                  ? <PlayCircle style={{width:iconSz,height:iconSz,color:col,flexShrink:0}}/>
+                  : <PauseCircle style={{width:iconSz,height:iconSz,color:'rgba(255,255,255,0.18)',flexShrink:0}}/>
                 }
-                <span style={{fontSize:12,fontFamily:'monospace',color:isA?C.text:C.sub,fontWeight:isA?600:400,flexShrink:0}}>{order.time}</span>
-                <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:col,background:isCall?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)',flexShrink:0}}>{isCall?'B':'S'}</span>
+                <span style={{fontSize:timeFz,fontFamily:'monospace',color:isA?C.text:C.sub,fontWeight:isA?600:400,flexShrink:0}}>{order.time}</span>
+                <span style={{fontSize:badgeFz,fontWeight:700,padding:badgePad,borderRadius:5,color:col,background:isCall?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)',flexShrink:0,lineHeight:'1.2'}}>{isCall?'B':'S'}</span>
               </div>
             );
           })}
         </div>
+        </>
       )}
       <div style={{padding:'8px 10px',marginTop:'auto',borderTop:`1px solid ${C.bdr}`,flexShrink:0}}>
-        {isRunning && onViewSession ? (
-          <button onClick={onViewSession} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 0',borderRadius:8,fontSize:12,fontWeight:500,background:`${C.cyan}10`,border:`1px solid ${C.cyan}28`,color:C.cyan,cursor:'pointer'}}>
-            <Info style={{width:12,height:12}}/>{T('dashboard.viewSession')}
-          </button>
-        ) : (
-          <button onClick={onOpenModal} disabled={isRunning} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 0',borderRadius:8,fontSize:12,fontWeight:500,background:'rgba(41,151,255,0.07)',border:`1px solid rgba(41,151,255,0.18)`,color:C.cyan,cursor:isRunning?'not-allowed':'pointer',opacity:isRunning?0.4:1}}>
-  <Plus style={{width:12,height:12}}/>{pendingOrders.length===0?T('dashboard.schedule.add'):T('dashboard.schedule.manageSignals')}
-          </button>
-        )}
+        <button
+          onClick={onOpenModal}
+          style={{
+            width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,
+            padding:'8px 0',borderRadius:8,fontSize:'clamp(9px,3vw,12px)',fontWeight:500,
+            background:`${C.cyan}10`,border:`1px solid ${C.cyan}28`,color:C.cyan,
+            cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',
+          }}
+        >
+          <Info style={{width:12,height:12,flexShrink:0}}/>
+          {isRunning ? T('dashboard.viewSession') : (pendingOrders.length===0 ? T('dashboard.schedule.add') : 'View')}
+        </button>
       </div>
     </Card>
   );
@@ -1678,44 +1885,47 @@ const MobileSessionSheet: React.FC<{
   if (!open) return null;
 
   return (
-    <div style={{position:'fixed',inset:0,zIndex:80,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',padding:16,animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',inset:0,zIndex:80,display:'flex',alignItems:'center',justifyContent:'center',padding:16,animation:'fade-in 0.15s ease'}}>
       {/* backdrop */}
       <div
         onClick={onClose}
-        style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.72)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)'}}
+        style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)'}}
       />
-      {/* sheet - centered modal */}
+      {/* modal — sama persis gaya OrderInputModal */}
       <div style={{
-        position:'relative',zIndex:1,
-        width:'100%',maxWidth:400,
-        background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',
-        borderRadius:18,
-        border:`1px solid ${ac}30`,
-        maxHeight:'70dvh',
+        position:'relative',width:'100%',maxWidth:460,height:'88dvh',maxHeight:640,
         display:'flex',flexDirection:'column',
+        background:C.bg,
+        borderRadius:24,
+        border:`0.4px solid ${ac}66`,
+        boxShadow:'0 32px 80px rgba(0,0,0,0.70), 0 8px 24px rgba(0,0,0,0.50)',
+        overflow:'hidden',
         animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
-        boxShadow:'0 24px 64px rgba(0,0,0,0.5)',
       }}>
-        {/* drag handle */}
-        <div style={{width:32,height:3,borderRadius:99,background:`${ac}44`,margin:'12px auto 0'}}/>
-        {/* header */}
+        {/* header — gradient seperti OrderInputModal */}
         <div style={{
+          flexShrink:0,
+          background:`linear-gradient(180deg,${C.card2} 0%,${C.card} 100%)`,
+          padding:'16px 24px',
           display:'flex',alignItems:'center',justifyContent:'space-between',
-          padding:'12px 16px',borderBottom:`1px solid ${ac}18`,flexShrink:0,
         }}>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <span style={{width:8,height:8,borderRadius:'50%',background:ac,boxShadow:`0 0 6px ${ac}`,animation:'pulse 1.6s ease-in-out infinite'}}/>
-            <span style={{fontSize:14,fontWeight:700,color:C.text}}>{modeLabel[mode]}</span>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{width:8,height:8,borderRadius:'50%',background:ac,boxShadow:`0 0 6px ${ac}`,animation:'pulse 1.6s ease-in-out infinite',flexShrink:0}}/>
+            <p style={{fontSize:20,fontWeight:600,color:C.text,letterSpacing:'-0.02em',margin:0}}>{modeLabel[mode]}</p>
           </div>
           <button
             onClick={onClose}
-            style={{width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8,border:`1px solid ${ac}20`,background:`${ac}0a`,color:C.muted,cursor:'pointer'}}
+            style={{
+              width:36,height:36,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
+              background:C.card2,border:`1px solid ${C.bdr}`,
+              color:C.sub,cursor:'pointer',flexShrink:0,
+            }}
           >
-            <X style={{width:13,height:13}}/>
+            <X style={{width:16,height:16}}/>
           </button>
         </div>
         {/* content */}
-        <div style={{overflowY:'auto',flex:1,WebkitOverflowScrolling:'touch' as any}}>
+        <div style={{flex:1,overflowY:'auto',background:C.bg,WebkitOverflowScrolling:'touch' as any}}>
           {(mode==='fastrade'||mode==='ctc')&&(
             <FastradePanel status={ftStatus} logs={ftLogs} isLoading={false} fillHeight={false}/>
           )}
@@ -1900,6 +2110,7 @@ const ModeSessionPanel: React.FC<{
       overflow: 'hidden',
       padding: 0,
       background: locked ? undefined : C.card2,
+      boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`,
     }}>
       {/* Mode picker modal */}
       <ModePickerModal
@@ -2170,16 +2381,16 @@ const SettingsCard: React.FC<{
       <PickerModal open={pickerOpen==='duration'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.orderDuration')} options={durationOpts} value={String(duration)} onSelect={v=>onDurationChange(+v)}/>
       <PickerModal open={pickerOpen==='ftTf'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.fastradeTimeframe')} options={FT_TF.map(t=>({value:t.value,label:t.label}))} value={ftTf} onSelect={v=>onFtTfChange(v as FastTradeTimeframe)}/>
 
-      <Card style={{ opacity:disabled?0.65:1, border:`1px solid ${C.bdr}`, boxShadow:`0 8px 24px rgba(0,0,0,0.22)` }}>
+      <Card style={{ opacity:disabled?0.65:1, border:`1px solid ${C.bdr}`, boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)` }}>
         {/* Header */}
         <button onClick={()=>setOpen(!open)} style={{ width:'100%',display:'flex',alignItems:'center',gap:10,padding:'16px 18px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer',textAlign:'left' }}>
             <div style={{ width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}14`,border:`1px solid ${ac}30` }}>
               <Settings style={{ width:16,height:16,color:ac }}/>
             </div>
-            <div style={{ flex:1,minWidth:0,textAlign:'left' }}>
-              <span style={{ fontSize:16,fontWeight:700,color:C.text,display:'block',lineHeight:1.2 }}>{T('dashboard.settings.title')}</span>
-              {disabled ? <span style={{ fontSize:10,color:C.amber,fontWeight:600,display:'block' }}>⚡ {T('dashboard.settings.botActive')}</span>
-                        : <span style={{ fontSize:10,color:C.muted,display:'block' }}>{T('dashboard.settings.subtitle')}</span>}
+            <div style={{ flex:1,minWidth:0,textAlign:'left',overflow:'hidden' }}>
+              <span style={{ fontSize:'clamp(11px,3.8vw,16px)',fontWeight:700,color:C.text,display:'block',lineHeight:1.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{T('dashboard.settings.title')}</span>
+              {disabled ? <span style={{ fontSize:'clamp(8px,2.5vw,10px)',color:C.amber,fontWeight:600,display:'block',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>⚡ {T('dashboard.settings.botActive')}</span>
+                        : <span style={{ fontSize:'clamp(8px,2.5vw,10px)',color:C.muted,display:'block',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{T('dashboard.settings.subtitle')}</span>}
             </div>
           <div style={{ display:'flex',alignItems:'center',gap:8 }}>
             <span style={{ fontSize:10,padding:'3px 9px',borderRadius:99,background:`${ac}12`,color:ac,border:`1px solid ${ac}28`,fontWeight:600 }}>{modeLabel}</span>
@@ -2200,6 +2411,7 @@ const SettingsCard: React.FC<{
                 <button disabled={disabled} onClick={()=>setPickerOpen('actype')} style={{
                   flex:'0 0 auto',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',
                   background:`${acctCol}16`,border:`0.8px solid ${acctCol}55`,transition:'all 0.15s',minWidth:0,
+                  boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)`,
                 }}>
                   <Wallet style={{ width:14,height:14,color:acctCol,flexShrink:0 }}/>
                   <span style={{ fontSize:11,fontWeight:700,color:C.text,whiteSpace:'nowrap' }}>{isDemo?'Demo':'Real'}</span>
@@ -2208,14 +2420,14 @@ const SettingsCard: React.FC<{
                 {/* Durasi / Timeframe */}
                 <div style={{ flex:'0 0 auto',minWidth:0 }}>
                   {!isNewMode&&(mode==='fastrade'
-                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
+                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)` }}>
                        <Clock style={{ width:13,height:13,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:11,fontWeight:600,color:C.text,flex:1,textAlign:'left',whiteSpace:'nowrap' }}>{FT_TF.find(t=>t.value===ftTf)?.label||''}</span><ChevronDown style={{ width:12,height:12,color:C.muted,flexShrink:0 }}/>
                      </button>
                     :mode==='ctc'
                     ?<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.faint,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
                        <Copy style={{ width:13,height:13,color:C.violet }}/><span style={{ fontSize:11,color:C.violet,whiteSpace:'nowrap' }}>1 Menit</span>
                      </div>
-                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
+                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)` }}>
                        <Clock style={{ width:13,height:13,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:11,fontWeight:600,color:C.text,flex:1,textAlign:'left',whiteSpace:'nowrap' }}>{durationOpts.find(d=>d.value===String(duration))?.label||''}</span><ChevronDown style={{ width:12,height:12,color:C.muted,flexShrink:0 }}/>
                      </button>
                   )}
@@ -2243,7 +2455,7 @@ const SettingsCard: React.FC<{
                     <input type="number" className="ds-input" value={amount} onChange={e=>onAmountChange(+e.target.value||0)} disabled={disabled} min={IDR_MIN_DISPLAY} step={1000} style={{ paddingLeft:30,borderColor:isBelowMin?C.coral:undefined }}/>
                   </div>
                   <div style={{ position:'relative',flexShrink:0 }}>
-                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer' }}>
+                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer',boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)` }}>
                       <Zap style={{ width:13,height:13 }}/> Quick
                     </button>
                     {amtDrop&&!disabled&&(
@@ -2473,7 +2685,7 @@ const ControlCard: React.FC<{
   return (
     <Card style={{
       border:`1px solid ${C.bdr}`,
-      boxShadow:`0 8px 28px ${canResumeBot?`${C.amber}20`:canStopBot?`${C.cyan}18`:`${C.coral}10`},0 2px 8px rgba(0,0,0,0.22)`,
+      boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`,
     }}>
       {/* ── Header: LEFT-aligned title + state pill + chevron ── */}
       <button onClick={()=>setOpen(!open)} style={{
@@ -2487,9 +2699,9 @@ const ControlCard: React.FC<{
           <span style={{color:ac}}>{modeIcon}</span>
         </div>
         {/* title — left-aligned */}
-        <div style={{flex:1,minWidth:0,textAlign:'left'}}>
-          <span style={{fontSize:16,fontWeight:700,color:C.text,display:'block',lineHeight:1.2}}>Bot Control</span>
-          <span style={{fontSize:10,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>{modeLabel} · {modeSub}</span>
+        <div style={{flex:1,minWidth:0,textAlign:'left',overflow:'hidden'}}>
+          <span style={{fontSize:'clamp(11px,3.8vw,16px)',fontWeight:700,color:C.text,display:'block',lineHeight:1.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>Bot Control</span>
+          <span style={{fontSize:'clamp(8px,2.5vw,10px)',color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>{modeLabel} · {modeSub}</span>
         </div>
         {/* state pill */}
         <div style={{
@@ -2550,7 +2762,7 @@ const ControlCard: React.FC<{
                 background:canResumeBot?`rgba(16,185,129,0.55)`:`rgba(251,191,36,0.75)`,
                 color:'#fff',fontSize:13,fontWeight:700,letterSpacing:'0.02em',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-                boxShadow:`0 3px 10px ${canResumeBot?`${C.cyan}35`:`${C.amber}35`}`,
+                boxShadow:`0 1px 0 rgba(255,255,255,0.18) inset, 0 8px 24px ${canResumeBot?`${C.cyan}55`:`${C.amber}55`}, 0 3px 8px rgba(0,0,0,0.40)`,
                 opacity:(!canPauseBot&&!canResumeBot)?0.45:1,transition:'opacity 0.2s',
               }}>
                 {canResumeBot?<><PlayCircle style={{width:16,height:16}}/> Resume</>:<><PauseCircle style={{width:16,height:16}}/> Pause</>}
@@ -2562,7 +2774,7 @@ const ControlCard: React.FC<{
                 background:`rgba(239,68,68,0.60)`,
                 color:'#fff',fontSize:13,fontWeight:700,letterSpacing:'0.02em',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-                boxShadow:`0 3px 10px ${C.coral}30`,
+                boxShadow:`0 1px 0 rgba(255,255,255,0.18) inset, 0 8px 24px ${C.coral}50, 0 3px 8px rgba(0,0,0,0.40)`,
                 opacity:(!canStopBot||isLoading)?0.45:1,transition:'opacity 0.2s',
               }}>
                 <StopCircle style={{width:16,height:16}}/> Stop
@@ -2577,10 +2789,10 @@ const ControlCard: React.FC<{
                 background:`linear-gradient(180deg,${ac}CC,${ac}AA)`,
                 color:'#fff',fontSize:14,fontWeight:700,letterSpacing:'0.02em',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-                boxShadow:`0 4px 16px ${ac}35`,
+                boxShadow:`0 1px 0 rgba(255,255,255,0.18) inset, 0 10px 28px ${ac}55, 0 3px 10px rgba(0,0,0,0.45)`,
                 opacity:(isLoading||!canStart||isBelowMin)?0.45:1,transition:'opacity 0.2s',
               }}>
-                <PlayCircle style={{width:18,height:18}}/> Mulai {modeLabel}
+                <PlayCircle style={{width:18,height:18}}/> Start
               </button>
               {!canStart&&!error&&!isBelowMin&&(
                 <p style={{fontSize:10,textAlign:'center',color:C.muted}}>
@@ -3033,13 +3245,8 @@ export default function DashboardPage() {
         transition:'all 0.2s ease',
       }}
     >
-      {actionLoading
-        ? <div style={{width:12,height:12,border:`2px solid rgba(255,255,255,0.3)`,borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/>
-        : isActiveMode
-          ? <StopCircle style={{width:13,height:13}}/>
-          : <PlayCircle style={{width:13,height:13}}/>
-      }
-      {actionLoading ? T('common.loading') : isActiveMode ? T('dashboard.stop')+' Bot' : T('dashboard.start')+' Bot'}
+      {actionLoading && <div style={{width:12,height:12,border:`2px solid rgba(255,255,255,0.3)`,borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/>}
+      {actionLoading ? T('common.loading') : isActiveMode ? 'Stop' : 'Start'}
     </button>
   );
 
@@ -3126,10 +3333,10 @@ export default function DashboardPage() {
 
         @media (max-width: 767px) {
           .ds-card, .ds-card:hover {
-            border-color: ${isDarkMode ? 'rgba(16,185,129,0.55)' : 'rgba(16,185,129,0.40)'} !important;
+            border: 0.5px solid ${isDarkMode ? 'rgba(20,184,166,0.35)' : 'rgba(20,184,166,0.28)'} !important;
             box-shadow: ${isDarkMode
-              ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(16,185,129,0.06), 0 2px 8px rgba(0,0,0,0.12)'
-              : '0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px rgba(0,0,0,0.06), 0 0 28px rgba(16,185,129,0.05), 0 2px 6px rgba(0,0,0,0.05)'
+              ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(20,184,166,0.05), 0 2px 8px rgba(0,0,0,0.12)'
+              : '0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px rgba(0,0,0,0.06), 0 0 28px rgba(20,184,166,0.04), 0 2px 6px rgba(0,0,0,0.05)'
             } !important;
             transform: none !important;
           }
@@ -3167,6 +3374,7 @@ export default function DashboardPage() {
         }}
         onClear={async()=>{await api.clearOrders();setScheduleOrders([]);}}
         loading={addOrderLoading}
+        isRunning={isSchedRunning||isSchedPaused}
       />
       {deviceType==='mobile'&&(
         <MobileSessionSheet
@@ -3483,7 +3691,7 @@ export default function DashboardPage() {
             {TopCards}
             <div style={{display:'flex',flexDirection:'row',gap:g,alignItems:'stretch'}}>
               {/* LEFT: chart card — stretches to match right column height */}
-              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0}}>
+              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${C.bdr}`,boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`}}>
                 {/* Clock header inside chart card */}
                 <div style={{
                   marginBottom:8,
@@ -3534,6 +3742,7 @@ export default function DashboardPage() {
                     padding:'10px 12px',borderRadius:12,
                     background:C.card2,
                     border:`1px solid ${modeAccent(tradingMode)}28`,
+                    boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`,
                     display:'flex',flexDirection:'column',gap:7,
                     flex:1,minHeight:0,
                   }}>
@@ -3611,11 +3820,11 @@ export default function DashboardPage() {
                         background:`${modeAccent(tradingMode)}14`,
                         border:`1px solid ${modeAccent(tradingMode)}35`,
                         color:modeAccent(tradingMode),
-                        fontSize:10,fontWeight:700,letterSpacing:'0.04em',
-                        cursor:'pointer',
+                        fontSize:'clamp(8px,2.8vw,10px)',fontWeight:700,letterSpacing:'0.04em',
+                        cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',
                       }}
 >
-                      <Info style={{width:11,height:11}}/>
+                      <Info style={{width:11,height:11,flexShrink:0}}/>
                       {T('dashboard.viewSession')}
                     </button>
                     {/* Start / Stop toggle button */}
@@ -3649,7 +3858,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                   <div style={{flex:1}}>
-                    {ModeSession(true, true, ()=>setMobileSessionOpen(true), mobileStartStopBtn)}
+                    {ModeSession(true, true, ()=>setOrderModalOpen(true), mobileStartStopBtn)}
                   </div>
                 </div>
               ) : (
