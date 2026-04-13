@@ -623,6 +623,8 @@ function LoginPageContent() {
             </div>
 
             <div className="panel">
+              {/* Absorbs browser auto-focus on mobile so keyboard does not pop up on page load */}
+              <div tabIndex={0} aria-hidden="true" style={{position:"absolute",opacity:0,width:0,height:0,overflow:"hidden",pointerEvents:"none"}}/>
               <form onSubmit={handleLogin} noValidate>
                 <div className={`fg ${focused ? 'active' : ''}`}>
                   <div className="field">

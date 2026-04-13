@@ -803,7 +803,7 @@ const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:
         </div>
         {searchable&&(
           <div style={{padding:'10px 14px',borderBottom:`1px solid ${headerBorder}`,flexShrink:0}}>
-            <input autoFocus className="ds-input" style={{fontSize:13,borderRadius:8}} placeholder="Cari aset..." value={q} onChange={e=>setQ(e.target.value)}/>
+            <input className="ds-input" style={{fontSize:13,borderRadius:8}} placeholder="Cari aset..." value={q} onChange={e=>setQ(e.target.value)}/>
           </div>
         )}
         <div style={{overflowY:'auto',flex:1}}>
