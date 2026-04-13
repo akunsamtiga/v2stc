@@ -213,7 +213,8 @@ function ProfilePageContent() {
   const fmtBalance = (n?: number) => {
     if (n == null) return '0';
     const val = n / 100;
-    return val.toLocaleString(language === 'en' ? 'en-US' : language === 'ru' ? 'ru-RU' : 'id-ID', { maximumFractionDigits: 0 });
+    const localeMap: Record<string, string> = { en: 'en-US', id: 'id-ID', ru: 'ru-RU', es: 'es-ES', ms: 'ms-MY', hi: 'hi-IN', th: 'th-TH', tr: 'tr-TR' };
+    return val.toLocaleString(localeMap[language] ?? 'id-ID', { maximumFractionDigits: 0 });
   };
 
   const getInitials = () => {
@@ -553,7 +554,7 @@ function ProfilePageContent() {
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
                 iconBg="linear-gradient(135deg, #10B981, #34D399)" 
                 label={t('language.title')} 
-                value={t(`language.${language === 'en' ? 'english' : language === 'id' ? 'indonesian' : 'russian'}`).toLowerCase()}
+                value={t(`language.${{ en: 'english', id: 'indonesian', ru: 'russian', es: 'spanish', ms: 'malay', hi: 'hindi', th: 'thai', tr: 'turkish' }[language] ?? 'english'}`).toLowerCase()}
                 onClick={() => setLangSheetOpen(true)} 
               />
               <TappableRow
@@ -602,10 +603,9 @@ function ProfilePageContent() {
 // ─────────────────────────────────────────────
 // EXPORT
 // ─────────────────────────────────────────────
+// LanguageProvider tidak diperlukan di sini — sudah disediakan oleh ClientLayout secara global.
+// Jika dibungkus lagi di sini akan membuat provider lokal yang terpisah dari global,
+// sehingga perubahan bahasa di halaman ini tidak tersinkron ke halaman lain (Dashboard dll).
 export default function ProfilePage() {
-  return (
-    <LanguageProvider>
-      <ProfilePageContent />
-    </LanguageProvider>
-  );
+  return <ProfilePageContent />;
 }

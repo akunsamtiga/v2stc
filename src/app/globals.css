@@ -3,10 +3,12 @@
 @tailwind utilities;
 
 /* ============================================================
-   DIGITAL CLOCK FONT — "Digital-7" via Google Fonts fallback
-   Using 'Share Tech Mono' which closely resembles a digital LCD font
+   DIGITAL CLOCK FONT — DSEG7 Classic (7-segment LCD style)
+   Install: npm install @fontsource/dseg7-classic
+   Di-bundle ke app, tidak bergantung CDN → reliable di Capacitor
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap');
+@import '@fontsource/dseg7-classic/400.css';
+@import '@fontsource/dseg7-classic/700.css';
 
 /* ============================================================
    ANIMATED BORDER PROPERTY REGISTRATION

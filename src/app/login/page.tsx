@@ -90,28 +90,18 @@ function LoginPageContent() {
       setSplash('out');
 
       // ── Bridge transition: show the persistent HTML splash as an overlay ──
-      // This lives outside React tree (in layout.tsx <body>) so it survives
-      // page navigation, eliminating the flicker gap between login unmount
-      // and ClientLayout mount.
       const htmlSplash = document.getElementById('__stc_splash');
       if (htmlSplash) {
-        // Instant show (no transition) so it covers the login splash immediately
         htmlSplash.style.transition = 'none';
         htmlSplash.style.opacity = '1';
         htmlSplash.style.pointerEvents = 'none';
         htmlSplash.classList.remove('hide');
-        // Restore transition in next frame so ClientLayout can fade it out smoothly
         requestAnimationFrame(() => {
           htmlSplash.style.transition = '';
         });
       }
 
-      // Tell ClientLayout to skip its own dark splash and auth-check delays —
-      // session is already valid since we literally just logged in.
       sessionStorage.setItem('stc_from_login', '1');
-
-      // Navigate after a single frame — the login page can unmount freely now
-      // because __stc_splash is covering everything above it (z-index: 99999).
       setTimeout(() => router.push('/dashboard'), 50);
     }, 7000);
   };
@@ -141,8 +131,9 @@ function LoginPageContent() {
     (password || passRef.current?.value)
   );
 
-  const getLanguageName = (code: Language) => {
-    return code.toUpperCase();
+  // ✅ FIXED: Tampilkan nama bahasa asli (nativeName), bukan hanya kode uppercase
+  const getLanguageName = (code: Language): string => {
+    return AVAILABLE_LANGUAGES.find(l => l.code === code)?.nativeName ?? code.toUpperCase();
   };
 
   const FlagIcon = ({ lang, size = 16 }: { lang: typeof AVAILABLE_LANGUAGES[0]; size?: number }) => {
@@ -402,10 +393,20 @@ function LoginPageContent() {
           color: var(--text-2);
           backdrop-filter: blur(10px);
           transition: all 0.15s;
+          max-width: 160px;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
         }
         .lang-btn:hover {
           background: rgba(255,255,255,0.9);
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .lang-btn-text {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 100px;
         }
         .lang-dropdown {
           position: absolute;
@@ -415,7 +416,9 @@ function LoginPageContent() {
           border-radius: 12px;
           box-shadow: 0 4px 24px rgba(0,0,0,0.12);
           overflow: hidden;
-          min-width: 140px;
+          min-width: 180px;
+          max-height: 300px;
+          overflow-y: auto;
           animation: lang-fade 0.2s ease;
         }
         @keyframes lang-fade {
@@ -430,18 +433,19 @@ function LoginPageContent() {
           padding: 10px 14px;
           background: transparent;
           border: none;
+          border-bottom: 1px solid rgba(60,60,67,0.07);
           cursor: pointer;
           text-align: left;
           font-size: 14px;
           transition: background 0.15s;
+          font-family: var(--font);
         }
-        .lang-option:hover {
-          background: rgba(0,122,255,0.06);
-        }
+        .lang-option:last-child { border-bottom: none; }
+        .lang-option:hover { background: rgba(0,122,255,0.06); }
         .lang-option.active {
-          background: rgba(0,122,255,0.1);
+          background: rgba(0,122,255,0.08);
           color: var(--accent);
-          font-weight: 500;
+          font-weight: 600;
         }
 
         /* Splash */
@@ -461,9 +465,6 @@ function LoginPageContent() {
           pointer-events: none;
         }
         @keyframes sp-fade-out { from { opacity: 1; } to { opacity: 0; } }
-        /* splash-enter: NO fade-in — splash must cover the login form instantly.
-           Fading from opacity:0 exposes the body background (#0a0a0a in dark mode)
-           for the duration of the animation, causing the black flicker. */
         .splash-enter { opacity: 1; }
 
         .sp-icon-wrap {
@@ -486,78 +487,34 @@ function LoginPageContent() {
         @keyframes icon-pop { from { transform: scale(0.8); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
 
         .sp-orb {
-          position: fixed;
-          border-radius: 50%;
-          pointer-events: none;
-          opacity: 0;
-          transition: opacity 0.5s ease;
+          position: fixed; border-radius: 50%; pointer-events: none;
+          opacity: 0; transition: opacity 0.5s ease;
         }
-        .splash-verified .sp-orb,
-        .splash-out .sp-orb { opacity: 1; }
-        .sp-orb-1 {
-          width: 380px; height: 380px;
-          background: radial-gradient(circle, rgba(0,122,255,0.40) 0%, transparent 70%);
-          filter: blur(90px);
-          top: -80px; left: -120px;
-          animation: orb-drift-1 5s ease-in-out infinite alternate;
-        }
-        .sp-orb-2 {
-          width: 340px; height: 340px;
-          background: radial-gradient(circle, rgba(48,209,88,0.35) 0%, transparent 70%);
-          filter: blur(80px);
-          bottom: -80px; right: -100px;
-          animation: orb-drift-2 6s ease-in-out infinite alternate;
-        }
-        .sp-orb-3 {
-          width: 280px; height: 280px;
-          background: radial-gradient(circle, rgba(191,90,242,0.30) 0%, transparent 70%);
-          filter: blur(85px);
-          top: 30%; left: -80px;
-          animation: orb-drift-3 4.5s ease-in-out infinite alternate;
-        }
-        .sp-orb-4 {
-          width: 260px; height: 260px;
-          background: radial-gradient(circle, rgba(255,159,10,0.28) 0%, transparent 70%);
-          filter: blur(80px);
-          bottom: 20%; right: -80px;
-          animation: orb-drift-4 5.5s ease-in-out infinite alternate;
-        }
+        .splash-verified .sp-orb, .splash-out .sp-orb { opacity: 1; }
+        .sp-orb-1 { width: 380px; height: 380px; background: radial-gradient(circle, rgba(0,122,255,0.40) 0%, transparent 70%); filter: blur(90px); top: -80px; left: -120px; animation: orb-drift-1 5s ease-in-out infinite alternate; }
+        .sp-orb-2 { width: 340px; height: 340px; background: radial-gradient(circle, rgba(48,209,88,0.35) 0%, transparent 70%); filter: blur(80px); bottom: -80px; right: -100px; animation: orb-drift-2 6s ease-in-out infinite alternate; }
+        .sp-orb-3 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(191,90,242,0.30) 0%, transparent 70%); filter: blur(85px); top: 30%; left: -80px; animation: orb-drift-3 4.5s ease-in-out infinite alternate; }
+        .sp-orb-4 { width: 260px; height: 260px; background: radial-gradient(circle, rgba(255,159,10,0.28) 0%, transparent 70%); filter: blur(80px); bottom: 20%; right: -80px; animation: orb-drift-4 5.5s ease-in-out infinite alternate; }
         @keyframes orb-drift-1 { from{transform:translate(0,0)} to{transform:translate(40px,30px)} }
         @keyframes orb-drift-2 { from{transform:translate(0,0)} to{transform:translate(-35px,-25px)} }
         @keyframes orb-drift-3 { from{transform:translate(0,0)} to{transform:translate(30px,20px)} }
         @keyframes orb-drift-4 { from{transform:translate(0,0)} to{transform:translate(-28px,-20px)} }
-
         .splash-out .sp-orb { animation: orb-fade-out 0.8s ease forwards !important; }
         @keyframes orb-fade-out { from{opacity:1} to{opacity:0} }
 
-        .sp-text-area {
-          position: relative; height: 80px; width: 100%;
-          display: flex; align-items: center; justify-content: center; overflow: hidden;
-        }
-        .sp-msg {
-          position: absolute; width: 100%;
-          display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          gap: 10px; text-align: center; padding: 0 24px;
-        }
+        .sp-text-area { position: relative; height: 80px; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .sp-msg { position: absolute; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 0 24px; }
         .sp-title { font-size: clamp(24px, 7vw, 30px); font-weight: 700; letter-spacing: -0.7px; color: #1c1c1e; line-height: 1.15; white-space: nowrap; }
         .sp-sub   { font-size: 14px; color: #6e6e73; font-weight: 400; line-height: 1.5; letter-spacing: -0.1px; }
-
         .sp-msg-welcome-in  { animation: msg-in 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
         .sp-msg-welcome-out { animation: msg-out-up 0.4s cubic-bezier(0.4,0,1,1) forwards; }
         .sp-msg-verified-in { animation: msg-in-from-below 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
-
         @keyframes msg-in            { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes msg-out-up        { from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(-20px)} }
         @keyframes msg-in-from-below { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
 
         .sp-dots { display: flex; gap: 6px; margin-top: 40px; }
-        .sp-dot {
-          height: 6px; border-radius: 99px;
-          background: rgba(0,0,0,0.10);
-          transition: width 0.45s cubic-bezier(0.34,1.2,0.64,1), background 0.3s ease;
-          width: 6px;
-        }
+        .sp-dot { height: 6px; border-radius: 99px; background: rgba(0,0,0,0.10); transition: width 0.45s cubic-bezier(0.34,1.2,0.64,1), background 0.3s ease; width: 6px; }
         .sp-dot.act { width: 22px; background: #007aff; }
       `}</style>
 
@@ -569,12 +526,10 @@ function LoginPageContent() {
           splash === 'verified' ? 'splash-verified'              : '',
           splash === 'out'      ? 'splash-out'                   : '',
         ].join(' ')}>
-
           <div className="sp-orb sp-orb-1" />
           <div className="sp-orb sp-orb-2" />
           <div className="sp-orb sp-orb-3" />
           <div className="sp-orb sp-orb-4" />
-
           <div className={`sp-icon-wrap ${splash === 'verified' || splash === 'out' ? 'sp-icon-verified' : 'sp-icon-welcome'}`}>
             {splash === 'welcome' ? (
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -587,7 +542,6 @@ function LoginPageContent() {
               </svg>
             )}
           </div>
-
           <div className="sp-text-area">
             {splash === 'welcome' && (
               <div className="sp-msg sp-msg-welcome-in">
@@ -601,7 +555,6 @@ function LoginPageContent() {
               </div>
             )}
           </div>
-
           <div className="sp-dots">
             <div className={`sp-dot ${splash === 'welcome' ? 'act' : ''}`} />
             <div className={`sp-dot ${splash === 'verified' || splash === 'out' ? 'act' : ''}`} />
@@ -612,27 +565,23 @@ function LoginPageContent() {
       {mounted && (
         <div
           className="lr-page"
-          style={splash !== 'hidden' ? {
-            // Keep in DOM — avoids the unmount gap that exposes the body background.
-            // The splash overlay (z-index: 200) sits on top; this is invisible to the user.
-            visibility: 'hidden',
-            pointerEvents: 'none',
-          } : undefined}
+          style={splash !== 'hidden' ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
         >
-          {/* Logo Desktop - pojok kiri atas, sejajar dengan lang-selector */}
+          {/* Logo Desktop */}
           <div className="logo-desktop">
             <img src="/logo.png" alt="STC AutoTrade" />
           </div>
 
           {/* Language Selector */}
           <div className="lang-selector" ref={langRef}>
-            <button 
-              className="lang-btn" 
+            <button
+              className="lang-btn"
               onClick={() => setShowLangSelector(!showLangSelector)}
             >
               {(() => { const l = AVAILABLE_LANGUAGES.find(l => l.code === language); return l ? <FlagIcon lang={l} size={16} /> : '🌐'; })()}
-              <span>{getLanguageName(language)}</span>
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+              {/* ✅ FIXED: Tampilkan nativeName bukan kode uppercase */}
+              <span className="lang-btn-text">{getLanguageName(language)}</span>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ flexShrink: 0 }}>
                 <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
@@ -649,6 +598,11 @@ function LoginPageContent() {
                   >
                     <FlagIcon lang={lang} size={16} />
                     <span>{lang.nativeName}</span>
+                    {language === lang.code && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                        <path d="M20 6L9 17l-5-5"/>
+                      </svg>
+                    )}
                   </button>
                 ))}
               </div>
@@ -660,12 +614,11 @@ function LoginPageContent() {
 
           <div className="card">
             <div className="brand">
-              {/* Logo Mobile - di atas judul */}
+              {/* Logo Mobile */}
               <div className="logo-mobile">
                 <img src="/logo.png" alt="STC AutoTrade" />
                 <span className="logo-mobile-name">STC AutoTrade</span>
               </div>
-
               <p className="brand-sub">{t('login.subtitle')}</p>
             </div>
 
@@ -688,7 +641,6 @@ function LoginPageContent() {
                       />
                     </div>
                   </div>
-
                   <div className="field">
                     <label className="fl" htmlFor="password">{t('login.password')}</label>
                     <div className="fwrap">
@@ -741,11 +693,7 @@ function LoginPageContent() {
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  className="btn"
-                  disabled={loading || !canSubmit}
-                >
+                <button type="submit" className="btn" disabled={loading || !canSubmit}>
                   {loading && <div className="spin" />}
                   {loading ? t('login.signingIn') : t('login.signIn')}
                 </button>
@@ -779,11 +727,9 @@ function LoginPageContent() {
   );
 }
 
-// Export with LanguageProvider
+// LanguageProvider tidak diperlukan di sini — sudah disediakan oleh ClientLayout secara global.
+// Jika dibungkus lagi di sini akan membuat provider lokal yang terpisah dari global,
+// sehingga perubahan bahasa di halaman login tidak tersinkron ke halaman lain setelah login.
 export default function LoginPage() {
-  return (
-    <LanguageProvider>
-      <LoginPageContent />
-    </LanguageProvider>
-  );
+  return <LoginPageContent />;
 }

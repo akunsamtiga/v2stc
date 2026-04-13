@@ -203,7 +203,7 @@ const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:bo
   const [time,setTime] = useState<Date|null>(null);
   useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
   const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
-  const fmt  = (d:Date) => d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const fmt  = (d:Date) => {const h=String(d.getHours()).padStart(2,'0');const m=String(d.getMinutes()).padStart(2,'0');const s=String(d.getSeconds()).padStart(2,'0');return`${h}:${m}:${s}`;};
   const fmtD = (d:Date) => d.toLocaleDateString(locale,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
   const tz   = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
   const dotColor = isBotRunning ? C.cyan : C.coral;
@@ -225,7 +225,7 @@ const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:bo
       }}>
         <p suppressHydrationWarning style={{
           fontSize:28,fontWeight:700,lineHeight:1,letterSpacing:'0.08em',
-          fontFamily:"'Orbitron','Share Tech Mono',ui-monospace,monospace",
+          fontFamily:"'DSEG7 Classic','Share Tech Mono',ui-monospace,monospace",
           color:C.text,
           textShadow:`0 0 20px rgba(16,185,129,0.40),0 0 6px rgba(16,185,129,0.18)`,
           margin:0,
@@ -252,7 +252,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
   const [time,setTime] = useState<Date|null>(null);
   useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
   const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
-  const fmt     = (d:Date) => d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const fmt     = (d:Date) => {const h=String(d.getHours()).padStart(2,'0');const m=String(d.getMinutes()).padStart(2,'0');const s=String(d.getSeconds()).padStart(2,'0');return`${h}:${m}:${s}`;};
   const fmtDay  = (d:Date) => d.toLocaleDateString(locale,{weekday:'short'});
   const fmtDate = (d:Date) => d.toLocaleDateString(locale,{day:'2-digit',month:'short',year:'numeric'});
   const tz      = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
@@ -277,7 +277,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
       }}>
         <p suppressHydrationWarning style={{
           fontSize:18,fontWeight:700,lineHeight:1,letterSpacing:'0.08em',
-          fontFamily:"'Orbitron','Share Tech Mono',ui-monospace,monospace",
+          fontFamily:"'DSEG7 Classic','Share Tech Mono',ui-monospace,monospace",
           color:C.text,margin:0,
           textShadow:`0 0 18px rgba(16,185,129,0.38),0 0 5px rgba(16,185,129,0.15)`,
         }}>{time?fmt(time):'--:--:--'}</p>
@@ -311,12 +311,17 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
 const RealtimeClockDesktop: React.FC = () => {
   const [time, setTime] = useState<Date|null>(null);
   useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
-  const fmt  = (d:Date)=>d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const fmt  = (d:Date)=>{const h=String(d.getHours()).padStart(2,'0');const m=String(d.getMinutes()).padStart(2,'0');const s=String(d.getSeconds()).padStart(2,'0');return`${h}:${m}:${s}`;};
   const fmtD = (d:Date)=>d.toLocaleDateString('id-ID',{weekday:'short',day:'2-digit',month:'short'});
   const tz   = ()=>{if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
   return (
     <div>
-      <p suppressHydrationWarning style={{fontSize:15,fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:C.text,fontFamily:'ui-monospace,SFMono-Regular,monospace'}}>
+      <p suppressHydrationWarning style={{
+        fontSize:15,fontWeight:700,letterSpacing:'0.06em',lineHeight:1,
+        color:C.text,
+        fontFamily:"'DSEG7 Classic','Share Tech Mono',ui-monospace,monospace",
+        textShadow:`0 0 14px rgba(16,185,129,0.45),0 0 4px rgba(16,185,129,0.18)`,
+      }}>
         {time?fmt(time):'--:--:--'}
       </p>
       <div suppressHydrationWarning style={{display:'flex',alignItems:'center',gap:5,marginTop:2}}>
@@ -370,7 +375,7 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
 // ═══════════════════════════════════════════
 const AssetCardCompact: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean;t:(k:string)=>string;onOpenPicker?:()=>void;disabled?:boolean}> = ({asset,mode,isLoading,t,onOpenPicker,disabled}) => {
   const modeCol = modeAccent(mode);
-  const abbr = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '—';
+  const abbr = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '+';
   const [imgErr,setImgErr] = useState(false);
   if(isLoading) return <Card style={{padding:'10px 12px'}}><Sk w={80} h={18}/></Card>;
   return (
@@ -591,7 +596,7 @@ const TodayProfitCard: React.FC<{
 // ═══════════════════════════════════════════
 const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?:boolean;t:(k:string)=>string;onOpenPicker?:()=>void;disabled?:boolean}> = ({asset,mode,isLoading,t,onOpenPicker,disabled}) => {
   const modeCol = modeAccent(mode);
-  const abbr    = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '—';
+  const abbr    = asset?.ric ? asset.ric.slice(0,3).toUpperCase() : '+';
   const [imgErr,setImgErr] = useState(false);
   if(isLoading) return <Card style={{padding:'11px 14px',height:'100%'}}><Sk w={100} h={22}/></Card>;
   return (
@@ -640,7 +645,7 @@ const AssetBalanceCombinedCard: React.FC<{
   const [hidden, setHidden] = useState(false);
   const [imgErr, setImgErr] = useState(false);
   const modeCol = modeAccent(mode);
-  const abbr = asset?.ric ? asset.ric.slice(0, 3).toUpperCase() : '—';
+  const abbr = asset?.ric ? asset.ric.slice(0, 3).toUpperCase() : '+';
   const isDemo = accountType === 'demo';
   const rawAmount = isDemo
     ? (balance?.demo_balance ?? balance?.balance ?? 0)
@@ -896,6 +901,7 @@ const PickerBtn: React.FC<{
 // ═══════════════════════════════════════════
 const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];logs:ExecutionLog[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>Promise<void>;loading:boolean;isRunning?:boolean}> =
 ({open,onClose,orders,logs,onAdd,onDelete,onClear,loading,isRunning}) => {
+  const { t } = useLanguage();
   const [input,setInput]           = useState('');
   const [clearLoading,setClearLoading] = useState(false);
   const [view,setView]             = useState<'list'|'input'>('list');
@@ -995,7 +1001,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
           {/* Row 1: title + close */}
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <p style={{fontSize:20,fontWeight:600,color:C.text,letterSpacing:'-0.02em',margin:0}}>
-              {view==='list'?'Scheduled Orders':'Input Signal'}
+              {view==='list'?t('dashboard.schedule.title')+' Orders':t('dashboard.schedule.inputSignal')}
             </p>
             <button
               onClick={view==='input'?()=>setView('list'):onClose}
@@ -1032,7 +1038,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                   opacity:isRunning?0.35:1,
                 }}
               >
-                <Plus style={{width:15,height:15}}/>Input Signal
+                <Plus style={{width:15,height:15}}/>{t('dashboard.schedule.inputSignal')}
               </button>
               {/* Clear Pending */}
               <button
@@ -1050,7 +1056,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                   ? <RefreshCw style={{width:13,height:13,animation:'spin 0.7s linear infinite'}}/>
                   : <Trash2 style={{width:14,height:14}}/>
                 }
-                Clear Pending
+                {t('dashboard.schedule.clearPending')}
               </button>
             </div>
           )}
@@ -1132,7 +1138,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                       color:C.cyan,fontSize:13,fontWeight:600,cursor:'pointer',
                     }}
                   >
-                    <Plus style={{width:15,height:15}}/>Input Signal
+                    <Plus style={{width:15,height:15}}/>{t('dashboard.schedule.inputSignal')}
                   </button>
                 </div>
               ) : (
@@ -1142,31 +1148,51 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                   {prevSessionLogs.length > 0 && (
                     <>
                       <p style={{fontSize:9,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:C.muted,margin:'0 0 2px'}}>Riwayat Sebelumnya</p>
-                      {prevSessionLogs.map(l=>{
+                      {prevSessionLogs.map((l,idx)=>{
                         const isWin  = /^win$/i.test(l.result??'');
                         const isLoss = /^los/i.test(l.result??'');
                         const isBuy  = l.trend==='call';
                         const col    = isWin ? C.cyan : isLoss ? C.coral : C.muted;
+                        const profit = l.profit;
                         return (
                           <div key={l.id} style={{
                             display:'flex',alignItems:'center',gap:10,
-                            padding:'8px 12px',borderRadius:10,
+                            padding:'10px 12px',borderRadius:12,
                             background:isWin?`${C.cyan}08`:isLoss?`${C.coral}08`:C.card2,
-                            border:`1px solid ${isWin?`${C.cyan}28`:isLoss?`${C.coral}28`:C.bdr}`,
+                            border:`1px solid ${isWin?`${C.cyan}35`:isLoss?`${C.coral}35`:C.bdr}`,
                             opacity:0.85,
                           }}>
-                            <span style={{fontSize:14,fontWeight:800,color:col,lineHeight:1,width:16,textAlign:'center'}}>
-                              {isWin?'✓':isLoss?'✗':'·'}
-                            </span>
-                            <span style={{fontSize:13,fontWeight:600,color:C.text,fontFamily:'monospace'}}>{l.time||'--:--'}</span>
-                            <span style={{fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:5,background:isBuy?`${C.cyan}18`:`${C.coral}18`,color:isBuy?C.cyan:C.coral}}>{isBuy?'BUY':'SELL'}</span>
-                            {(isWin||isLoss)&&<span style={{fontSize:9,fontWeight:700,color:col}}>{isWin?'WIN':'LOSS'}</span>}
-                            {l.martingaleStep!=null&&l.martingaleStep>0&&(
-                              <span style={{fontSize:9,color:C.amber,fontWeight:600}}>K{l.martingaleStep}</span>
+                            {/* Nomor badge — seragam dengan pending orders */}
+                            <div style={{
+                              width:22,height:22,borderRadius:'50%',flexShrink:0,
+                              display:'flex',alignItems:'center',justifyContent:'center',
+                              background:isWin?`${C.cyan}14`:isLoss?`${C.coral}14`:'rgba(126,126,126,0.12)',
+                              border:`1px solid ${isWin?`${C.cyan}35`:isLoss?`${C.coral}35`:'rgba(126,126,126,0.22)'}`,
+                            }}>
+                              <span style={{fontSize:10,fontWeight:700,color:col}}>{idx+1}</span>
+                            </div>
+                            {/* Waktu */}
+                            <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace',flexShrink:0}}>{l.time||'--:--'}</span>
+                            {/* BUY/SELL badge */}
+                            <span style={{
+                              fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,
+                              background:isBuy?`${C.cyan}22`:`${C.coral}22`,
+                              color:isBuy?C.cyan:C.coral,
+                              border:`1px solid ${isBuy?C.cyan:C.coral}35`,
+                              flexShrink:0,
+                            }}>{isBuy?'BUY':'SELL'}</span>
+                            {/* Result */}
+                            {(isWin||isLoss)&&(
+                              <span style={{fontSize:9,fontWeight:700,color:col,flexShrink:0}}>{isWin?'WIN':'LOSS'}</span>
                             )}
-                            {l.profit!=null&&(
-                              <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',color:l.profit>=0?C.cyan:C.coral}}>
-                                {l.profit>=0?'+':''}{Math.round(l.profit/100).toLocaleString('id-ID')}
+                            {/* Martingale step */}
+                            {l.martingaleStep!=null&&l.martingaleStep>0&&(
+                              <span style={{fontSize:9,color:C.amber,fontWeight:600,flexShrink:0}}>K{l.martingaleStep}</span>
+                            )}
+                            {/* Profit/Amount — push ke kanan */}
+                            {profit!=null&&(
+                              <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',color:profit>=0?C.cyan:C.coral,flexShrink:0}}>
+                                {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
                               </span>
                             )}
                           </div>
@@ -1727,7 +1753,7 @@ const AISignalPanel: React.FC<{
                     ? alwaysSignal.status || `${T('dashboard.aiSignal.martingaleStep')} ${alwaysSignal.currentStep}/${alwaysSignal.maxSteps}`
                     : pendingOrders.length > 0
                     ? `${pendingOrders.length} ${T('dashboard.aiSignal.pendingSignals')}`
-                    : T('dashboard.aiSignal.waitingTelegram')}
+                    : 'sedang konfigurasi analysis ai system'}
                 </span>
               </div>
             </div>
@@ -1824,7 +1850,7 @@ const AISignalPanel: React.FC<{
                   }} />
                 ))}
               </div>
-              <span style={{ fontSize: 10, color: `${C.muted}88` }}>{T('dashboard.aiSignal.waitingTelegram')}</span>
+              <span style={{ fontSize: 10, color: `${C.muted}88` }}>sedang konfigurasi analysis ai system</span>
             </div>
           )}
         </div>
@@ -2483,8 +2509,13 @@ const SettingsCard: React.FC<{
   const [showMartingaleDialog, setShowMartingaleDialog] = useState(false);
   // Local string state for amount input — avoids iOS number-input editing issues
   const [amtStr, setAmtStr] = useState(amount > 0 ? String(amount) : '');
+  const [amtFocused, setAmtFocused] = useState(false);
   // Sync amtStr when amount changes externally (e.g. quick-pick)
   useEffect(()=>{ setAmtStr(amount > 0 ? String(amount) : ''); },[amount]);
+  // SELALU formatted dengan titik ribuan — live saat mengetik, nilai internal tetap integer
+  const amtDisplay = amtStr && parseInt(amtStr,10) > 0
+    ? parseInt(amtStr,10).toLocaleString('id-ID')
+    : '';
   useEffect(()=>{ if(disabled) setOpen(false); },[disabled]);
   const set = (k:keyof MartingaleConfig,v:any) => onMartingaleChange({...martingale,[k]:v});
   const assetOpts: PickerOpt[] = assets.map(a=>({value:a.ric,label:a.name,sub:`${a.ric} · ${a.profitRate}%`,icon:a.iconUrl}));
@@ -2580,18 +2611,37 @@ const SettingsCard: React.FC<{
                       pattern="[0-9]*"
                       autoComplete="off"
                       className="ds-input"
-                      value={amtStr}
+                      value={amtDisplay}
                       onChange={e=>{
-                        const raw = e.target.value.replace(/[^0-9]/g,'');
+                        // Strip titik ribuan + non-digit agar nilai internal tetap angka murni
+                        const raw = e.target.value.replace(/\./g,'').replace(/[^0-9]/g,'');
                         setAmtStr(raw);
                         onAmountChange(raw ? parseInt(raw, 10) : 0);
                       }}
-                      onFocus={e=>e.target.select()}
-                      onBlur={()=>{ if(!amtStr||amtStr==='0') setAmtStr(''); }}
+                      onFocus={e=>{ setAmtFocused(true); setTimeout(()=>e.target.select(),0); }}
+                      onBlur={()=>{ setAmtFocused(false); if(!amtStr||amtStr==='0') setAmtStr(''); }}
+                      onKeyDown={e=>{ if(e.key==='Enter'||(e as any).keyCode===13) e.currentTarget.blur(); }}
                       disabled={disabled}
                       placeholder={IDR_MIN_DISPLAY.toLocaleString('id-ID')}
-                      style={{ paddingLeft:30, borderColor:isBelowMin?C.coral:undefined, fontSize:16 }}
+                      style={{ paddingLeft:30, paddingRight:44, borderColor:isBelowMin?C.coral:undefined, fontSize:16 }}
                     />
+                    {/* Tombol Enter — tutup keyboard */}
+                    <button
+                      type="button"
+                      onMouseDown={e=>{ e.preventDefault(); (e.currentTarget.previousElementSibling as HTMLInputElement|null)?.blur(); }}
+                      disabled={disabled}
+                      style={{
+                        position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',
+                        width:30,height:26,borderRadius:7,
+                        display:'flex',alignItems:'center',justifyContent:'center',
+                        background:amtFocused?`${C.cyan}22`:C.card2,
+                        border:`1px solid ${amtFocused?`${C.cyan}55`:C.bdr}`,
+                        color:amtFocused?C.cyan:C.muted,
+                        cursor:'pointer',transition:'all 0.15s',flexShrink:0,
+                        fontSize:13,fontWeight:700,lineHeight:1,
+                      }}
+                      title="Konfirmasi"
+                    >↵</button>
                   </div>
                   <div style={{ position:'relative',flexShrink:0 }}>
                     <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer',boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)` }}>
@@ -2652,18 +2702,37 @@ const SettingsCard: React.FC<{
                       pattern="[0-9]*"
                       autoComplete="off"
                       className="ds-input"
-                      value={amtStr}
+                      value={amtDisplay}
                       onChange={e=>{
-                        const raw = e.target.value.replace(/[^0-9]/g,'');
+                        // Strip titik ribuan + non-digit agar nilai internal tetap angka murni
+                        const raw = e.target.value.replace(/\./g,'').replace(/[^0-9]/g,'');
                         setAmtStr(raw);
                         onAmountChange(raw ? parseInt(raw, 10) : 0);
                       }}
-                      onFocus={e=>e.target.select()}
-                      onBlur={()=>{ if(!amtStr||amtStr==='0') setAmtStr(''); }}
+                      onFocus={e=>{ setAmtFocused(true); setTimeout(()=>e.target.select(),0); }}
+                      onBlur={()=>{ setAmtFocused(false); if(!amtStr||amtStr==='0') setAmtStr(''); }}
+                      onKeyDown={e=>{ if(e.key==='Enter'||(e as any).keyCode===13) e.currentTarget.blur(); }}
                       disabled={disabled}
                       placeholder={IDR_MIN_DISPLAY.toLocaleString('id-ID')}
-                      style={{ paddingLeft:30, fontSize:16 }}
+                      style={{ paddingLeft:30, paddingRight:44, fontSize:16 }}
                     />
+                    {/* Tombol Enter — tutup keyboard */}
+                    <button
+                      type="button"
+                      onMouseDown={e=>{ e.preventDefault(); (e.currentTarget.previousElementSibling as HTMLInputElement|null)?.blur(); }}
+                      disabled={disabled}
+                      style={{
+                        position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',
+                        width:30,height:26,borderRadius:7,
+                        display:'flex',alignItems:'center',justifyContent:'center',
+                        background:amtFocused?`${C.cyan}22`:C.card2,
+                        border:`1px solid ${amtFocused?`${C.cyan}55`:C.bdr}`,
+                        color:amtFocused?C.cyan:C.muted,
+                        cursor:'pointer',transition:'all 0.15s',flexShrink:0,
+                        fontSize:13,fontWeight:700,lineHeight:1,
+                      }}
+                      title="Konfirmasi"
+                    >↵</button>
                   </div>
                 </div>
               </div>
@@ -2674,8 +2743,8 @@ const SettingsCard: React.FC<{
               <div style={{ padding:'10px 12px',borderRadius:10,background:`${C.pink}07`,border:`1px solid ${C.pink}20`,display:'flex',gap:8 }}>
                 <Waves style={{ width:14,height:14,color:C.pink,flexShrink:0,marginTop:2 }}/>
                 <div>
-                  <p style={{ fontSize:11,fontWeight:600,color:C.pink,marginBottom:4 }}>Pola Candle Aktif</p>
-                  <p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>Semua pola candle diaktifkan otomatis — Candle Sabit, Doji Terjepit, Doji Pembatalan, BB + SAR Break.</p>
+                  <p style={{ fontSize:11,fontWeight:600,color:C.pink,marginBottom:4 }}>Active pola candle</p>
+                  <p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>All candlestick patterns are systematically enabled — Hammer, Squeezed Doji, Reversal Doji, Bollinger Band + Parabolic SAR Breakout.</p>
                 </div>
               </div>
             )}
@@ -3587,7 +3656,7 @@ export default function DashboardPage() {
                 }}>
                   {selectedAsset?.iconUrl
                     ? <img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:6}}/>
-                    : <span style={{fontSize:12,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'—'}</span>
+                    : <span style={{fontSize:12,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'+'}</span>
                   }
                 </div>
                 <div style={{minWidth:0,flex:1}}>
@@ -3824,7 +3893,7 @@ export default function DashboardPage() {
                 <div style={{width:34,height:34,borderRadius:9,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`}}>
                   {selectedAsset?.iconUrl
                     ?<img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:5}}/>
-                    :<span style={{fontSize:11,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'—'}</span>
+                    :<span style={{fontSize:11,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'+'}</span>
                   }
                 </div>
                 <div style={{minWidth:0,flex:1}}>

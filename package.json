@@ -16,6 +16,7 @@
     "@capacitor/device": "^8.0.2",
     "@capacitor/ios": "^8.3.0",
     "@capacitor/preferences": "^8.0.1",
+    "@fontsource/dseg7-classic": "^5.2.5",
     "@phosphor-icons/react": "^2.1.10",
     "firebase": "^12.11.0",
     "lucide-react": "^1.7.0",

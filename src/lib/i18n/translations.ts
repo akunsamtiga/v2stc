@@ -186,6 +186,7 @@ export interface Translations {
       add: string;
       manageSignals: string;
       inputSignal: string;
+      clearPending: string;
       signalFormat: string;
       example: string;
       activeSignals: string;
@@ -548,6 +549,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'Add Signal',
         manageSignals: 'Manage',
         inputSignal: 'Input Signal',
+        clearPending: 'Clear Pending',
         signalFormat: 'Format: HH:MM call/put or HH.MM B/S',
         example: 'Example',
         activeSignals: 'active signals',
@@ -908,6 +910,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'Tambah Signal',
         manageSignals: 'Kelola',
         inputSignal: 'Input Signal',
+        clearPending: 'Hapus Pending',
         signalFormat: 'Format: JJ:MM call/put atau JJ.MM B/S',
         example: 'Contoh',
         activeSignals: 'signal aktif',
@@ -1268,6 +1271,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'Добавить сигнал',
         manageSignals: 'Управление',
         inputSignal: 'Ввод сигнала',
+        clearPending: 'Очистить ожидающие',
         signalFormat: 'Формат: ЧЧ:ММ call/put или ЧЧ.ММ B/S',
         example: 'Пример',
         activeSignals: 'активных сигналов',
@@ -1628,6 +1632,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'Agregar señal',
         manageSignals: 'Gestionar',
         inputSignal: 'Ingresar señal',
+        clearPending: 'Limpiar pendientes',
         signalFormat: 'Formato: HH:MM call/put o HH.MM B/S',
         example: 'Ejemplo',
         activeSignals: 'señales activas',
@@ -1988,6 +1993,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'Tambah Isyarat',
         manageSignals: 'Urus',
         inputSignal: 'Masukkan Isyarat',
+        clearPending: 'Kosongkan Tunda',
         signalFormat: 'Format: JJ:MM call/put atau JJ.MM B/S',
         example: 'Contoh',
         activeSignals: 'isyarat aktif',
@@ -2348,6 +2354,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'सिग्नल जोड़ें',
         manageSignals: 'प्रबंधित करें',
         inputSignal: 'सिग्नल दर्ज करें',
+        clearPending: 'पेंडिंग साफ करें',
         signalFormat: 'फॉर्मेट: HH:MM call/put या HH.MM B/S',
         example: 'उदाहरण',
         activeSignals: 'सक्रिय सिग्नल',
@@ -2708,6 +2715,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'เพิ่มสัญญาณ',
         manageSignals: 'จัดการ',
         inputSignal: 'ป้อนสัญญาณ',
+        clearPending: 'ล้างรายการที่รอ',
         signalFormat: 'รูปแบบ: HH:MM call/put หรือ HH.MM B/S',
         example: 'ตัวอย่าง',
         activeSignals: 'สัญญาณที่ใช้งาน',
@@ -3068,6 +3076,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'Sinyal Ekle',
         manageSignals: 'Yönet',
         inputSignal: 'Sinyal Gir',
+        clearPending: 'Bekleyenleri Temizle',
         signalFormat: 'Format: SS:DD call/put veya SS.DD B/S',
         example: 'Örnek',
         activeSignals: 'aktif sinyal',
