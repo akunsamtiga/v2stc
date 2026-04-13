@@ -388,7 +388,7 @@ const AssetCardCompact: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isL
               style={{width:'100%',height:'100%',objectFit:'contain',padding:3}}
             />
           ):(
-            <span style={{fontWeight:700,fontSize:11,color:modeCol,letterSpacing:'-0.02em'}}>{abbr}</span>
+            <span style={{fontWeight:700,fontSize:18,color:modeCol,letterSpacing:'-0.02em'}}>{abbr}</span>
           )}
         </div>
         <div style={{flex:1,minWidth:0}}>
@@ -609,7 +609,7 @@ const AssetCard: React.FC<{asset?:StockityAsset|null;mode:TradingMode;isLoading?
               style={{width:'100%',height:'100%',objectFit:'contain',padding:4}}
             />
           ):(
-            <span style={{fontWeight:700,fontSize:13,color:modeCol,letterSpacing:'-0.02em'}}>{abbr}</span>
+            <span style={{fontWeight:700,fontSize:20,color:modeCol,letterSpacing:'-0.02em'}}>{abbr}</span>
           )}
         </div>
         <div style={{flex:1,minWidth:0}}>
@@ -1181,10 +1181,10 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                               border:`1px solid ${isBuy?C.cyan:C.coral}35`,
                               flexShrink:0,
                             }}>{isBuy?'BUY':'SELL'}</span>
-                            {/* Result */}
-                            {(isWin||isLoss)&&(
-                              <span style={{fontSize:9,fontWeight:700,color:col,flexShrink:0}}>{isWin?'WIN':'LOSS'}</span>
-                            )}
+                            {/* Result — minWidth agar kolom selalu sejajar dengan done orders */}
+                            <span style={{fontSize:9,fontWeight:700,color:col,flexShrink:0,minWidth:32,textAlign:'left'}}>
+                              {isWin?'WIN':isLoss?'LOSS':''}
+                            </span>
                             {/* Martingale step */}
                             {l.martingaleStep!=null&&l.martingaleStep>0&&(
                               <span style={{fontSize:9,color:C.amber,fontWeight:600,flexShrink:0}}>K{l.martingaleStep}</span>
@@ -1259,12 +1259,14 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                           {isSkip?'⊘':res==='WIN'?'✓':res==='LOSS'?'✗':'·'}
                         </span>
                         <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
-                        <span style={{fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:5,background:isBuy?`${C.cyan}18`:`${C.coral}18`,color:isBuy?C.cyan:C.coral}}>{isBuy?'BUY':'SELL'}</span>
+                        <span style={{fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:isBuy?`${C.cyan}18`:`${C.coral}18`,color:isBuy?C.cyan:C.coral,border:`1px solid ${isBuy?C.cyan:C.coral}35`,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
                         {isSkip?(
-                          <span style={{fontSize:9,fontWeight:700,color:C.amber}}>SKIP</span>
+                          <span style={{fontSize:9,fontWeight:700,color:C.amber,minWidth:32,textAlign:'left'}}>SKIP</span>
                         ):res?(
-                          <span style={{fontSize:9,fontWeight:700,color:col}}>{res}</span>
-                        ):null}
+                          <span style={{fontSize:9,fontWeight:700,color:col,minWidth:32,textAlign:'left'}}>{res}</span>
+                        ):(
+                          <span style={{minWidth:32}}/>
+                        )}
                         {ms&&(ms.currentStep??0)>0&&(
                           <span style={{fontSize:9,color:C.amber,fontWeight:600}}>K{ms.currentStep}{ms.maxSteps>0?`/${ms.maxSteps}`:''}</span>
                         )}
@@ -2638,7 +2640,7 @@ const SettingsCard: React.FC<{
                         border:`1px solid ${amtFocused?`${C.cyan}55`:C.bdr}`,
                         color:amtFocused?C.cyan:C.muted,
                         cursor:'pointer',transition:'all 0.15s',flexShrink:0,
-                        fontSize:13,fontWeight:700,lineHeight:1,
+                        fontSize:18,fontWeight:700,lineHeight:1,
                       }}
                       title="Konfirmasi"
                     >↵</button>
@@ -2729,7 +2731,7 @@ const SettingsCard: React.FC<{
                         border:`1px solid ${amtFocused?`${C.cyan}55`:C.bdr}`,
                         color:amtFocused?C.cyan:C.muted,
                         cursor:'pointer',transition:'all 0.15s',flexShrink:0,
-                        fontSize:13,fontWeight:700,lineHeight:1,
+                        fontSize:18,fontWeight:700,lineHeight:1,
                       }}
                       title="Konfirmasi"
                     >↵</button>
