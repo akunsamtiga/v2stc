@@ -96,26 +96,27 @@ body {
    successColor=#059669  errorColor=#DC2626  warningColor=#D97706
    borderColor=#D6DADF */
 [data-theme="light"] {
+  /* ── Surfaces ── */
   --bg:          #F8F9FA;        /* Kotlin: background */
   --s1:          #FFFFFF;        /* Kotlin: surface */
   --s2:          #FFFFFF;        /* Kotlin: cardBackground */
   --s3:          #EBEBEB;        /* Kotlin: surface3 */
 
   --blue:        #059669;        /* Kotlin: successColor light */
-  --blue-dim:    rgba(5, 150, 105, 0.10);
-  --blue-glow:   rgba(5, 150, 105, 0.04);
-  --blue-bdr:    rgba(5, 150, 105, 0.30);
+  --blue-dim:    rgba(5, 150, 105, 0.12);
+  --blue-glow:   rgba(5, 150, 105, 0.06);
+  --blue-bdr:    rgba(5, 150, 105, 0.35);
 
   --coral:       #DC2626;        /* Kotlin: errorColor light */
-  --coral-dim:   rgba(220, 38, 38, 0.09);
+  --coral-dim:   rgba(220, 38, 38, 0.12);
   --amber:       #D97706;        /* Kotlin: warningColor light */
-  --amber-dim:   rgba(217, 119, 6, 0.09);
+  --amber-dim:   rgba(217, 119, 6, 0.12);
   --violet:      #9333EA;
-  --violet-dim:  rgba(147, 51, 234, 0.09);
+  --violet-dim:  rgba(147, 51, 234, 0.12);
 
-  --bdr:         rgba(214, 218, 223, 0.90);  /* Kotlin: #D6DADF */
-  --bdr-act:     rgba(5, 150, 105, 0.45);
-  --faint:       rgba(5, 150, 105, 0.05);
+  --bdr:         rgba(214, 218, 223, 0.95);  /* Kotlin: #D6DADF */
+  --bdr-act:     rgba(5, 150, 105, 0.50);
+  --faint:       rgba(5, 150, 105, 0.06);
 
   --text:        #1F2937;        /* Kotlin: textPrimary light */
   --sub:         #6B7280;        /* Kotlin: textSecondary light */
@@ -213,7 +214,7 @@ body:not([data-theme="light"])::after {
   background:
     radial-gradient(
       ellipse 70% 40% at 50% -5%,
-      rgba(5, 150, 105, 0.08) 0%,
+      rgba(5, 150, 105, 0.06) 0%,
       transparent 65%
     ),
     radial-gradient(
@@ -327,10 +328,17 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 /* Light mode card */
 [data-theme="light"] .ds-card {
   background: #ffffff;
-  border-color: rgba(16, 185, 129, 0.15);
+  border-color: rgba(5, 150, 105, 0.18);
   box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.06),
-    0 1px 4px  rgba(0, 0, 0, 0.04);
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .ds-card:hover {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    0 2px 6px rgba(0, 0, 0, 0.03),
+    0 0 20px rgba(5, 150, 105, 0.08);
 }
 
 /* ============================================================
@@ -565,7 +573,7 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 
 /* Light mode backdrop */
 [data-theme="light"] .ds-modal-backdrop {
-  background: rgba(0, 0, 0, 0.30);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .ds-modal-sheet {
@@ -769,6 +777,40 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 
 .pf-copy-btn:active {
   opacity: 0.6;
+}
+
+/* ============================================================
+   LIGHT MODE SPECIFIC FIXES
+   ============================================================ */
+
+/* Fix for schedule panel icons in light mode */
+[data-theme="light"] .schedule-item svg {
+  color: var(--sub) !important;
+}
+
+[data-theme="light"] .schedule-item-active svg {
+  color: var(--blue) !important;
+}
+
+/* Fix for modal backgrounds in light mode */
+[data-theme="light"] .ds-modal-content {
+  background: var(--s1);
+  border-color: var(--bdr);
+}
+
+/* Fix for picker items in light mode */
+[data-theme="light"] .picker-item {
+  background: var(--s1);
+  border-color: var(--bdr);
+}
+
+[data-theme="light"] .picker-item:hover {
+  background: var(--faint);
+}
+
+/* Fix for status indicators */
+[data-theme="light"] .status-dot {
+  box-shadow: 0 0 4px currentColor;
 }
 
 /* ============================================================

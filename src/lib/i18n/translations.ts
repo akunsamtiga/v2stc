@@ -909,7 +909,7 @@ const translations: Record<Language, Translations> = {
         title: 'Signal',
         addSignal: 'Tambah Signal',
         manageSignals: 'Kelola',
-        inputSignal: 'Input Signal',
+        inputSignal: 'Masukkan Signal',
         clearPending: 'Hapus Pending',
         signalFormat: 'Format: JJ:MM call/put atau JJ.MM B/S',
         example: 'Contoh',

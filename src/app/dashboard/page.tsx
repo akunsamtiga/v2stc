@@ -212,7 +212,7 @@ const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:bo
       borderRadius:16,overflow:'hidden',height:'100%',
       background:C.card,
       border:`1px solid rgba(16,185,129,0.40)`,
-      boxShadow:`0 4px 18px rgba(0,0,0,0.28)`,
+      boxShadow:C.bg==='#161616'?`0 4px 18px rgba(0,0,0,0.28)`:`0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)`,
       padding:'14px 14px 10px',
       display:'flex',flexDirection:'column',gap:6,
     }}>
@@ -262,8 +262,10 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
     <div style={{
       width:'100%',borderRadius:14,overflow:'hidden',
       background:C.bg,
-      border:`1px solid rgba(16,185,129,0.38)`,
-      boxShadow:`0 2px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.25)`,
+      border:`1px solid ${C.cyan}40`,
+      boxShadow:C.bg==='#161616'
+        ?`0 2px 0 ${C.cyan}08 inset, 0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.25)`
+        :`0 2px 0 ${C.cyan}08 inset, 0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)`,
       padding:'10px 12px 8px',
       display:'flex',flexDirection:'column',gap:5,
     }}>
@@ -682,69 +684,80 @@ const AssetBalanceCombinedCard: React.FC<{
                 onError={() => setImgErr(true)}
                 style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3 }}
               />
-            ) : (
+            ) : asset ? (
               <span style={{ fontWeight: 700, fontSize: 11, color: modeCol }}>{abbr}</span>
+            ) : (
+              <Plus style={{ width: 18, height: 18, color: modeCol }} />
             )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, lineHeight: 1, marginBottom: 3 }}>
-              {t('dashboard.asset')}
-            </p>
+            {/* Label "ASET" + persentasi di sebelah kanannya */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+              <p style={{ fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, lineHeight: 1, margin: 0 }}>
+                {t('dashboard.asset')}
+              </p>
+              {asset && (
+                <span style={{ fontSize: 9, fontWeight: 700, color: modeCol, lineHeight: 1, flexShrink: 0 }}>{asset.profitRate}%</span>
+              )}
+            </div>
             {isLoading ? <div style={{ height: 14, width: 60, borderRadius: 4, background: C.faint }} /> : asset ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap', minWidth: 0 }}>
-                <p style={{ fontSize: 'clamp(10px,3.2vw,14px)', fontWeight: 700, lineHeight: 1, color: C.text, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                  {asset.name}
-                </p>
-                <span style={{ fontSize: 'clamp(8px,2.5vw,10px)', fontWeight: 700, color: modeCol, flexShrink: 0 }}>{asset.profitRate}%</span>
-              </div>
+              <p style={{ fontSize: 'clamp(10px,3.2vw,14px)', fontWeight: 700, lineHeight: 1, color: C.text, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, margin: 0 }}>
+                {asset.name}
+              </p>
             ) : (
-              <p style={{ fontSize: 11, color: modeCol, fontWeight: 600 }}>{t('dashboard.notSelected')}</p>
+              <p style={{ fontSize: 11, color: modeCol, fontWeight: 600, margin: 0 }}>{t('dashboard.notSelected')}</p>
             )}
           </div>
+          {asset && (
+            <div style={{
+              width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: `${modeCol}12`, border: `1px solid ${modeCol}28`,
+              alignSelf: 'center',
+            }}>
+              <Plus style={{ width: 16, height: 16, color: modeCol }} />
+            </div>
+          )}
         </button>
 
         {/* Divider Vertikal */}
         <div style={{ width: 1, height: 36, background: C.bdr, flexShrink: 0 }} />
 
-        {/* Sisi Kanan: Saldo */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-          {/* Kiri: label "Saldo + eye" & badge "Real/Demo" — 2 baris rapat */}
-          <div style={{ flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <p style={{ fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, lineHeight: '13px', margin: 0 }}>
-                {t('dashboard.balance')}
-              </p>
-              <button
-                onClick={() => setHidden(h => !h)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.muted, padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}
-              >
-                {hidden
-                  ? <Eye style={{ width: 10, height: 10 }} />
-                  : <EyeOff style={{ width: 10, height: 10 }} />
-                }
-              </button>
-            </div>
-            <span style={{ fontSize: 8, fontWeight: 700, padding: '0px 5px', borderRadius: 99, color: balCol, background: balBg, border: `1px solid ${balCol}30`, lineHeight: '13px', display: 'inline-block' }}>
+        {/* Sisi Kanan: Saldo — ditengahkan secara vertikal & horizontal */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+          {/* Baris 1: label + eye + badge sejajar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <p style={{ fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, lineHeight: 1, margin: 0 }}>
+              {t('dashboard.balance')}
+            </p>
+            <button
+              onClick={() => setHidden(h => !h)}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.muted, padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+            >
+              {hidden
+                ? <Eye style={{ width: 10, height: 10 }} />
+                : <EyeOff style={{ width: 10, height: 10 }} />
+              }
+            </button>
+            <span style={{ fontSize: 8, fontWeight: 700, padding: '1px 5px', borderRadius: 99, color: balCol, background: balBg, border: `1px solid ${balCol}30`, lineHeight: '13px', display: 'inline-block' }}>
               {isDemo ? t('common.demo') : t('common.real')}
             </span>
           </div>
 
-          {/* Kanan: angka saldo — rata kanan, otomatis center vertikal karena parent align-items:center */}
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            {isLoading ? (
-              <div style={{ height: 13, width: 60, borderRadius: 4, background: C.faint, marginLeft: 'auto' }} />
-            ) : hidden ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-end' }}>
-                {[...Array(5)].map((_, i) => (
-                  <span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: balCol, opacity: 0.4 + (i % 2) * 0.2 }} />
-                ))}
-              </div>
-            ) : (
-              <p style={{ fontSize: 'clamp(11px,3.5vw,20px)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: balCol, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
-                {Math.round(amount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
-              </p>
-            )}
-          </div>
+          {/* Baris 2: angka saldo — terpusat */}
+          {isLoading ? (
+            <div style={{ height: 13, width: 60, borderRadius: 4, background: C.faint }} />
+          ) : hidden ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {[...Array(5)].map((_, i) => (
+                <span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: balCol, opacity: 0.4 + (i % 2) * 0.2 }} />
+              ))}
+            </div>
+          ) : (
+            <p style={{ fontSize: 'clamp(11px,3.5vw,16px)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: balCol, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0, textAlign: 'center' }}>
+              {Math.round(amount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+            </p>
+          )}
         </div>
 
       </div>
@@ -756,25 +769,40 @@ const AssetBalanceCombinedCard: React.FC<{
 // PICKER MODAL
 // ═══════════════════════════════════════════
 interface PickerOpt {value:string;label:string;sub?:string;icon?:string|null;}
-const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:PickerOpt[];value:string;onSelect:(v:string)=>void;searchable?:boolean}> =
-({open,onClose,title,options,value,onSelect,searchable}) => {
+const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:PickerOpt[];value:string;onSelect:(v:string)=>void;searchable?:boolean;isDark?:boolean}> =
+({open,onClose,title,options,value,onSelect,searchable,isDark=true}) => {
   const [q,setQ] = useState('');
   useEffect(()=>{if(open)setQ('');},[open]);
 
   if(!open) return null;
   const filtered = q.trim() ? options.filter(o=>o.label.toLowerCase().includes(q.toLowerCase())||o.value.toLowerCase().includes(q.toLowerCase())) : options;
+  
+  // Theme-aware colors
+  const modalBg = isDark 
+    ? 'linear-gradient(160deg,#18181c 0%,#101012 100%)'
+    : 'linear-gradient(160deg,#ffffff 0%,#f8f9fa 100%)';
+  const headerBorder = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const closeBtnBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+  const closeBtnBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const closeBtnColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+  const itemBorder = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+  const iconBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+  const iconBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const iconColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+  const radioBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+  
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',padding:'16px',animation:'fade-in 0.15s ease'}}>
-      <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(12px)'}}/>
-      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:'80%',display:'flex',flexDirection:'column',background:'linear-gradient(160deg,#18181c 0%,#101012 100%)',borderRadius:16,border:`1px solid ${C.bdr}`,boxShadow:'0 24px 80px rgba(0,0,0,0.7)',overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 16px 12px',borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
+      <div onClick={onClose} style={{position:'absolute',inset:0,background:isDark?'rgba(0,0,0,0.8)':'rgba(0,0,0,0.5)',backdropFilter:'blur(12px)'}}/>
+      <div style={{position:'relative',width:'100%',maxWidth:480,maxHeight:'80%',display:'flex',flexDirection:'column',background:modalBg,borderRadius:16,border:`1px solid ${C.bdr}`,boxShadow:isDark?'0 24px 80px rgba(0,0,0,0.7)':'0 24px 80px rgba(0,0,0,0.3)',overflow:'hidden',animation:'slide-up 0.25s cubic-bezier(0.32,0.72,0,1)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 16px 12px',borderBottom:`1px solid ${headerBorder}`,flexShrink:0}}>
           <span style={{fontSize:14,fontWeight:600,color:C.text}}>{title}</span>
-          <button onClick={onClose} style={{width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'rgba(255,255,255,0.4)',cursor:'pointer'}}>
+          <button onClick={onClose} style={{width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:8,border:`1px solid ${closeBtnBorder}`,background:closeBtnBg,color:closeBtnColor,cursor:'pointer'}}>
             <X style={{width:13,height:13}}/>
           </button>
         </div>
         {searchable&&(
-          <div style={{padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
+          <div style={{padding:'10px 14px',borderBottom:`1px solid ${headerBorder}`,flexShrink:0}}>
             <input autoFocus className="ds-input" style={{fontSize:13,borderRadius:8}} placeholder="Cari aset..." value={q} onChange={e=>setQ(e.target.value)}/>
           </div>
         )}
@@ -784,17 +812,17 @@ const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:
             return (
               <button key={opt.value} onClick={()=>{onSelect(opt.value);onClose();}} style={{
                 width:'100%',textAlign:'left',display:'flex',alignItems:'center',gap:12,padding:'11px 16px',
-                background:isSel?'rgba(41,151,255,0.08)':'transparent',
-                borderBottom:i<filtered.length-1?'1px solid rgba(255,255,255,0.04)':'none',
+                background:isSel?`${C.cyan}15`:'transparent',
+                borderBottom:i<filtered.length-1?`1px solid ${itemBorder}`:'none',
                 borderLeft:isSel?`2px solid ${C.cyan}`:'2px solid transparent',
                 borderTop:'none',borderRight:'none',cursor:'pointer',
               }}>
                 {opt.icon!==undefined&&(
-                  <div style={{width:32,height:32,borderRadius:8,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:isSel?'rgba(41,151,255,0.12)':'rgba(255,255,255,0.05)',border:`1px solid ${isSel?'rgba(41,151,255,0.25)':'rgba(255,255,255,0.08)'}`}}>
+                  <div style={{width:32,height:32,borderRadius:8,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:isSel?`${C.cyan}15`:iconBg,border:`1px solid ${isSel?`${C.cyan}40`:iconBorder}`}}>
                     {opt.icon?(
                       <img src={opt.icon} alt="" style={{width:'100%',height:'100%',objectFit:'contain',padding:4}} onError={e=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>
                     ):(
-                      <span style={{fontSize:10,fontWeight:700,color:isSel?C.cyan:'rgba(255,255,255,0.4)'}}>{opt.value.slice(0,3)}</span>
+                      <span style={{fontSize:10,fontWeight:700,color:isSel?C.cyan:iconColor}}>{opt.value.slice(0,3)}</span>
                     )}
                   </div>
                 )}
@@ -802,7 +830,7 @@ const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:
                   <span style={{display:'block',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:isSel?C.cyan:C.text,fontWeight:isSel?600:400}}>{opt.label}</span>
                   {opt.sub&&<span style={{display:'block',fontSize:11,marginTop:2,color:C.muted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{opt.sub}</span>}
                 </div>
-                <div style={{flexShrink:0,width:20,height:20,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:isSel?'rgba(41,151,255,0.15)':'rgba(255,255,255,0.04)',border:`1px solid ${isSel?C.cyan:'rgba(255,255,255,0.08)'}`}}>
+                <div style={{flexShrink:0,width:20,height:20,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:isSel?`${C.cyan}15`:radioBg,border:`1px solid ${isSel?C.cyan:iconBorder}`}}>
                   {isSel&&<span style={{fontSize:10,color:C.cyan}}>✓</span>}
                 </div>
               </button>
@@ -975,7 +1003,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   const statusCl = (o:ScheduleOrder) => o.isSkipped?C.amber:o.isExecuted?C.cyan:C.muted;
 
   return (
-    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px 16px calc(56px + env(safe-area-inset-bottom, 0px) + 8px) 16px',animation:'fade-in 0.15s ease'}}>
       {/* Backdrop */}
       <div onClick={isBusy?undefined:onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',cursor:isBusy?'not-allowed':'default'}}/>
 
@@ -1089,7 +1117,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                   style={{
                     flex:1,height:44,display:'flex',alignItems:'center',justifyContent:'center',gap:7,
                     borderRadius:12,fontSize:13,fontWeight:600,
-                    background:input.trim()?`${C.cyan}20`:'rgba(255,255,255,0.04)',
+                    background:input.trim()?`${C.cyan}20`:C.card2,
                     border:`1px solid ${input.trim()?`${C.cyan}50`:C.bdr}`,
                     color:input.trim()?C.cyan:C.muted,
                     cursor:(!input.trim()||isBusy)?'not-allowed':'pointer',
@@ -1104,7 +1132,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                   disabled={isBusy}
                   style={{
                     padding:'0 20px',height:44,borderRadius:12,fontSize:13,fontWeight:500,
-                    background:'rgba(255,255,255,0.05)',border:`1px solid ${C.bdr}`,
+                    background:C.card2,border:`1px solid ${C.bdr}`,
                     color:C.sub,cursor:isBusy?'not-allowed':'pointer',
                   }}
                 >Batal</button>
@@ -1144,64 +1172,6 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:6,paddingTop:8}}>
 
-                  {/* ── 3 RIWAYAT TERAKHIR (di atas) ── */}
-                  {prevSessionLogs.length > 0 && (
-                    <>
-                      <p style={{fontSize:9,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:C.muted,margin:'0 0 2px'}}>Riwayat Sebelumnya</p>
-                      {prevSessionLogs.map((l,idx)=>{
-                        const isWin  = /^win$/i.test(l.result??'');
-                        const isLoss = /^los/i.test(l.result??'');
-                        const isBuy  = l.trend==='call';
-                        const col    = isWin ? C.cyan : isLoss ? C.coral : C.muted;
-                        const profit = l.profit;
-                        return (
-                          <div key={l.id} style={{
-                            display:'flex',alignItems:'center',gap:10,
-                            padding:'10px 12px',borderRadius:12,
-                            background:isWin?`${C.cyan}08`:isLoss?`${C.coral}08`:C.card2,
-                            border:`1px solid ${isWin?`${C.cyan}35`:isLoss?`${C.coral}35`:C.bdr}`,
-                            opacity:0.85,
-                          }}>
-                            {/* Nomor badge — seragam dengan pending orders */}
-                            <div style={{
-                              width:22,height:22,borderRadius:'50%',flexShrink:0,
-                              display:'flex',alignItems:'center',justifyContent:'center',
-                              background:isWin?`${C.cyan}14`:isLoss?`${C.coral}14`:'rgba(126,126,126,0.12)',
-                              border:`1px solid ${isWin?`${C.cyan}35`:isLoss?`${C.coral}35`:'rgba(126,126,126,0.22)'}`,
-                            }}>
-                              <span style={{fontSize:10,fontWeight:700,color:col}}>{idx+1}</span>
-                            </div>
-                            {/* Waktu */}
-                            <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace',flexShrink:0}}>{l.time||'--:--'}</span>
-                            {/* BUY/SELL badge */}
-                            <span style={{
-                              fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,
-                              background:isBuy?`${C.cyan}22`:`${C.coral}22`,
-                              color:isBuy?C.cyan:C.coral,
-                              border:`1px solid ${isBuy?C.cyan:C.coral}35`,
-                              flexShrink:0,
-                            }}>{isBuy?'BUY':'SELL'}</span>
-                            {/* Result — minWidth agar kolom selalu sejajar dengan done orders */}
-                            <span style={{fontSize:9,fontWeight:700,color:col,flexShrink:0,minWidth:32,textAlign:'left'}}>
-                              {isWin?'WIN':isLoss?'LOSS':''}
-                            </span>
-                            {/* Martingale step */}
-                            {l.martingaleStep!=null&&l.martingaleStep>0&&(
-                              <span style={{fontSize:9,color:C.amber,fontWeight:600,flexShrink:0}}>K{l.martingaleStep}</span>
-                            )}
-                            {/* Profit/Amount — push ke kanan */}
-                            {profit!=null&&(
-                              <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',color:profit>=0?C.cyan:C.coral,flexShrink:0}}>
-                                {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                      <div style={{height:1,background:C.bdr,margin:'2px 0 4px'}}/>
-                    </>
-                  )}
-
                   {/* ── PENDING ORDERS ── */}
                   {pendingOrders.map((o,i)=>{
                     const isBuy = o.trend==='call';
@@ -1209,12 +1179,12 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                       <div key={o.id} style={{
                         display:'flex',alignItems:'center',padding:'10px 12px',gap:10,
                         borderRadius:12,background:C.card2,
-                        border:`1px solid rgba(16,185,129,0.45)`,
+                        border:`1px solid ${C.cyan}45`,
                       }}>
                         <div style={{
                           width:22,height:22,borderRadius:'50%',flexShrink:0,
                           display:'flex',alignItems:'center',justifyContent:'center',
-                          background:'rgba(16,185,129,0.10)',border:`1px solid rgba(16,185,129,0.22)`,
+                          background:`${C.cyan}12`,border:`1px solid ${C.cyan}25`,
                         }}>
                           <span style={{fontSize:10,fontWeight:600,color:C.cyan}}>{i+1}</span>
                         </div>
@@ -1343,7 +1313,7 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <span style={{fontSize:12,fontWeight:600,color:C.sub}}>{T('dashboard.schedule.title')}</span>
           {doneCount>0&&(
-            <span style={{fontSize:10,padding:'1px 7px',borderRadius:99,color:C.muted,background:'rgba(255,255,255,0.05)',border:`1px solid rgba(255,255,255,0.08)`}}>
+            <span style={{fontSize:10,padding:'1px 7px',borderRadius:99,color:C.muted,background:C.card2,border:`1px solid ${C.bdr}`}}>
               {doneCount} {T('dashboard.schedule.completed')}
             </span>
           )}
@@ -1380,10 +1350,10 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
               }}>
                 {isA
                   ? <PlayCircle style={{width:iconSz,height:iconSz,color:col,flexShrink:0}}/>
-                  : <PauseCircle style={{width:iconSz,height:iconSz,color:'rgba(255,255,255,0.18)',flexShrink:0}}/>
+                  : <PauseCircle style={{width:iconSz,height:iconSz,color:C.muted,flexShrink:0}}/>
                 }
                 <span style={{fontSize:timeFz,fontFamily:'monospace',color:isA?C.text:C.sub,fontWeight:isA?600:400,flexShrink:0}}>{order.time}</span>
-                <span style={{fontSize:badgeFz,fontWeight:700,padding:badgePad,borderRadius:5,color:col,background:isCall?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)',flexShrink:0,lineHeight:'1.2'}}>{isCall?'B':'S'}</span>
+                <span style={{fontSize:badgeFz,fontWeight:700,padding:badgePad,borderRadius:5,color:col,background:isCall?`${C.cyan}12`:`${C.coral}12`,flexShrink:0,lineHeight:'1.2'}}>{isCall?'B':'S'}</span>
               </div>
             );
           })}
@@ -1471,18 +1441,18 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?accent:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
           <Row label={T('dashboard.fastTrade.phase')} right={<span style={{color:accent,fontSize:10}}>{phaseMap[phase]??phase}</span>}/>
-          {trend&&<Row label={T('dashboard.fastTrade.trend')} right={<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:trend==='call'?C.cyan:C.coral,background:trend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)'}}>{trend==='call'?'↑ CALL':'↓ PUT'}</span>} border={logs.length===0}/>}
+          {trend&&<Row label={T('dashboard.fastTrade.trend')} right={<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:trend==='call'?C.cyan:C.coral,background:trend==='call'?`${C.cyan}12`:`${C.coral}12`}}>{trend==='call'?'↑ CALL':'↓ PUT'}</span>} border={logs.length===0}/>}
           {logs.length>0&&(
             <>
               <div style={{padding:'6px 12px 4px',borderBottom:`1px solid ${C.bdr}`}}>
-                <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(41,151,255,0.45)'}}>{T('dashboard.fastTrade.history')}</span>
+                <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.muted}}>{T('dashboard.fastTrade.history')}</span>
               </div>
               {logs.slice(-4).reverse().map((log,i,arr)=>{
                 const rc=log.result==='WIN'?accent:log.result==='LOSS'||log.result==='LOSE'?C.coral:C.amber;
                 const col=log.trend==='call'?C.cyan:C.coral;
                 return (
                   <div key={log.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderBottom:i<arr.length-1?`1px solid ${C.bdr}`:'none',minWidth:0,overflow:'hidden'}}>
-                    <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:col,background:log.trend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)',flexShrink:0}}>{log.trend==='call'?'CALL':'PUT'}</span>
+                    <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:col,background:log.trend==='call'?`${C.cyan}12`:`${C.coral}12`,flexShrink:0}}>{log.trend==='call'?'CALL':'PUT'}</span>
                     <span style={{fontSize:10,color:C.muted,flex:1,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{log.amount!=null?Math.round(log.amount/100).toLocaleString('id-ID',{maximumFractionDigits:0}):''}</span>
                     {log.result&&<span style={{fontSize:10,fontWeight:700,color:rc,flexShrink:0}}>{log.result}</span>}
                     {log.profit!=null&&<span style={{fontSize:10,color:rc,fontFamily:'monospace',flexShrink:0}}>{log.profit>=0?'+':'-'}{Math.round(Math.abs(log.profit)/100).toLocaleString('id-ID',{maximumFractionDigits:0})}</span>}
@@ -1779,7 +1749,7 @@ const AISignalPanel: React.FC<{
  
               {pendingOrders.slice(0, 5).map((o, i, arr) => {
                 const col     = o.trend === 'call' ? C.cyan : C.coral;
-                const colBg   = o.trend === 'call' ? 'rgba(16,185,129,0.10)' : 'rgba(255,69,58,0.10)';
+                const colBg   = o.trend === 'call' ? `${C.cyan}12` : `${C.coral}12`;
                 const secLeft = Math.max(0, Math.ceil((o.executionTime - now) / 1000));
                 const urgent  = secLeft < 30 && secLeft > 0;
                 const isMart  = o.martingaleStep > 0;
@@ -1915,7 +1885,7 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?C.orange:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
           <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.orange,fontSize:10}}>{status?.lastStatus||T('dashboard.indicator.monitoring')}</span>}/>
-          <Row label={T('dashboard.indicator.signalLabel')} right={lastTrend?<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:lastTrend==='call'?C.cyan:C.coral,background:lastTrend==='call'?'rgba(41,151,255,0.1)':'rgba(255,69,58,0.1)'}}>{lastTrend==='call'?'↑ CALL':'↓ PUT'}</span>:<span style={{color:C.muted}}>—</span>}/>
+          <Row label={T('dashboard.indicator.signalLabel')} right={lastTrend?<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:lastTrend==='call'?C.cyan:C.coral,background:lastTrend==='call'?`${C.cyan}12`:`${C.coral}12`}}>{lastTrend==='call'?'↑ CALL':'↓ PUT'}</span>:<span style={{color:C.muted}}>—</span>}/>
           {status?.currentIndicatorValue!=null&&(
             <Row label={`${T('dashboard.indicator.valueLabel')} ${indType}`} right={<span style={{color:C.orange,fontFamily:'monospace'}}>{status.currentIndicatorValue.toFixed(4)}</span>} border={false}/>
           )}
@@ -2120,26 +2090,26 @@ const ModePickerModal: React.FC<{
       {/* sheet */}
       <div style={{
         position:'relative',width:'100%',maxWidth:420,
-        background:'linear-gradient(160deg,#1a1a1e 0%,#111113 100%)',
+        background:C.bg,
         borderRadius:20,
-        border:`1px solid rgba(255,255,255,0.08)`,
+        border:`1px solid ${C.bdr}`,
         animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
         boxShadow:'0 20px 60px rgba(0,0,0,0.6)',
         maxHeight:'85dvh',
         overflowY:'auto',
       }}>
         {/* header */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px 12px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px 12px',borderBottom:`1px solid ${C.bdr}`}}>
           <div>
             <p style={{fontSize:16,fontWeight:700,color:C.text,lineHeight:1}}>Mode Trading</p>
             <p style={{fontSize:12,color:C.muted,marginTop:3}}>Pilih mode yang ingin digunakan</p>
           </div>
-          <button onClick={onClose} style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:99,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',cursor:'pointer',color:C.muted}}>
+          <button onClick={onClose} style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:99,background:C.card2,border:`1px solid ${C.bdr}`,cursor:'pointer',color:C.muted}}>
             <X style={{width:14,height:14}}/>
           </button>
         </div>
         {/* mode list */}
-        <div style={{padding:'0 12px 16px',display:'flex',flexDirection:'column',gap:6}}>
+        <div style={{padding:'12px',display:'flex',flexDirection:'column',gap:6}}>
           {MODES.map(({ v, label, icon, accent, desc }) => {
             const isAct = mode === v;
             const isLock = blockedModes.includes(v);
@@ -2154,8 +2124,8 @@ const ModePickerModal: React.FC<{
                 style={{
                   display:'flex',alignItems:'center',gap:12,padding:'11px 14px',
                   borderRadius:14,cursor:'pointer',
-                  background:isAct?`${accent}14`:'rgba(255,255,255,0.03)',
-                  border:`1px solid ${isAct?`${accent}45`:isLock?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.06)'}`,
+                  background:isAct?`${accent}14`:C.card2,
+                  border:`1px solid ${isAct?`${accent}45`:isLock?C.bdr:C.bdr}`,
                   opacity:isLock?0.6:1,
                   transition:'background 0.15s,border-color 0.15s',
                 }}
@@ -2171,7 +2141,7 @@ const ModePickerModal: React.FC<{
                   <div style={{display:'flex',alignItems:'center',gap:5}}>
                     <span style={{display:'block',fontSize:14,fontWeight:600,color:isAct?accent:C.sub}}>{label}</span>
                     {isLock&&!isAct&&(
-        <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:6,color:C.coral,background:'rgba(255,69,58,0.10)',border:'1px solid rgba(255,69,58,0.22)',letterSpacing:'0.04em',flexShrink:0}}>🔒 {T('common.active')}</span>
+        <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:6,color:C.coral,background:`${C.coral}12`,border:`1px solid ${C.coral}30`,letterSpacing:'0.04em',flexShrink:0}}>🔒 {T('common.active')}</span>
                     )}
                   </div>
                   <span style={{display:'block',fontSize:11,color:C.muted,marginTop:1}}>{desc}</span>
@@ -2183,7 +2153,7 @@ const ModePickerModal: React.FC<{
             );
           })}
           {blockedModes.length > 0 && (
-            <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:10,background:'rgba(255,159,10,0.06)',border:'1px solid rgba(255,159,10,0.22)',marginTop:2}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:10,background:`${C.amber}08`,border:`1px solid ${C.amber}25`,marginTop:2}}>
               <Info style={{width:11,height:11,color:C.amber,flexShrink:0}}/>
               <span style={{fontSize:11,color:C.amber}}>{T('dashboard.modePicker.stopActiveFirst')}</span>
             </div>
@@ -2257,7 +2227,7 @@ const ModeSessionPanel: React.FC<{
       overflow: 'hidden',
       padding: 0,
       background: locked ? undefined : C.card2,
-      boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`,
+      boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)`,
     }}>
       {/* Mode picker modal */}
       <ModePickerModal
@@ -2536,7 +2506,7 @@ const SettingsCard: React.FC<{
       <PickerModal open={pickerOpen==='duration'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.orderDuration')} options={durationOpts} value={String(duration)} onSelect={v=>onDurationChange(+v)}/>
       <PickerModal open={pickerOpen==='ftTf'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.fastradeTimeframe')} options={FT_TF.map(t=>({value:t.value,label:t.label}))} value={ftTf} onSelect={v=>onFtTfChange(v as FastTradeTimeframe)}/>
 
-      <Card style={{ opacity:disabled?0.65:1, border:`1px solid ${C.bdr}`, boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)` }}>
+      <Card style={{ opacity:disabled?0.65:1, border:`1px solid ${C.bdr}`, boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)` }}>
         {/* Header */}
         <button onClick={()=>setOpen(!open)} style={{ width:'100%',display:'flex',alignItems:'center',gap:10,padding:'16px 18px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer',textAlign:'left' }}>
             <div style={{ width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}14`,border:`1px solid ${ac}30` }}>
@@ -2566,7 +2536,7 @@ const SettingsCard: React.FC<{
                 <button disabled={disabled} onClick={()=>setPickerOpen('actype')} style={{
                   flex:'0 0 auto',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',
                   background:`${acctCol}16`,border:`0.8px solid ${acctCol}55`,transition:'all 0.15s',minWidth:0,
-                  boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)`,
+                  boxShadow:`0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)`,
                 }}>
                   <Wallet style={{ width:14,height:14,color:acctCol,flexShrink:0 }}/>
                   <span style={{ fontSize:11,fontWeight:700,color:C.text,whiteSpace:'nowrap' }}>{isDemo?'Demo':'Real'}</span>
@@ -2575,23 +2545,23 @@ const SettingsCard: React.FC<{
                 {/* Durasi / Timeframe */}
                 <div style={{ flex:'0 0 auto',minWidth:0 }}>
                   {!isNewMode&&(mode==='fastrade'
-                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)` }}>
+                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow:`0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` }}>
                        <Clock style={{ width:13,height:13,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:11,fontWeight:600,color:C.text,flex:1,textAlign:'left',whiteSpace:'nowrap' }}>{FT_TF.find(t=>t.value===ftTf)?.label||''}</span><ChevronDown style={{ width:12,height:12,color:C.muted,flexShrink:0 }}/>
                      </button>
                     :mode==='ctc'
                     ?<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.faint,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
                        <Copy style={{ width:13,height:13,color:C.violet }}/><span style={{ fontSize:11,color:C.violet,whiteSpace:'nowrap' }}>1 Menit</span>
                      </div>
-                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)` }}>
+                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow:`0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` }}>
                        <Clock style={{ width:13,height:13,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:11,fontWeight:600,color:C.text,flex:1,textAlign:'left',whiteSpace:'nowrap' }}>{durationOpts.find(d=>d.value===String(duration))?.label||''}</span><ChevronDown style={{ width:12,height:12,color:C.muted,flexShrink:0 }}/>
                      </button>
                   )}
                   {isNewMode&&<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}` }}><span style={{ fontSize:11,color:C.muted }}>{T('dashboard.settings.automatic')}</span></div>}
                 </div>
                 {/* Mata Uang */}
-                <div style={{ flex:1,height:44,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'0 10px',background:`rgba(255,255,255,0.06)`,border:`0.8px solid rgba(255,255,255,0.15)`,minWidth:0 }}>
+                <div style={{ flex:1,height:44,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
                   <span style={{ fontSize:14,lineHeight:1,flexShrink:0 }}>🇮🇩</span>
-                  <span style={{ fontSize:8,fontWeight:700,color:'rgba(255,255,255,0.7)',background:`rgba(255,255,255,0.10)`,borderRadius:4,padding:'1px 5px',border:`1px solid rgba(255,255,255,0.18)`,flexShrink:0,whiteSpace:'nowrap' }}>AUTO</span>
+                  <span style={{ fontSize:8,fontWeight:700,color:C.sub,background:`${C.cyan}10`,borderRadius:4,padding:'1px 5px',border:`1px solid ${C.cyan}25`,flexShrink:0,whiteSpace:'nowrap' }}>AUTO</span>
                 </div>
               </div>
               {mode==='ctc'&&<div style={{ marginTop:8,padding:'9px 12px',borderRadius:10,background:'rgba(191,90,242,0.07)',border:'1px solid rgba(191,90,242,0.2)',display:'flex',gap:8 }}><Copy style={{ width:13,height:13,color:C.violet,flexShrink:0,marginTop:1 }}/><p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>{T('dashboard.settings.ctcInfo')}</p></div>}
@@ -2646,7 +2616,7 @@ const SettingsCard: React.FC<{
                     >↵</button>
                   </div>
                   <div style={{ position:'relative',flexShrink:0 }}>
-                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer',boxShadow:`0 1px 0 rgba(255,255,255,0.07) inset, 0 4px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25)` }}>
+                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer',boxShadow:`0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` }}>
                       <Zap style={{ width:13,height:13 }}/> Quick
                     </button>
                     {amtDrop&&!disabled&&(
@@ -2908,7 +2878,7 @@ const ControlCard: React.FC<{
   return (
     <Card style={{
       border:`1px solid ${C.bdr}`,
-      boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`,
+      boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)`,
     }}>
       {/* ── Header: LEFT-aligned title + state pill + chevron ── */}
       <button onClick={()=>setOpen(!open)} style={{
@@ -2985,7 +2955,7 @@ const ControlCard: React.FC<{
                 background:canResumeBot?`rgba(16,185,129,0.55)`:`rgba(251,191,36,0.75)`,
                 color:'#fff',fontSize:13,fontWeight:700,letterSpacing:'0.02em',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-                boxShadow:`0 1px 0 rgba(255,255,255,0.18) inset, 0 8px 24px ${canResumeBot?`${C.cyan}55`:`${C.amber}55`}, 0 3px 8px rgba(0,0,0,0.40)`,
+                boxShadow:`0 1px 0 ${C.cyan}15 inset, 0 8px 24px ${canResumeBot?`${C.cyan}55`:`${C.amber}55`}, 0 3px 8px rgba(0,0,0,0.25)`,
                 opacity:(!canPauseBot&&!canResumeBot)?0.45:1,transition:'opacity 0.2s',
               }}>
                 {canResumeBot?<><PlayCircle style={{width:16,height:16}}/> Resume</>:<><PauseCircle style={{width:16,height:16}}/> Pause</>}
@@ -2997,7 +2967,7 @@ const ControlCard: React.FC<{
                 background:`rgba(239,68,68,0.60)`,
                 color:'#fff',fontSize:13,fontWeight:700,letterSpacing:'0.02em',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-                boxShadow:`0 1px 0 rgba(255,255,255,0.18) inset, 0 8px 24px ${C.coral}50, 0 3px 8px rgba(0,0,0,0.40)`,
+                boxShadow:`0 1px 0 ${C.coral}15 inset, 0 8px 24px ${C.coral}50, 0 3px 8px rgba(0,0,0,0.25)`,
                 opacity:(!canStopBot||isLoading)?0.45:1,transition:'opacity 0.2s',
               }}>
                 <StopCircle style={{width:16,height:16}}/> Stop
@@ -4127,7 +4097,7 @@ export default function DashboardPage() {
                     padding:'10px 12px',borderRadius:12,
                     background:C.card2,
                     border:`1px solid ${modeAccent(tradingMode)}28`,
-                    boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`,
+                    boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)`,
                     display:'flex',flexDirection:'column',gap:7,
                     flex:1,minHeight:0,
                   }}>
