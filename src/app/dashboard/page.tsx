@@ -3515,8 +3515,12 @@ export default function DashboardPage() {
         @keyframes profit-slide-down { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
         @keyframes win-flash   { 0%{box-shadow:0 0 0 0 rgba(41,151,255,0)} 15%{box-shadow:0 0 0 4px rgba(41,151,255,0.35)} 100%{box-shadow:0 0 0 0 rgba(41,151,255,0)} }
         @keyframes lose-flash  { 0%{box-shadow:0 0 0 0 rgba(255,69,58,0)} 15%{box-shadow:0 0 0 4px rgba(255,69,58,0.35)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)} }
-
-        .ds-card {
+@keyframes header-shimmer {
+  0%   { background-position: 200% center; }
+  40%  { background-position: -200% center; }
+  100% { background-position: -200% center; }
+}
+          .ds-card {
           background: ${isDarkMode ? C.card : '#ffffff'};
           border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'};
           border-radius: 14px;
@@ -4035,14 +4039,52 @@ export default function DashboardPage() {
           <div style={{display:'flex',flexDirection:'column',gap:g}}>
             {/* Header Image - Fullwidth, no top margin */}
             {/* Header Image - Full bleed, breaks out of padding */}
-            <div className="header-shimmer-wrap" style={{marginLeft:`-${px}px`,marginRight:`-${px}px`,marginTop:0,marginBottom:8}}>
-              <img 
-                src="/header.png" 
-                alt="STC AutoTrade" 
-                style={{width:'100%',height:'auto',display:'block'}}
-                onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
-              />
-            </div>
+            <div 
+  style={{
+    marginLeft:`-${px}px`,
+    marginRight:`-${px}px`,
+    marginTop:0,
+    marginBottom:8,
+    position: 'relative',
+    overflow: 'hidden',
+  }}
+>
+  <div style={{
+    position: 'absolute',
+    inset: 0,
+    background: colors.bg,
+    zIndex: 0,
+  }}/>
+  <img 
+    src="/header.png" 
+    alt="STC AutoTrade" 
+    style={{
+      width:'100%',
+      height:'auto',
+      display:'block',
+      position: 'relative',
+      zIndex: 1,
+    }}
+    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+  />
+  {/* Shimmer overlay */}
+<div style={{
+  position: 'absolute',
+  inset: 0,
+  zIndex: 2,
+  background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 55%, transparent 70%)',
+  backgroundSize: '300% 100%',
+  animation: 'header-shimmer 12s ease-in-out infinite',
+  pointerEvents: 'none',
+  WebkitMaskImage: 'url(/header.png)',
+  WebkitMaskSize: '100% 100%',
+  WebkitMaskRepeat: 'no-repeat',
+  maskImage: 'url(/header.png)',
+  maskSize: '100% 100%',
+  maskRepeat: 'no-repeat',
+}}/>
+
+</div>
             {TopCards}
             <div style={{display:'flex',flexDirection:'row',gap:g,alignItems:'stretch'}}>
               {/* LEFT: chart card — stretches to match right column height */}

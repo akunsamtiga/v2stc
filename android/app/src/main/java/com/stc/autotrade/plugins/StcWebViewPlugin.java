@@ -525,6 +525,7 @@ public class StcWebViewPlugin extends Plugin {
                     String v = t.substring(name.length() + 1).trim();
                     if (!v.isEmpty()) return v;
                 }
+
             }
         return null;
     }
