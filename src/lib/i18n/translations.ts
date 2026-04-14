@@ -910,7 +910,7 @@ const translations: Record<Language, Translations> = {
         addSignal: 'Tambah Signal',
         manageSignals: 'Kelola',
         inputSignal: 'Masukkan Signal',
-        clearPending: 'Hapus Pending',
+        clearPending: 'Hapus Semua',
         signalFormat: 'Format: JJ:MM call/put atau JJ.MM B/S',
         example: 'Contoh',
         activeSignals: 'signal aktif',

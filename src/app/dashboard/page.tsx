@@ -15,6 +15,7 @@ import {
 import { ChartCard } from '@/components/ChartCard';
 import AssetIcon from '@/components/common/AssetIcon';
 import { storage, isSessionValid } from '@/lib/storage';
+import { useTradingSettings } from '@/lib/useTradingSettings';
 import { useLanguage } from '@/lib/i18n';
 import { useDarkMode } from '@/lib/DarkModeContext';
 import {
@@ -927,12 +928,64 @@ const PickerBtn: React.FC<{
 // ═══════════════════════════════════════════
 // ORDER INPUT MODAL (Schedule) — Kotlin ScheduleDialog style
 // ═══════════════════════════════════════════
+// ORDER STATE MACHINE
+// Menunggu → Monitoring → K{n} → Win/Lose (5 detik) → hilang
+// ═══════════════════════════════════════════
+type OrderPhase = 'waiting' | 'monitoring' | 'martingale' | 'win' | 'lose' | 'skipped';
+
+function resolvePhase(o: ScheduleOrder, getLog: (o:ScheduleOrder)=>ExecutionLog|undefined): OrderPhase {
+  if (o.isSkipped) return 'skipped';
+  if (!o.isExecuted) return 'waiting';
+  const raw = o.result ?? getLog(o)?.result ?? '';
+  const hasResult = /^win$/i.test(raw) || /^los/i.test(raw);
+  const ms = o.martingaleState;
+  if (hasResult) return /^win$/i.test(raw) ? 'win' : 'lose';
+  if (ms?.isActive && (ms.currentStep ?? 0) > 0) return 'martingale';
+  return 'monitoring';
+}
+
 const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];logs:ExecutionLog[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>Promise<void>;loading:boolean;isRunning?:boolean}> =
 ({open,onClose,orders,logs,onAdd,onDelete,onClear,loading,isRunning}) => {
   const { t } = useLanguage();
-  const [input,setInput]           = useState('');
+  const [input,setInput]              = useState('');
   const [clearLoading,setClearLoading] = useState(false);
-  const [view,setView]             = useState<'list'|'input'>('list');
+  const [view,setView]                = useState<'list'|'input'>('list');
+
+  // ── Persistent history — order selesai (WIN/LOSE/SKIP) tidak hilang dari sesi ──
+  const [historyOrders, setHistoryOrders] = useState<ScheduleOrder[]>([]);
+  const historyIdsRef  = useRef<Set<string>>(new Set());
+  const prevOrdersRef  = useRef<ScheduleOrder[]>([]);
+
+  // ── Match log untuk order ─────────────────────────────────────────────────
+  const getLog = useCallback((o: ScheduleOrder): ExecutionLog | undefined =>
+    logs.find(l => l.orderId === o.id) ?? logs.find(l => l.time === o.time),
+  [logs]);
+
+  // ── Deteksi order selesai → masukkan ke history permanen ─────────────────
+  useEffect(() => {
+    const prev    = prevOrdersRef.current;
+    const currIds = new Set(orders.map(o => o.id));
+
+    // Order yang dihapus server (sudah selesai di backend)
+    const removedFinished = prev.filter(
+      o => !currIds.has(o.id) && !historyIdsRef.current.has(o.id)
+    );
+
+    // Order yang masih di server tapi sudah WIN/LOSE/SKIPPED
+    const justFinished = orders.filter(o => {
+      if (historyIdsRef.current.has(o.id)) return false;
+      const ph = resolvePhase(o, getLog);
+      return ph === 'win' || ph === 'lose' || ph === 'skipped';
+    });
+
+    const toAdd = [...removedFinished, ...justFinished];
+    if (toAdd.length > 0) {
+      toAdd.forEach(o => historyIdsRef.current.add(o.id));
+      setHistoryOrders(h => [...toAdd, ...h]); // terbaru di atas
+    }
+
+    prevOrdersRef.current = orders;
+  }, [orders, getLog]);
 
   const handleClear = async () => {
     if(!window.confirm('Hapus semua signal pending?')) return;
@@ -949,58 +1002,15 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   };
 
   const isBusy = loading || clearLoading;
-  const pendingOrders = orders.filter(o=>!o.isExecuted&&!o.isSkipped);
-  const doneOrders    = orders.filter(o=>o.isExecuted||o.isSkipped);
-  const sortedOrders  = [...pendingOrders,...doneOrders];
 
-  // ── Riwayat sesi sebelumnya: logs yang orderId-nya tidak ada di orders saat ini ──
-  // Ini adalah execution logs dari sesi/run yang sudah selesai/clear
-  const currentOrderIds  = new Set(orders.map(o => o.id));
-  const currentOrderTimes = new Set(orders.map(o => o.time));
-  const prevSessionLogs = logs
-    .filter(l => {
-      // Exclude jika log ini sudah direpresentasikan oleh order yang ada sekarang
-      if (l.orderId && currentOrderIds.has(l.orderId)) return false;
-      if (l.time && currentOrderTimes.has(l.time) && orders.some(o=>o.isExecuted&&o.time===l.time)) return false;
-      return true;
-    })
-    .sort((a,b) => (b.executedAt??0) - (a.executedAt??0))
-    .slice(0, 3);
+  // ── Live orders: exclude yang sudah masuk history ────────────────────────
+  const liveOrders    = orders.filter(o => !historyIdsRef.current.has(o.id));
+  const pendingOrders = liveOrders.filter(o => !o.isExecuted && !o.isSkipped);
+  const activeOrders  = liveOrders.filter(o =>  o.isExecuted && !historyIdsRef.current.has(o.id));
+  // Untuk tombol Clear Pending
+  const allLiveCount  = liveOrders.length;
 
-  if(!open) return null;
-
-  // ── Match log untuk order: cari lewat orderId atau waktu ─────────
-  const getLog = (o: ScheduleOrder): ExecutionLog | undefined =>
-    logs.find(l => l.orderId === o.id) ??
-    logs.find(l => l.time === o.time);
-
-  // ── Resolve result: dari order.result atau log.result ────────────
-  const getResult = (o: ScheduleOrder): 'WIN'|'LOSS'|null => {
-    const raw = o.result ?? getLog(o)?.result ?? '';
-    if (/^win$/i.test(raw))  return 'WIN';
-    if (/^los/i.test(raw))   return 'LOSS';
-    return null;
-  };
-
-  // ── Item colours — WIN=cyan, LOSS=coral, skipped=amber, pending=card2 ──
-  const itemBg  = (o:ScheduleOrder) => {
-    if (o.isSkipped) return `${C.amber}0d`;
-    const r = getResult(o);
-    if (r === 'WIN')  return `${C.cyan}0d`;
-    if (r === 'LOSS') return `${C.coral}0d`;
-    if (o.isExecuted) return `${C.cyan}0d`;
-    return `${C.card2}`;
-  };
-  const itemBdr = (o:ScheduleOrder) => {
-    if (o.isSkipped) return `${C.amber}33`;
-    const r = getResult(o);
-    if (r === 'WIN')  return `${C.cyan}40`;
-    if (r === 'LOSS') return `${C.coral}40`;
-    if (o.isExecuted) return `${C.cyan}33`;
-    return C.bdr;
-  };
-  const statusTx = (o:ScheduleOrder) => o.isSkipped?'Dilewati':o.isExecuted?'Selesai':'Menunggu...';
-  const statusCl = (o:ScheduleOrder) => o.isSkipped?C.amber:o.isExecuted?C.cyan:C.muted;
+  if (!open) return null;
 
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px 16px calc(56px + env(safe-area-inset-bottom, 0px) + 8px) 16px',animation:'fade-in 0.15s ease'}}>
@@ -1026,6 +1036,13 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
           padding:'16px 24px',
           display:'flex',flexDirection:'column',gap:8,
         }}>
+          {/* Date label — kecil, di atas judul */}
+          <span style={{
+            fontSize:10,fontWeight:600,letterSpacing:'0.10em',textTransform:'uppercase',
+            color:C.muted,lineHeight:1,
+          }}>
+            {new Date().toLocaleDateString('id-ID',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}
+          </span>
           {/* Row 1: title + close */}
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <p style={{fontSize:20,fontWeight:600,color:C.text,letterSpacing:'-0.02em',margin:0}}>
@@ -1143,7 +1160,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
           {/* LIST VIEW */}
           {view==='list' && (
             <>
-              {sortedOrders.length===0 ? (
+              {historyOrders.length === 0 && liveOrders.length === 0 ? (
                 /* Empty state */
                 <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',gap:24,paddingTop:40}}>
                   <div style={{
@@ -1172,82 +1189,167 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:6,paddingTop:8}}>
 
-                  {/* ── PENDING ORDERS ── */}
-                  {pendingOrders.map((o,i)=>{
-                    const isBuy = o.trend==='call';
-                    return (
-                      <div key={o.id} style={{
-                        display:'flex',alignItems:'center',padding:'10px 12px',gap:10,
-                        borderRadius:12,background:C.card2,
-                        border:`1px solid ${C.cyan}45`,
-                      }}>
-                        <div style={{
-                          width:22,height:22,borderRadius:'50%',flexShrink:0,
-                          display:'flex',alignItems:'center',justifyContent:'center',
-                          background:`${C.cyan}12`,border:`1px solid ${C.cyan}25`,
-                        }}>
-                          <span style={{fontSize:10,fontWeight:600,color:C.cyan}}>{i+1}</span>
-                        </div>
-                        <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
-                        <span style={{
-                          fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,
-                          background:isBuy?`${C.cyan}22`:`${C.coral}22`,
-                          color:isBuy?C.cyan:C.coral,
-                          border:`1px solid ${isBuy?C.cyan:C.coral}35`,
-                        }}>{isBuy?'BUY':'SELL'}</span>
-                        <span style={{fontSize:10,color:C.muted,marginLeft:'auto'}}>Menunggu…</span>
-                        {!isRunning && (
-                          <button onClick={()=>onDelete(o.id)} style={{
-                            width:28,height:28,borderRadius:'50%',flexShrink:0,
-                            display:'flex',alignItems:'center',justifyContent:'center',
-                            background:`${C.coral}18`,border:'none',cursor:'pointer',color:C.coral,
+                  {/* ── HISTORY SECTION (selesai: WIN/LOSE/SKIP) ── */}
+                  {historyOrders.length > 0 && (
+                    <div style={{marginBottom:4}}>
+                      {/* Section header */}
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                        <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>History</span>
+                        <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.bdr},transparent)`}}/>
+                        <span style={{fontSize:9,color:C.muted,background:C.card2,border:`1px solid ${C.bdr}`,borderRadius:99,padding:'1px 6px'}}>{historyOrders.length}</span>
+                      </div>
+                      {historyOrders.map(o => {
+                        const ph   = resolvePhase(o, getLog);
+                        const log  = getLog(o);
+                        const isBuy = o.trend === 'call';
+                        const ms   = o.martingaleState;
+                        const profit = log?.profit;
+                        const phaseColor = ph==='win'?C.cyan : ph==='lose'?C.coral : ph==='skipped'?C.amber : C.muted;
+                        const phaseBg   = ph==='win'?`${C.cyan}08` : ph==='lose'?`${C.coral}08` : `${C.amber}06`;
+                        const phaseBdr  = ph==='win'?`${C.cyan}25` : ph==='lose'?`${C.coral}25` : `${C.amber}20`;
+                        const phaseIcon = ph==='win'?'✓' : ph==='lose'?'✗' : ph==='skipped'?'⊘' : ph==='martingale'?`K${ms?.currentStep??1}` : '◎';
+                        const phaseLabel = ph==='win'?'WIN' : ph==='lose'?'LOSE' : ph==='skipped'?'SKIP' : ph==='martingale'?`K${ms?.currentStep??1}` : 'DONE';
+                        return (
+                          <div key={`hist-${o.id}`} style={{
+                            display:'flex',alignItems:'center',gap:8,padding:'8px 10px',
+                            borderRadius:10,background:phaseBg,border:`1px solid ${phaseBdr}`,
+                            marginBottom:4,opacity:0.85,
                           }}>
-                            <Trash2 style={{width:12,height:12}}/>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                            <span style={{fontSize:12,fontWeight:800,color:phaseColor,width:18,textAlign:'center',flexShrink:0}}>{phaseIcon}</span>
+                            <span style={{fontSize:13,fontWeight:600,color:C.sub,fontFamily:'monospace'}}>{o.time}</span>
+                            <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,background:isBuy?`${C.cyan}15`:`${C.coral}15`,color:isBuy?C.cyan:C.coral,border:`1px solid ${isBuy?C.cyan:C.coral}25`,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
+                            <span style={{fontSize:8,fontWeight:700,padding:'1px 6px',borderRadius:99,background:`${phaseColor}15`,border:`1px solid ${phaseColor}28`,color:phaseColor,flexShrink:0}}>{phaseLabel}</span>
+                            {ms && (ms.currentStep??0) > 0 && (
+                              <span style={{fontSize:8,color:C.amber,fontFamily:'monospace',flexShrink:0}}>K{ms.currentStep}/{ms.maxSteps}</span>
+                            )}
+                            {profit != null ? (
+                              <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',flexShrink:0,color:profit>=0?C.cyan:C.coral}}>
+                                {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
+                              </span>
+                            ) : (
+                              <span style={{marginLeft:'auto'}}/>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-                  {/* ── DONE ORDERS (sesi ini) ── */}
-                  {doneOrders.map(o=>{
-                    const isBuy  = o.trend==='call';
-                    const isSkip = o.isSkipped;
-                    const res    = getResult(o);
-                    const log    = getLog(o);
-                    const ms     = o.martingaleState ?? (log?.martingaleStep!=null?{currentStep:log.martingaleStep,maxSteps:0} as any:null);
-                    const profit = log?.profit;
-                    const col    = isSkip?C.amber:res==='WIN'?C.cyan:res==='LOSS'?C.coral:C.muted;
-                    return (
-                      <div key={o.id} style={{
-                        display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
-                        borderRadius:12,
-                        background:isSkip?`${C.amber}0c`:res==='WIN'?`${C.cyan}0c`:res==='LOSS'?`${C.coral}0c`:C.card2,
-                        border:`1px solid ${isSkip?`${C.amber}30`:res==='WIN'?`${C.cyan}35`:res==='LOSS'?`${C.coral}35`:C.bdr}`,
-                      }}>
-                        <span style={{fontSize:14,fontWeight:800,color:col,width:16,textAlign:'center',lineHeight:1}}>
-                          {isSkip?'⊘':res==='WIN'?'✓':res==='LOSS'?'✗':'·'}
-                        </span>
-                        <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
-                        <span style={{fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:isBuy?`${C.cyan}18`:`${C.coral}18`,color:isBuy?C.cyan:C.coral,border:`1px solid ${isBuy?C.cyan:C.coral}35`,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
-                        {isSkip?(
-                          <span style={{fontSize:9,fontWeight:700,color:C.amber,minWidth:32,textAlign:'left'}}>SKIP</span>
-                        ):res?(
-                          <span style={{fontSize:9,fontWeight:700,color:col,minWidth:32,textAlign:'left'}}>{res}</span>
-                        ):(
-                          <span style={{minWidth:32}}/>
-                        )}
-                        {ms&&(ms.currentStep??0)>0&&(
-                          <span style={{fontSize:9,color:C.amber,fontWeight:600}}>K{ms.currentStep}{ms.maxSteps>0?`/${ms.maxSteps}`:''}</span>
-                        )}
-                        {profit!=null&&(
-                          <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',color:profit>=0?C.cyan:C.coral}}>
-                            {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
-                          </span>
-                        )}
+                  {/* ── ACTIVE / MONITORING ORDERS ── */}
+                  {activeOrders.length > 0 && (
+                    <div style={{marginBottom:4}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                        <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.sky}}>Monitoring</span>
+                        <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.sky}40,transparent)`}}/>
+                        <span style={{
+                          fontSize:9,color:C.sky,background:`${C.sky}12`,border:`1px solid ${C.sky}30`,
+                          borderRadius:99,padding:'1px 6px',
+                          animation:'ping 1.6s ease-in-out infinite',
+                        }}>{activeOrders.length}</span>
                       </div>
-                    );
-                  })}
+                      {activeOrders.map(o => {
+                        const phase  = resolvePhase(o, getLog);
+                        const isBuy  = o.trend === 'call';
+                        const ms     = o.martingaleState;
+                        const log    = getLog(o);
+                        const profit = log?.profit;
+                        const phaseColor = phase==='martingale'?C.amber : C.sky;
+                        const phaseBg    = phase==='martingale'?`${C.amber}0c` : `${C.sky}0c`;
+                        const phaseBdr   = phase==='martingale'?`${C.amber}30` : `${C.sky}25`;
+                        const phaseIcon  = phase==='martingale'?`K${ms?.currentStep??1}` : '◎';
+                        const phaseLabel = phase==='martingale'
+                          ? `K${ms?.currentStep??1}${ms?.maxSteps?`/${ms.maxSteps}`:''}`
+                          : 'Monitoring';
+                        return (
+                          <div key={o.id} style={{
+                            display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
+                            borderRadius:12,background:phaseBg,border:`1px solid ${phaseBdr}`,
+                            marginBottom:4,
+                          }}>
+                            <span style={{
+                              fontSize:phase==='martingale'?9:14,fontWeight:800,color:phaseColor,
+                              width:22,textAlign:'center',lineHeight:1,flexShrink:0,
+                              animation:'pulse 1.2s ease-in-out infinite',
+                            }}>{phaseIcon}</span>
+                            <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
+                            <span style={{fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:isBuy?`${C.cyan}18`:`${C.coral}18`,color:isBuy?C.cyan:C.coral,border:`1px solid ${isBuy?C.cyan:C.coral}35`,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
+                            <span style={{
+                              fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:99,
+                              background:`${phaseColor}18`,border:`1px solid ${phaseColor}35`,color:phaseColor,
+                              flexShrink:0,animation:'pulse 1.4s ease-in-out infinite',
+                            }}>{phaseLabel}</span>
+                            {profit != null ? (
+                              <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',flexShrink:0,color:profit>=0?C.cyan:C.coral}}>
+                                {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
+                              </span>
+                            ) : (
+                              <span style={{marginLeft:'auto',display:'flex',gap:3,alignItems:'center'}}>
+                                {[0,1,2].map(i=>(
+                                  <span key={i} style={{width:4,height:4,borderRadius:'50%',background:phaseColor,opacity:0.4,animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>
+                                ))}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* ── PENDING ORDERS ── */}
+                  {pendingOrders.length > 0 && (
+                    <div>
+                      {(activeOrders.length > 0 || historyOrders.length > 0) && (
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                          <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>Menunggu</span>
+                          <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.bdr},transparent)`}}/>
+                          <span style={{fontSize:9,color:C.muted,background:C.card2,border:`1px solid ${C.bdr}`,borderRadius:99,padding:'1px 6px'}}>{pendingOrders.length}</span>
+                        </div>
+                      )}
+                      {pendingOrders.map((o,i)=>{
+                        const isBuy = o.trend==='call';
+                        return (
+                          <div key={o.id} style={{
+                            display:'flex',alignItems:'center',padding:'10px 12px',gap:10,
+                            borderRadius:12,background:C.card2,
+                            border:`1px solid ${C.cyan}45`,
+                            marginBottom:4,
+                          }}>
+                            <div style={{
+                              width:22,height:22,borderRadius:'50%',flexShrink:0,
+                              display:'flex',alignItems:'center',justifyContent:'center',
+                              background:`${C.cyan}12`,border:`1px solid ${C.cyan}25`,
+                            }}>
+                              <span style={{fontSize:10,fontWeight:600,color:C.cyan}}>{i+1}</span>
+                            </div>
+                            <span style={{fontSize:14,fontWeight:700,color:C.text,fontFamily:'monospace'}}>{o.time}</span>
+                            <span style={{
+                              fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,
+                              background:isBuy?`${C.cyan}22`:`${C.coral}22`,
+                              color:isBuy?C.cyan:C.coral,
+                              border:`1px solid ${isBuy?C.cyan:C.coral}35`,
+                            }}>{isBuy?'BUY':'SELL'}</span>
+                            <span style={{fontSize:10,color:C.muted,marginLeft:'auto'}}>Menunggu…</span>
+                            {!isRunning && (
+                              <button onClick={()=>onDelete(o.id)} style={{
+                                width:28,height:28,borderRadius:'50%',flexShrink:0,
+                                display:'flex',alignItems:'center',justifyContent:'center',
+                                background:`${C.coral}18`,border:'none',cursor:'pointer',color:C.coral,
+                              }}>
+                                <Trash2 style={{width:12,height:12}}/>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Semua pending sudah selesai tapi masih ada history */}
+                  {pendingOrders.length === 0 && activeOrders.length === 0 && historyOrders.length > 0 && (
+                    <div style={{padding:'12px',borderRadius:10,background:`${C.cyan}08`,border:`1px solid ${C.cyan}18`,textAlign:'center'}}>
+                      <p style={{fontSize:12,color:C.muted,margin:0}}>Semua order telah selesai</p>
+                    </div>
+                  )}
 
                 </div>
               )}
@@ -1284,7 +1386,8 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
   const itemRefs = useRef<(HTMLDivElement|null)[]>([]);
   const [activeIdx,setActiveIdx] = useState(-1);
 
-  const pendingOrders = orders.filter(o => !o.isExecuted && !o.isSkipped);
+  const pendingOrders   = orders.filter(o => !o.isExecuted && !o.isSkipped);
+  const monitoringOrders = orders.filter(o => o.isExecuted && !o.result && !(o.result === 'WIN' || o.result === 'LOSE' || o.result === 'DRAW'));
 
   useEffect(()=>{
     const update=()=>{
@@ -1323,7 +1426,7 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
         )}
       </div>
       )}
-      {pendingOrders.length===0?(
+      {pendingOrders.length===0 && monitoringOrders.length===0?(
         <div style={{height:120,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,gap:8}}>
           <Calendar style={{width:28,height:28,color:C.muted,opacity:0.5}}/>
           <p style={{fontSize:12,color:C.muted,textAlign:'center'}}>
@@ -1333,6 +1436,33 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
       ):(
         <>
         <div ref={listRef} style={{overflowY:'auto',overflowX:'hidden',maxHeight:compact?100:210,flex:'none'}}>
+          {/* Monitoring / active orders */}
+          {monitoringOrders.map(o => {
+            const isCall = o.trend === 'call';
+            const ms = o.martingaleState;
+            const isMartingale = ms?.isActive && (ms.currentStep ?? 0) > 0;
+            const col = isMartingale ? C.amber : C.sky;
+            const label = isMartingale ? `K${ms!.currentStep}` : '●';
+            const timeFz = compact ? 'clamp(9px,2.8vw,11px)' : '12px';
+            const itemPad = compact ? '5px 10px' : '8px 12px';
+            const itemGap = compact ? 5 : 8;
+            return (
+              <div key={o.id} className="schedule-item" style={{
+                display:'flex',alignItems:'center',gap:itemGap,padding:itemPad,
+                borderBottom:`1px solid ${C.bdr}`,
+                background: isMartingale ? `${C.amber}08` : `${C.sky}08`,
+                minWidth:0,overflow:'hidden',
+              }}>
+                <span style={{fontSize:compact?9:10,fontWeight:800,color:col,width:18,textAlign:'center',flexShrink:0,animation:'pulse 1.2s ease-in-out infinite'}}>{label}</span>
+                <span style={{fontSize:timeFz,fontFamily:'monospace',color:C.text,fontWeight:600,flexShrink:0}}>{o.time}</span>
+                <span style={{fontSize:compact?8:9,fontWeight:700,padding:'1px 5px',borderRadius:4,color:isCall?C.cyan:C.coral,background:isCall?`${C.cyan}12`:`${C.coral}12`,flexShrink:0}}>{isCall?'B':'S'}</span>
+                <span style={{fontSize:compact?8:9,fontWeight:700,padding:'1px 6px',borderRadius:99,color:col,background:`${col}12`,border:`1px solid ${col}28`,flexShrink:0,marginLeft:'auto'}}>
+                  {isMartingale ? `K${ms!.currentStep}/${ms!.maxSteps}` : 'Monitor'}
+                </span>
+              </div>
+            );
+          })}
+          {/* Pending orders */}
           {(compact?pendingOrders.slice(0,2):pendingOrders).map((order,i,arr)=>{
             const isA=i===activeIdx, isCall=order.trend==='call', col=isCall?C.cyan:C.coral;
             const iconSz = compact?11:13;
@@ -2948,19 +3078,7 @@ const ControlCard: React.FC<{
           {/* ── Action buttons only, no P&L ── */}
           {isActive ? (
             <div style={{display:'flex',gap:10}}>
-              {/* Pause / Resume */}
-              <button onClick={canResumeBot?onResume:onPause} disabled={!canPauseBot&&!canResumeBot} style={{
-                flex:1,height:48,borderRadius:14,cursor:'pointer',
-                border:`0.5px solid ${canResumeBot?C.cyan:C.amber}`,
-                background:canResumeBot?`rgba(16,185,129,0.55)`:`rgba(251,191,36,0.75)`,
-                color:'#fff',fontSize:13,fontWeight:700,letterSpacing:'0.02em',
-                display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-                boxShadow:`0 1px 0 ${C.cyan}15 inset, 0 8px 24px ${canResumeBot?`${C.cyan}55`:`${C.amber}55`}, 0 3px 8px rgba(0,0,0,0.25)`,
-                opacity:(!canPauseBot&&!canResumeBot)?0.45:1,transition:'opacity 0.2s',
-              }}>
-                {canResumeBot?<><PlayCircle style={{width:16,height:16}}/> Resume</>:<><PauseCircle style={{width:16,height:16}}/> Pause</>}
-              </button>
-              {/* Stop */}
+              {/* Stop — full width, no Pause */}
               <button onClick={onStop} disabled={!canStopBot||isLoading} style={{
                 flex:1,height:48,borderRadius:14,cursor:'pointer',
                 border:`0.5px solid ${C.coral}`,
@@ -3035,7 +3153,42 @@ export default function DashboardPage() {
   const [momentumStatus,setMomentumStatus] = useState<MomentumStatus|null>(null);
   const [todayProfitData,setTodayProfitData] = useState<TodayProfitSummary|null>(null);
 
-  const [tradingMode,setTradingMode] = useState<TradingMode>('schedule');
+  // ── Persistent trading settings (auto-save ke localStorage) ────────────────
+  const { settings: _s, loaded: settingsLoaded, update: _upd } = useTradingSettings();
+
+  const tradingMode          = _s.tradingMode;
+  const selectedRic          = _s.selectedRic;
+  const isDemo               = _s.isDemo;
+  const duration             = _s.duration;
+  const amount               = _s.amount;
+  const martingale           = _s.martingale;
+  const ftTf                 = _s.ftTf;
+  const stopLoss             = _s.stopLoss;
+  const stopProfit           = _s.stopProfit;
+  const indicatorType        = _s.indicatorType;
+  const indicatorPeriod      = _s.indicatorPeriod;
+  const indicatorSensitivity = _s.indicatorSensitivity;
+  const rsiOverbought        = _s.rsiOverbought;
+  const rsiOversold          = _s.rsiOversold;
+  const momentumPatterns     = _s.momentumPatterns;
+
+  const setTradingMode          = (v: TradingMode)                               => _upd('tradingMode', v);
+  const setSelectedRic          = (v: string)                                    => _upd('selectedRic', v);
+  const setIsDemo               = (v: boolean)                                   => _upd('isDemo', v);
+  const setDuration             = (v: number)                                    => _upd('duration', v);
+  const setAmount               = (v: number)                                    => _upd('amount', v);
+  const setMartingale           = (v: MartingaleConfig)                          => _upd('martingale', v);
+  const setFtTf                 = (v: FastTradeTimeframe)                        => _upd('ftTf', v);
+  const setStopLoss             = (v: number)                                    => _upd('stopLoss', v);
+  const setStopProfit           = (v: number)                                    => _upd('stopProfit', v);
+  const setIndicatorType        = (v: IndicatorType)                              => _upd('indicatorType', v);
+  const setIndicatorPeriod      = (v: number)                                    => _upd('indicatorPeriod', v);
+  const setIndicatorSensitivity = (v: number)                                    => _upd('indicatorSensitivity', v);
+  const setRsiOverbought        = (v: number)                                    => _upd('rsiOverbought', v);
+  const setRsiOversold          = (v: number)                                    => _upd('rsiOversold', v);
+  const setMomentumPatterns     = (v: typeof _s.momentumPatterns)               => _upd('momentumPatterns', v);
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const [error,setError] = useState<string|null>(null);
   const [actionLoading,setActionLoading] = useState(false);
   const [orderModalOpen,setOrderModalOpen] = useState(false);
@@ -3043,23 +3196,6 @@ export default function DashboardPage() {
   // ✅ FIX: Deteksi device SEKALI saat mount, tidak pakai resize listener
   // (resize listener → re-render saat keyboard muncul di mobile)
   const [deviceType,setDeviceType] = useState<'mobile'|'tablet'|'desktop'>('mobile');
-
-  const [selectedRic,setSelectedRic] = useState('');
-  const [isDemo,setIsDemo] = useState(true);
-  const [duration,setDuration] = useState(60);
-  const [amount,setAmount] = useState(50_000);
-  const [martingale,setMartingale] = useState<MartingaleConfig>({enabled:false,maxStep:3,multiplier:2,alwaysSignal:false});
-  const [ftTf,setFtTf] = useState<FastTradeTimeframe>('1m');
-  const [stopLoss,setStopLoss] = useState(0);
-  const [stopProfit,setStopProfit] = useState(0);
-
-  const [indicatorType,setIndicatorType] = useState<IndicatorType>('SMA');
-  const [indicatorPeriod,setIndicatorPeriod] = useState(14);
-  const [indicatorSensitivity,setIndicatorSensitivity] = useState(0.5);
-  const [rsiOverbought,setRsiOverbought] = useState(70);
-  const [rsiOversold,setRsiOversold] = useState(30);
-
-  const [momentumPatterns,setMomentumPatterns] = useState({candleSabit:true,dojiTerjepit:true,dojiPembatalan:true,bbSarBreak:true});
 
   const [mobileSessionOpen,setMobileSessionOpen] = useState(false);
   const [assetPickerOpen,setAssetPickerOpen] = useState(false);
@@ -3443,6 +3579,9 @@ export default function DashboardPage() {
     </button>
   );
 
+
+  // Tunggu settings dari storage sebelum render (cegah flicker default → saved value)
+  if (!settingsLoaded) return null;
 
   return (
     <div style={{minHeight:'100%',background:colors.bg,paddingBottom:88,color:colors.text,transition:'background 0.3s, color 0.3s'}}>
