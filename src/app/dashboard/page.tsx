@@ -4496,86 +4496,145 @@ export default function DashboardPage() {
                 </div>
               ) : isActiveMode && tradingMode === 'schedule' ? (
                 <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
-                  {/* mode bar */}
-                  <div style={{
-                    display:'flex',alignItems:'center',
-                    padding:'8px 12px',borderRadius:12,
-                    background:`${modeAccent(tradingMode)}0a`,
-                    border:`1px solid ${modeAccent(tradingMode)}30`,
-                  }}>
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
-                      <span style={{width:6,height:6,borderRadius:'50%',background:modeAccent(tradingMode),animation:'pulse 1.6s ease-in-out infinite',boxShadow:`0 0 5px ${modeAccent(tradingMode)}`}}/>
-                      <span style={{fontSize:11,fontWeight:700,color:modeAccent(tradingMode)}}>Signal Mode</span>
-                    </div>
-                  </div>
-                  {/* P&L + Stats card */}
-                  <div style={{
-                    padding:'10px 12px',borderRadius:12,
-                    background:C.card2,
-                    border:`1px solid ${modeAccent(tradingMode)}28`,
-                    boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)`,
-                    display:'flex',flexDirection:'column',gap:7,
-                    flex:1,minHeight:0,
-                  }}>
-                    {/* P&L */}
-                    <div>
-                      <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.1em',display:'block',marginBottom:2}}>{T('dashboard.sessionPnl')}</span>
-                      <span style={{fontSize:13,fontWeight:800,fontFamily:'monospace',letterSpacing:'-0.02em',color:sessionPnL>=0?modeAccent(tradingMode):C.coral}}>
-                        {sessionPnL>=0?'+':'-'}{Math.round(Math.abs(sessionPnL/100)).toLocaleString('id-ID',{maximumFractionDigits:0})}
-                      </span>
-                    </div>
-                    <div style={{height:1,background:`${modeAccent(tradingMode)}15`}}/>
-                    {/* Win / Loss / WR dari scheduleLogs */}
-                    {(()=>{
-                      const ac = modeAccent(tradingMode);
-                      const wins   = scheduleLogs.filter(l=>/^win$/i.test(l.result??'')).length;
-                      const losses = scheduleLogs.filter(l=>/^los/i.test(l.result??'')).length;
-                      const total  = wins+losses;
-                      const wr     = total>0?Math.round((wins/total)*100):null;
-                      const asActive = (scheduleStatus as any)?.alwaysSignalActive;
-                      const asStep   = (scheduleStatus as any)?.alwaysSignalStep ?? 0;
-                      return (
-                        <div style={{display:'flex',flexDirection:'column',gap:5}}>
-                          <div style={{display:'flex',gap:4}}>
-                            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.cyan}0c`,border:`1px solid ${C.cyan}20`}}>
-                              <span style={{fontSize:14,fontWeight:800,color:C.cyan,lineHeight:1,fontFamily:'monospace'}}>{wins}</span>
-                              <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Win</span>
-                            </div>
-                            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.coral}0c`,border:`1px solid ${C.coral}20`}}>
-                              <span style={{fontSize:14,fontWeight:800,color:C.coral,lineHeight:1,fontFamily:'monospace'}}>{losses}</span>
-                              <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Loss</span>
-                            </div>
-                            {wr!==null&&(
-                              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:wr>=50?`${ac}0c`:`${C.coral}0c`,border:`1px solid ${wr>=50?ac:C.coral}20`}}>
-                                <span style={{fontSize:14,fontWeight:800,color:wr>=50?ac:C.coral,lineHeight:1,fontFamily:'monospace'}}>{wr}%</span>
-                                <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>WR</span>
-                              </div>
-                            )}
-                            {asActive&&asStep>0&&(
-                              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.amber}0c`,border:`1px solid ${C.amber}20`}}>
-                                <span style={{fontSize:11,fontWeight:800,color:C.amber,lineHeight:1,fontFamily:'monospace'}}>K{asStep}</span>
-                                <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>AS</span>
-                              </div>
-                            )}
+                  {(() => {
+                    const pending = scheduleOrders.filter(o => !o.isExecuted && !o.isSkipped);
+                    const ac = modeAccent('schedule');
+                    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+                    let activeIdx = 0, minDiff = Infinity;
+                    pending.forEach((o, i) => {
+                      const [h, m] = o.time.split(':').map(Number);
+                      let d = (h * 60 + m) - nowMin;
+                      if (d < 0) d += 24 * 60;
+                      if (d < minDiff) { minDiff = d; activeIdx = i; }
+                    });
+                    const slots = [0, 1, 2].map(offset => {
+                      const idx = pending.length > 0 ? (activeIdx + offset) % pending.length : -1;
+                      return idx >= 0 ? { order: pending[idx], offset } : null;
+                    }).filter(Boolean) as { order: ScheduleOrder; offset: number }[];
+
+                    const martStep   = (scheduleStatus as any)?.alwaysSignalStep ?? 0;
+                    const martActive = (scheduleStatus as any)?.alwaysSignalActive ?? false;
+
+                    return (
+                      <>
+                        {/* Always Signal badge */}
+                        {martActive && (
+                          <div style={{padding:'4px 8px',borderRadius:8,background:`${C.amber}10`,border:`1px solid ${C.amber}30`,display:'flex',alignItems:'center',gap:5}}>
+                            <span style={{width:4,height:4,borderRadius:'50%',background:C.amber,animation:'ping 1.4s ease-in-out infinite'}}/>
+                            <span style={{fontSize:9,fontWeight:700,color:C.amber,letterSpacing:'0.06em'}}>
+                              AS · K{martStep}/{martingale.maxStep}
+                            </span>
                           </div>
-                          <div style={{display:'flex',alignItems:'flex-end',gap:2,height:22}}>
-                            {[0.4,0.7,0.5,1,0.6,0.85,0.45,0.9,0.55,0.75].map((h,i)=>(
-                              <div key={i} style={{flex:1,height:`${h*100}%`,borderRadius:2,background:ac,opacity:0.2+h*0.5,animation:`pulse ${1.1+i*0.12}s ease-in-out infinite`,animationDelay:`${i*0.07}s`}}/>
-                            ))}
+                        )}
+                        {/* Mode indicator bar */}
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 10px',borderRadius:10,background:`${ac}0a`,border:`1px solid ${ac}28`}}>
+                          <div style={{display:'flex',alignItems:'center',gap:5}}>
+                            <span style={{width:5,height:5,borderRadius:'50%',background:ac,animation:'ping 1.6s ease-in-out infinite',boxShadow:`0 0 5px ${ac}`}}/>
+                            <span style={{fontSize:10,fontWeight:700,color:ac}}>Signal Mode</span>
                           </div>
+                          <span style={{fontSize:8,padding:'1px 6px',borderRadius:99,color:ac,background:`${ac}14`,border:`1px solid ${ac}28`,fontWeight:700}}>{T('common.active')}</span>
                         </div>
-                      );
-                    })()}
-                    <div style={{height:1,background:`${modeAccent(tradingMode)}15`}}/>
-                    <button
-                      onClick={()=>setOrderModalOpen(true)}
-                      style={{display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'6px 0',borderRadius:8,background:`${modeAccent(tradingMode)}14`,border:`1px solid ${modeAccent(tradingMode)}35`,color:modeAccent(tradingMode),fontSize:'clamp(8px,2.8vw,10px)',fontWeight:700,letterSpacing:'0.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden'}}
-                    >
-                      <Info style={{width:11,height:11,flexShrink:0}}/>
-                      {T('dashboard.viewSession')}
-                    </button>
-                    {mobileStartStopBtn}
-                  </div>
+                        {/* 3 Schedule Items */}
+                        <div style={{display:'flex',flexDirection:'column',gap:5,flex:1}}>
+                          {slots.length === 0 ? (
+                            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 0'}}>
+                              <Calendar style={{width:22,height:22,color:C.muted,opacity:0.4}}/>
+                              <span style={{fontSize:10,color:C.muted,textAlign:'center'}}>Semua signal selesai</span>
+                            </div>
+                          ) : slots.map(({ order, offset }) => {
+                            const isRunning = offset === 0;
+                            const isCall    = order.trend === 'call';
+                            const dirCol    = isCall ? C.cyan : C.coral;
+                            const opacity   = isRunning ? 1 : offset === 1 ? 0.72 : 0.50;
+                            // Martingale K indicator — dari order.martingaleState atau scheduleStatus
+                            const orderStep = order.martingaleState?.currentStep ?? 0;
+                            const showMart  = isRunning && (orderStep > 0 || (martActive && martStep > 0));
+                            const dispStep  = orderStep > 0 ? orderStep : martStep;
+
+                            return (
+                              <div key={order.id} style={{
+                                display:'flex',alignItems:'center',gap:8,padding:'7px 10px',
+                                borderRadius:10,opacity,
+                                background: isRunning ? `${ac}0e` : C.card2,
+                                border:`1px solid ${isRunning ? ac+'55' : C.bdr}`,
+                                transition:'all 0.2s',
+                                position:'relative',
+                                overflow:'hidden',
+                              }}>
+                                {/* Left glow strip */}
+                                {isRunning && (
+                                  <div style={{position:'absolute',left:0,top:0,bottom:0,width:2,background:ac,borderRadius:'99px 0 0 99px'}}/>
+                                )}
+                                {/* Icon */}
+                                <div style={{
+                                  width:24,height:24,borderRadius:6,flexShrink:0,
+                                  display:'flex',alignItems:'center',justifyContent:'center',
+                                  background: isRunning ? `${ac}18` : C.card2,
+                                  border:`1px solid ${isRunning ? ac+'40' : C.bdr}`,
+                                  marginLeft: isRunning ? 4 : 0,
+                                }}>
+                                  {isRunning
+                                    ? <Activity style={{width:11,height:11,color:ac}}/>
+                                    : <Clock style={{width:11,height:11,color:C.muted}}/>
+                                  }
+                                </div>
+                                {/* Info */}
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:5,flexWrap:'nowrap'}}>
+                                    <span style={{fontSize:12,fontWeight:700,color:isRunning?C.text:C.sub,fontFamily:'monospace',lineHeight:1,flexShrink:0}}>{order.time}</span>
+                                    <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,color:dirCol,background:`${dirCol}14`,border:`1px solid ${dirCol}28`,flexShrink:0}}>
+                                      {isCall ? 'BUY' : 'SELL'}
+                                    </span>
+                                    {/* Martingale K badge */}
+                                    {showMart && (
+                                      <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,color:C.amber,background:`${C.amber}14`,border:`1px solid ${C.amber}30`,flexShrink:0,letterSpacing:'0.04em'}}>
+                                        K{dispStep}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {isRunning && (
+                                    <span style={{fontSize:8,color:C.muted,marginTop:2,display:'block',lineHeight:1}}>
+                                      {(scheduleStatus as any)?.nextOrderInSeconds != null
+                                        ? `Eksekusi dalam ${(scheduleStatus as any).nextOrderInSeconds}d`
+                                        : 'Menunggu eksekusi'}
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Right badge */}
+                                {isRunning ? (
+                                  <div style={{display:'flex',alignItems:'center',gap:3,padding:'2px 6px',borderRadius:99,background:`${ac}18`,border:`1px solid ${ac}40`,flexShrink:0}}>
+                                    <span style={{width:4,height:4,borderRadius:'50%',background:ac,animation:'ping 1.6s ease-in-out infinite'}}/>
+                                    <span style={{fontSize:8,fontWeight:700,color:ac,letterSpacing:'0.06em'}}>LIVE</span>
+                                  </div>
+                                ) : (
+                                  <span style={{fontSize:9,fontWeight:700,color:C.muted,flexShrink:0,fontFamily:'monospace'}}>+{offset}</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {pending.length > 3 && (
+                            <div style={{textAlign:'center',paddingTop:2}}>
+                              <span style={{fontSize:8,color:C.muted}}>+{pending.length - 3} signal lainnya</span>
+                            </div>
+                          )}
+                        </div>
+                        {/* View session button */}
+                        <button
+                          onClick={() => setOrderModalOpen(true)}
+                          style={{
+                            display:'flex',alignItems:'center',justifyContent:'center',gap:5,
+                            padding:'6px 0',borderRadius:8,
+                            background:`${ac}10`,border:`1px solid ${ac}25`,
+                            color:ac,fontSize:'clamp(8px,2.8vw,10px)',fontWeight:700,
+                            cursor:'pointer',letterSpacing:'0.04em',
+                          }}
+                        >
+                          <Info style={{width:10,height:10}}/> {T('dashboard.viewSession')}
+                        </button>
+                        {mobileStartStopBtn}
+                      </>
+                    );
+                  })()}
                 </div>
               ) : (
                 <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
