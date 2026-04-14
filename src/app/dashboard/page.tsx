@@ -2618,8 +2618,8 @@ const SettingsCard: React.FC<{
             </div>
           <div style={{ display:'flex',alignItems:'center',gap:8 }}>
             <span style={{ fontSize:10,padding:'3px 9px',borderRadius:99,background:`${ac}12`,color:ac,border:`1px solid ${ac}28`,fontWeight:600 }}>{modeLabel}</span>
-            <div style={{ width:24,height:24,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:C.card2,border:`1px solid ${C.bdr}` }}>
-              {open?<ChevronUp style={{ width:12,height:12,color:C.muted }}/>:<ChevronDown style={{ width:12,height:12,color:C.muted }}/>}
+            <div style={{ width:28,height:28,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:open?`${ac}18`:C.card2,border:`1px solid ${open?`${ac}45`:C.bdr}`,transition:'all 0.2s',flexShrink:0 }}>
+              {open?<ChevronUp style={{ width:15,height:15,color:ac }}/>:<ChevronDown style={{ width:15,height:15,color:ac }}/>}
             </div>
           </div>
         </button>
@@ -3009,8 +3009,8 @@ const ControlCard: React.FC<{
           }}/>
           <span style={{fontSize:11,fontWeight:700,color:stateCol}}>{stateLabel}</span>
         </div>
-        <div style={{width:22,height:22,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:C.card2,border:`1px solid ${C.bdr}`,flexShrink:0}}>
-          {open?<ChevronUp style={{width:11,height:11,color:C.muted}}/>:<ChevronDown style={{width:11,height:11,color:C.muted}}/>}
+        <div style={{width:28,height:28,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:open?`${ac}18`:C.card2,border:`1px solid ${open?`${ac}45`:C.bdr}`,transition:'all 0.2s',flexShrink:0}}>
+          {open?<ChevronUp style={{width:15,height:15,color:ac}}/>:<ChevronDown style={{width:15,height:15,color:ac}}/>}
         </div>
       </button>
 

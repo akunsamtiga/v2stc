@@ -32,7 +32,9 @@ function LoginPageContent() {
     const init = async () => {
       setMounted(true);
       const savedEmail = await storage.get('stc_remember_email');
+      const savedPass  = await storage.get('stc_remember_password');
       if (savedEmail) { setEmail(savedEmail); setRemember(true); }
+      if (savedPass)  { setPassword(savedPass); }
       // ✅ FIXED: Gunakan isSessionValid untuk cek session lengkap
       const sessionValid = await isSessionValid();
       if (sessionValid) router.push('/dashboard');
@@ -115,9 +117,11 @@ function LoginPageContent() {
     try {
       const res = await api.login(emailVal, passVal);
       if (remember) {
-        await storage.set('stc_remember_email', emailVal);
+        await storage.set('stc_remember_email',    emailVal);
+        await storage.set('stc_remember_password', passVal);
       } else {
         await storage.remove('stc_remember_email');
+        await storage.remove('stc_remember_password');
       }
       await runSplash(res);
     } catch (err: unknown) {

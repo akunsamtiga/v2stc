@@ -198,8 +198,37 @@ function ProfilePageContent() {
   };
 
   const handleLogout = async () => {
-    // ✅ FIXED: Gunakan sessionLogout untuk clear semua session data
+    // 1. Hapus session keys (token, userId, dll)
     await sessionLogout();
+
+    // 2. Simpan remember-me sebelum wipe localStorage
+    const rememberEmail = localStorage.getItem('stc_remember_email');
+    const rememberPass  = localStorage.getItem('stc_remember_password');
+
+    // 3. Wipe seluruh localStorage (hapus trading settings, cache lokal, dll)
+    localStorage.clear();
+
+    // 4. Kembalikan remember-me
+    if (rememberEmail) localStorage.setItem('stc_remember_email',    rememberEmail);
+    if (rememberPass)  localStorage.setItem('stc_remember_password', rememberPass);
+
+    // 5. Hapus seluruh sessionStorage
+    sessionStorage.clear();
+
+    // 6. Hapus Browser Cache API (service worker cache, dll)
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch { /* ignore */ }
+
+    // 7. Hapus IndexedDB (Firebase local persistence)
+    try {
+      const dbs = await indexedDB.databases?.() ?? [];
+      await Promise.all(dbs.map(db => db.name ? indexedDB.deleteDatabase(db.name) : Promise.resolve()));
+    } catch { /* ignore */ }
+
     router.push('/login');
   };
 
