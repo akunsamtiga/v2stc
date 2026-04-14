@@ -950,6 +950,26 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   const [input,setInput]              = useState('');
   const [clearLoading,setClearLoading] = useState(false);
   const [view,setView]                = useState<'list'|'input'>('list');
+  const scrollRef      = useRef<HTMLDivElement>(null);
+  const monitoringRef  = useRef<HTMLDivElement>(null);
+  const pendingRef     = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll ke Monitoring → Menunggu → atas, tiap kali modal dibuka atau kembali ke list view
+  useEffect(() => {
+    if (open && view === 'list') {
+      const timer = setTimeout(() => {
+        const container = scrollRef.current;
+        if (!container) return;
+        const target = monitoringRef.current ?? pendingRef.current;
+        if (target) {
+          container.scrollTo({ top: target.offsetTop - 8, behavior: 'smooth' });
+        } else {
+          container.scrollTop = 0;
+        }
+      }, 80);
+      return () => clearTimeout(timer);
+    }
+  }, [open, view]);
 
   // ── Match log untuk order ─────────────────────────────────────────────────
   const getLog = useCallback((o: ScheduleOrder): ExecutionLog | undefined =>
@@ -1077,7 +1097,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
         </div>
 
         {/* ── Content ── */}
-        <div style={{flex:1,overflowY:'auto',background:C.bg,padding:'4px 20px 16px',WebkitOverflowScrolling:'touch' as any}}>
+        <div ref={scrollRef} style={{flex:1,overflowY:'auto',background:C.bg,padding:'4px 20px 16px',WebkitOverflowScrolling:'touch' as any}}>
 
           {/* INPUT VIEW */}
           {view==='input' && (
@@ -1206,7 +1226,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
 
                   {/* ── ACTIVE / MONITORING ORDERS ── */}
                   {activeOrders.length > 0 && (
-                    <div style={{marginBottom:4}}>
+                    <div ref={monitoringRef} style={{marginBottom:4}}>
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
                         <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.sky}}>Monitoring</span>
                         <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.sky}40,transparent)`}}/>
@@ -1266,7 +1286,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
 
                   {/* ── PENDING ORDERS ── */}
                   {pendingOrders.length > 0 && (
-                    <div>
+                    <div ref={pendingRef}>
                       {(activeOrders.length > 0 || historyOrders.length > 0) && (
                         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
                           <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>Menunggu</span>
@@ -3176,6 +3196,7 @@ export default function DashboardPage() {
   const [deviceType,setDeviceType] = useState<'mobile'|'tablet'|'desktop'>('mobile');
 
   const [mobileSessionOpen,setMobileSessionOpen] = useState(false);
+  const [mobileModePickerOpen,setMobileModePickerOpen] = useState(false);
   const [assetPickerOpen,setAssetPickerOpen] = useState(false);
   const [flash,setFlash] = useState<'win'|'lose'|null>(null);
   const prevWRef = useRef(0), prevLRef = useRef(0);
@@ -4517,120 +4538,117 @@ export default function DashboardPage() {
 
                     return (
                       <>
-                        {/* Always Signal badge */}
+                        {/* Always Signal badge — di luar card */}
                         {martActive && (
-                          <div style={{padding:'4px 8px',borderRadius:8,background:`${C.amber}10`,border:`1px solid ${C.amber}30`,display:'flex',alignItems:'center',gap:5}}>
+                          <div style={{padding:'4px 8px',borderRadius:8,background:`${C.amber}10`,border:`1px solid ${C.amber}30`,display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
                             <span style={{width:4,height:4,borderRadius:'50%',background:C.amber,animation:'ping 1.4s ease-in-out infinite'}}/>
                             <span style={{fontSize:9,fontWeight:700,color:C.amber,letterSpacing:'0.06em'}}>
                               AS · K{martStep}/{martingale.maxStep}
                             </span>
                           </div>
                         )}
-                        {/* Mode indicator bar */}
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 10px',borderRadius:10,background:`${ac}0a`,border:`1px solid ${ac}28`}}>
-                          <div style={{display:'flex',alignItems:'center',gap:5}}>
-                            <span style={{width:5,height:5,borderRadius:'50%',background:ac,animation:'ping 1.6s ease-in-out infinite',boxShadow:`0 0 5px ${ac}`}}/>
-                            <span style={{fontSize:10,fontWeight:700,color:ac}}>Signal Mode</span>
-                          </div>
-                          <span style={{fontSize:8,padding:'1px 6px',borderRadius:99,color:ac,background:`${ac}14`,border:`1px solid ${ac}28`,fontWeight:700}}>{T('common.active')}</span>
-                        </div>
-                        {/* 3 Schedule Items */}
-                        <div style={{display:'flex',flexDirection:'column',gap:5,flex:1}}>
-                          {slots.length === 0 ? (
-                            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 0'}}>
-                              <Calendar style={{width:22,height:22,color:C.muted,opacity:0.4}}/>
-                              <span style={{fontSize:10,color:C.muted,textAlign:'center'}}>Semua signal selesai</span>
-                            </div>
-                          ) : slots.map(({ order, offset }) => {
-                            const isRunning = offset === 0;
-                            const isCall    = order.trend === 'call';
-                            const dirCol    = isCall ? C.cyan : C.coral;
-                            const opacity   = isRunning ? 1 : offset === 1 ? 0.72 : 0.50;
-                            // Martingale K indicator — dari order.martingaleState atau scheduleStatus
-                            const orderStep = order.martingaleState?.currentStep ?? 0;
-                            const showMart  = isRunning && (orderStep > 0 || (martActive && martStep > 0));
-                            const dispStep  = orderStep > 0 ? orderStep : martStep;
 
-                            return (
-                              <div key={order.id} style={{
-                                display:'flex',alignItems:'center',gap:8,padding:'7px 10px',
-                                borderRadius:10,opacity,
-                                background: isRunning ? `${ac}0e` : C.card2,
-                                border:`1px solid ${isRunning ? ac+'55' : C.bdr}`,
-                                transition:'all 0.2s',
-                                position:'relative',
-                                overflow:'hidden',
-                              }}>
-                                {/* Left glow strip */}
-                                {isRunning && (
-                                  <div style={{position:'absolute',left:0,top:0,bottom:0,width:2,background:ac,borderRadius:'99px 0 0 99px'}}/>
-                                )}
-                                {/* Icon */}
-                                <div style={{
-                                  width:24,height:24,borderRadius:6,flexShrink:0,
-                                  display:'flex',alignItems:'center',justifyContent:'center',
-                                  background: isRunning ? `${ac}18` : C.card2,
-                                  border:`1px solid ${isRunning ? ac+'40' : C.bdr}`,
-                                  marginLeft: isRunning ? 4 : 0,
-                                }}>
-                                  {isRunning
-                                    ? <Activity style={{width:11,height:11,color:ac}}/>
-                                    : <Clock style={{width:11,height:11,color:C.muted}}/>
-                                  }
-                                </div>
-                                {/* Info */}
-                                <div style={{flex:1,minWidth:0}}>
-                                  <div style={{display:'flex',alignItems:'center',gap:5,flexWrap:'nowrap'}}>
-                                    <span style={{fontSize:12,fontWeight:700,color:isRunning?C.text:C.sub,fontFamily:'monospace',lineHeight:1,flexShrink:0}}>{order.time}</span>
-                                    <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,color:dirCol,background:`${dirCol}14`,border:`1px solid ${dirCol}28`,flexShrink:0}}>
-                                      {isCall ? 'BUY' : 'SELL'}
-                                    </span>
-                                    {/* Martingale K badge */}
-                                    {showMart && (
-                                      <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,color:C.amber,background:`${C.amber}14`,border:`1px solid ${C.amber}30`,flexShrink:0,letterSpacing:'0.04em'}}>
-                                        K{dispStep}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {isRunning && (
-                                    <span style={{fontSize:8,color:C.muted,marginTop:2,display:'block',lineHeight:1}}>
-                                      {(scheduleStatus as any)?.nextOrderInSeconds != null
-                                        ? `Eksekusi dalam ${(scheduleStatus as any).nextOrderInSeconds}d`
-                                        : 'Menunggu eksekusi'}
-                                    </span>
-                                  )}
-                                </div>
-                                {/* Right badge */}
-                                {isRunning ? (
-                                  <div style={{display:'flex',alignItems:'center',gap:3,padding:'2px 6px',borderRadius:99,background:`${ac}18`,border:`1px solid ${ac}40`,flexShrink:0}}>
-                                    <span style={{width:4,height:4,borderRadius:'50%',background:ac,animation:'ping 1.6s ease-in-out infinite'}}/>
-                                    <span style={{fontSize:8,fontWeight:700,color:ac,letterSpacing:'0.06em'}}>LIVE</span>
-                                  </div>
-                                ) : (
-                                  <span style={{fontSize:9,fontWeight:700,color:C.muted,flexShrink:0,fontFamily:'monospace'}}>+{offset}</span>
-                                )}
+                        {/* Card wrapper — sama persis dengan card idle state */}
+                        <Card style={{flex:1,padding:0,display:'flex',flexDirection:'column',minHeight:0,overflow:'hidden'}}>
+                          {/* Mode picker modal */}
+                          <ModePickerModal
+                            open={mobileModePickerOpen}
+                            onClose={() => setMobileModePickerOpen(false)}
+                            mode={tradingMode}
+                            onModeChange={handleModeChange}
+                            locked={isActiveMode}
+                            blockedModes={blockedModes}
+                          />
+                          {/* Card header — mode picker button, sama dengan mode lain saat aktif */}
+                          <div style={{padding:'8px 12px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
+                            <div
+                              style={{
+                                display:'flex',alignItems:'center',justifyContent:'space-between',
+                                padding:'8px 12px',borderRadius:12,
+                                background:`${ac}0a`,
+                                border:`1px solid ${ac}30`,
+                              }}
+                            >
+                              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                                <span style={{
+                                  width:6,height:6,borderRadius:'50%',background:ac,
+                                  animation:'pulse 1.6s ease-in-out infinite',
+                                  boxShadow:`0 0 5px ${ac}`,
+                                }}/>
+                                <span style={{fontWeight:700,color:ac,fontSize:11,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>Signal Mode</span>
                               </div>
-                            );
-                          })}
-                          {pending.length > 3 && (
-                            <div style={{textAlign:'center',paddingTop:2}}>
-                              <span style={{fontSize:8,color:C.muted}}>+{pending.length - 3} signal lainnya</span>
                             </div>
-                          )}
-                        </div>
-                        {/* View session button */}
-                        <button
-                          onClick={() => setOrderModalOpen(true)}
-                          style={{
-                            display:'flex',alignItems:'center',justifyContent:'center',gap:5,
-                            padding:'6px 0',borderRadius:8,
-                            background:`${ac}10`,border:`1px solid ${ac}25`,
-                            color:ac,fontSize:'clamp(8px,2.8vw,10px)',fontWeight:700,
-                            cursor:'pointer',letterSpacing:'0.04em',
-                          }}
-                        >
-                          <Info style={{width:10,height:10}}/> {T('dashboard.viewSession')}
-                        </button>
+                          </div>
+
+                          {/* Card body — 3 schedule items */}
+                          <div style={{flex:1,display:'flex',flexDirection:'column',gap:5,padding:'8px 12px',minHeight:0}}>
+                            {slots.length === 0 ? (
+                              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6}}>
+                                <Calendar style={{width:22,height:22,color:C.muted,opacity:0.4}}/>
+                                <span style={{fontSize:10,color:C.muted,textAlign:'center'}}>Semua signal selesai</span>
+                              </div>
+                            ) : slots.map(({ order, offset }) => {
+                              const isRunning = offset === 0;
+                              const isCall    = order.trend === 'call';
+                              const dirCol    = isCall ? C.cyan : C.coral;
+                              const opacity   = isRunning ? 1 : offset === 1 ? 0.72 : 0.50;
+                              const orderStep = order.martingaleState?.currentStep ?? 0;
+                              const showMart  = isRunning && (orderStep > 0 || (martActive && martStep > 0));
+                              const dispStep  = orderStep > 0 ? orderStep : martStep;
+
+                              return (
+                                <div key={order.id} style={{
+                                  display:'flex',alignItems:'center',gap:5,padding:'6px 8px',
+                                  borderRadius:10,opacity,
+                                  background: isRunning ? `${ac}0e` : C.card2,
+                                  border:`1px solid ${isRunning ? ac+'55' : C.bdr}`,
+                                  transition:'all 0.2s',
+                                  position:'relative',
+                                  overflow:'hidden',
+                                }}>
+                                  {isRunning && (
+                                    <div style={{position:'absolute',left:0,top:0,bottom:0,width:2,background:ac,borderRadius:'99px 0 0 99px'}}/>
+                                  )}
+                                  <div style={{flex:1,minWidth:0,paddingLeft: isRunning ? 4 : 0}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:4,flexWrap:'nowrap'}}>
+                                      <span style={{fontSize:'clamp(9px,2.6vw,11px)',fontWeight:700,color:isRunning?C.text:C.sub,fontFamily:'monospace',lineHeight:1,flexShrink:0}}>{order.time}</span>
+                                      <span style={{fontSize:'clamp(7px,2vw,8px)',fontWeight:700,padding:'1px 4px',borderRadius:4,color:dirCol,background:`${dirCol}14`,border:`1px solid ${dirCol}28`,flexShrink:0}}>
+                                        {isCall ? 'BUY' : 'SELL'}
+                                      </span>
+                                      {showMart && (
+                                        <span style={{fontSize:'clamp(7px,2vw,8px)',fontWeight:700,padding:'1px 4px',borderRadius:4,color:C.amber,background:`${C.amber}14`,border:`1px solid ${C.amber}30`,flexShrink:0,letterSpacing:'0.04em'}}>
+                                          K{dispStep}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {/* Status indicator - dot for running, offset for others */}
+                                  <span style={{fontSize:'clamp(7px,2vw,9px)',fontWeight:700,color:isRunning?ac:C.muted,flexShrink:0,fontFamily:'monospace'}}>
+                                    {isRunning ? '●' : `+${offset}`}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Card footer — view session button */}
+                          <div style={{padding:'0 12px 10px',flexShrink:0,borderTop:`1px solid ${C.bdr}`,paddingTop:8}}>
+                            <button
+                              onClick={() => setOrderModalOpen(true)}
+                              style={{
+                                width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:5,
+                                padding:'7px 0',borderRadius:8,
+                                background:`${ac}10`,border:`1px solid ${ac}25`,
+                                color:ac,fontSize:'clamp(8px,2.8vw,10px)',fontWeight:700,
+                                cursor:'pointer',letterSpacing:'0.04em',
+                              }}
+                            >
+                              <Info style={{width:10,height:10}}/> {T('dashboard.viewSession')}
+                            </button>
+                          </div>
+                        </Card>
+
+                        {/* Start/Stop di luar card, bawah */}
                         {mobileStartStopBtn}
                       </>
                     );
