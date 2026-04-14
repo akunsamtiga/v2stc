@@ -944,48 +944,17 @@ function resolvePhase(o: ScheduleOrder, getLog: (o:ScheduleOrder)=>ExecutionLog|
   return 'monitoring';
 }
 
-const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];logs:ExecutionLog[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>Promise<void>;loading:boolean;isRunning?:boolean}> =
-({open,onClose,orders,logs,onAdd,onDelete,onClear,loading,isRunning}) => {
+const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];logs:ExecutionLog[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>Promise<void>;loading:boolean;isRunning?:boolean;historyOrders:ScheduleOrder[];historyIdsRef:React.MutableRefObject<Set<string>>}> =
+({open,onClose,orders,logs,onAdd,onDelete,onClear,loading,isRunning,historyOrders,historyIdsRef}) => {
   const { t } = useLanguage();
   const [input,setInput]              = useState('');
   const [clearLoading,setClearLoading] = useState(false);
   const [view,setView]                = useState<'list'|'input'>('list');
 
-  // ── Persistent history — order selesai (WIN/LOSE/SKIP) tidak hilang dari sesi ──
-  const [historyOrders, setHistoryOrders] = useState<ScheduleOrder[]>([]);
-  const historyIdsRef  = useRef<Set<string>>(new Set());
-  const prevOrdersRef  = useRef<ScheduleOrder[]>([]);
-
   // ── Match log untuk order ─────────────────────────────────────────────────
   const getLog = useCallback((o: ScheduleOrder): ExecutionLog | undefined =>
     logs.find(l => l.orderId === o.id) ?? logs.find(l => l.time === o.time),
   [logs]);
-
-  // ── Deteksi order selesai → masukkan ke history permanen ─────────────────
-  useEffect(() => {
-    const prev    = prevOrdersRef.current;
-    const currIds = new Set(orders.map(o => o.id));
-
-    // Order yang dihapus server (sudah selesai di backend)
-    const removedFinished = prev.filter(
-      o => !currIds.has(o.id) && !historyIdsRef.current.has(o.id)
-    );
-
-    // Order yang masih di server tapi sudah WIN/LOSE/SKIPPED
-    const justFinished = orders.filter(o => {
-      if (historyIdsRef.current.has(o.id)) return false;
-      const ph = resolvePhase(o, getLog);
-      return ph === 'win' || ph === 'lose' || ph === 'skipped';
-    });
-
-    const toAdd = [...removedFinished, ...justFinished];
-    if (toAdd.length > 0) {
-      toAdd.forEach(o => historyIdsRef.current.add(o.id));
-      setHistoryOrders(h => [...toAdd, ...h]); // terbaru di atas
-    }
-
-    prevOrdersRef.current = orders;
-  }, [orders, getLog]);
 
   const handleClear = async () => {
     if(!window.confirm('Hapus semua signal pending?')) return;
@@ -1220,7 +1189,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                             <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,background:isBuy?`${C.cyan}15`:`${C.coral}15`,color:isBuy?C.cyan:C.coral,border:`1px solid ${isBuy?C.cyan:C.coral}25`,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
                             <span style={{fontSize:8,fontWeight:700,padding:'1px 6px',borderRadius:99,background:`${phaseColor}15`,border:`1px solid ${phaseColor}28`,color:phaseColor,flexShrink:0}}>{phaseLabel}</span>
                             {ms && (ms.currentStep??0) > 0 && (
-                              <span style={{fontSize:8,color:C.amber,fontFamily:'monospace',flexShrink:0}}>K{ms.currentStep}/{ms.maxSteps}</span>
+                              <span style={{fontSize:8,color:C.amber,fontFamily:'monospace',flexShrink:0}}>K{ms.currentStep}</span>
                             )}
                             {profit != null ? (
                               <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',flexShrink:0,color:profit>=0?C.cyan:C.coral}}>
@@ -1258,7 +1227,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                         const phaseBdr   = phase==='martingale'?`${C.amber}30` : `${C.sky}25`;
                         const phaseIcon  = phase==='martingale'?`K${ms?.currentStep??1}` : '◎';
                         const phaseLabel = phase==='martingale'
-                          ? `K${ms?.currentStep??1}${ms?.maxSteps?`/${ms.maxSteps}`:''}`
+                          ? `K${ms?.currentStep??1}`
                           : 'Monitoring';
                         return (
                           <div key={o.id} style={{
@@ -1457,7 +1426,7 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
                 <span style={{fontSize:timeFz,fontFamily:'monospace',color:C.text,fontWeight:600,flexShrink:0}}>{o.time}</span>
                 <span style={{fontSize:compact?8:9,fontWeight:700,padding:'1px 5px',borderRadius:4,color:isCall?C.cyan:C.coral,background:isCall?`${C.cyan}12`:`${C.coral}12`,flexShrink:0}}>{isCall?'B':'S'}</span>
                 <span style={{fontSize:compact?8:9,fontWeight:700,padding:'1px 6px',borderRadius:99,color:col,background:`${col}12`,border:`1px solid ${col}28`,flexShrink:0,marginLeft:'auto'}}>
-                  {isMartingale ? `K${ms!.currentStep}/${ms!.maxSteps}` : 'Monitor'}
+                  {isMartingale ? `K${ms!.currentStep}` : 'Monitor'}
                 </span>
               </div>
             );
@@ -3143,6 +3112,15 @@ export default function DashboardPage() {
   const [scheduleStatus,setScheduleStatus] = useState<ScheduleStatus|null>(null);
   const [scheduleOrders,setScheduleOrders] = useState<ScheduleOrder[]>([]);
   const [scheduleLogs,setScheduleLogs] = useState<ExecutionLog[]>([]);
+
+  // ── Persistent schedule history — survive modal open/close ───────────────
+  // PENTING: state ini HARUS di DashboardPage (bukan di modal) karena
+  // OrderInputModal unmount setiap kali ditutup (if !open return null).
+  // Kalau di modal: history hilang saat modal ditutup → saat dibuka lagi
+  // hanya order SKIP saat ini yang tampil, WIN/LOSE yang sudah dihapus server hilang.
+  const [scheduleHistoryOrders, setScheduleHistoryOrders] = useState<ScheduleOrder[]>([]);
+  const scheduleHistoryIdsRef  = useRef<Set<string>>(new Set());
+  const schedulePrevOrdersRef  = useRef<ScheduleOrder[]>([]);
   const [ftStatus,setFtStatus] = useState<FastradeStatus|null>(null);
   const [ftLogs,setFtLogs] = useState<FastradeLog[]>([]);
   const [isLoading,setIsLoading] = useState(true);
@@ -3212,6 +3190,36 @@ export default function DashboardPage() {
     else if(l>prevLRef.current&&(prevWRef.current+prevLRef.current)>0)flashResult('lose');
     prevWRef.current=w; prevLRef.current=l;
   },[ftStatus?.totalWins,ftStatus?.totalLosses]); // eslint-disable-line
+
+  // ── Akumulasi schedule history di parent ─────────────────────────────────
+  // Dipindahkan dari OrderInputModal agar tidak reset saat modal ditutup/dibuka.
+  useEffect(() => {
+    const getLogForOrder = (o: ScheduleOrder): ExecutionLog | undefined =>
+      scheduleLogs.find(l => l.orderId === o.id) ?? scheduleLogs.find(l => l.time === o.time);
+
+    const prev    = schedulePrevOrdersRef.current;
+    const currIds = new Set(scheduleOrders.map(o => o.id));
+
+    // Order yang sudah dihapus server (selesai di backend)
+    const removedFinished = prev.filter(
+      o => !currIds.has(o.id) && !scheduleHistoryIdsRef.current.has(o.id)
+    );
+
+    // Order yang masih di server tapi statusnya sudah WIN/LOSE/SKIPPED
+    const justFinished = scheduleOrders.filter(o => {
+      if (scheduleHistoryIdsRef.current.has(o.id)) return false;
+      const ph = resolvePhase(o, getLogForOrder);
+      return ph === 'win' || ph === 'lose' || ph === 'skipped';
+    });
+
+    const toAdd = [...removedFinished, ...justFinished];
+    if (toAdd.length > 0) {
+      toAdd.forEach(o => scheduleHistoryIdsRef.current.add(o.id));
+      setScheduleHistoryOrders(h => [...toAdd, ...h]); // terbaru di atas
+    }
+
+    schedulePrevOrdersRef.current = scheduleOrders;
+  }, [scheduleOrders, scheduleLogs]); // eslint-disable-line
 
   const [modeBlock,setModeBlock] = useState<string|null>(null);
   const mbTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -3712,6 +3720,8 @@ export default function DashboardPage() {
         onClear={async()=>{await api.clearOrders();setScheduleOrders([]);}}
         loading={addOrderLoading}
         isRunning={isSchedRunning||isSchedPaused}
+        historyOrders={scheduleHistoryOrders}
+        historyIdsRef={scheduleHistoryIdsRef}
       />
       {deviceType==='mobile'&&(
         <MobileSessionSheet
@@ -4269,9 +4279,6 @@ export default function DashboardPage() {
                         {{schedule:'Signal Mode',fastrade:'Fastrade FTT',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'}[tradingMode]}
                       </span>
                     </div>
-                    <span style={{fontSize:9,padding:'1px 6px',borderRadius:99,color:modeAccent(tradingMode),background:`${modeAccent(tradingMode)}14`,border:`1px solid ${modeAccent(tradingMode)}28`}}>
-{T('common.active')}
-                    </span>
                   </div>
                   {/* P&L + Mini Stats + Lihat Sesi — unified card (non-schedule modes) */}
                   <div style={{
@@ -4368,34 +4375,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : isActiveMode && tradingMode === 'schedule' ? (
-                <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
-                  {/* Schedule aktif: tampilkan list seperti idle + tombol Lihat Sesi di bawah */}
-                  {/* Always Signal badge jika aktif */}
-                  {(scheduleStatus as any)?.alwaysSignalActive && (
-                    <div style={{padding:'5px 8px',borderRadius:10,background:`${C.amber}10`,border:`1px solid ${C.amber}30`,display:'flex',alignItems:'center',gap:6}}>
-                      <span style={{width:5,height:5,borderRadius:'50%',background:C.amber,animation:'ping 1.4s ease-in-out infinite'}}/>
-                      <span style={{fontSize:9,fontWeight:700,color:C.amber,letterSpacing:'0.06em'}}>
-                        ALWAYS SIGNAL · K{(scheduleStatus as any)?.alwaysSignalStep ?? 1}/{martingale.maxStep}
-                      </span>
-                    </div>
-                  )}
-                  {/* Next order time */}
-                  {(scheduleStatus as any)?.nextOrderTime && (
-                    <div style={{padding:'4px 8px',borderRadius:8,background:`${modeAccent(tradingMode)}08`,border:`1px solid ${modeAccent(tradingMode)}20`,display:'flex',alignItems:'center',gap:5}}>
-                      <Timer style={{width:9,height:9,color:modeAccent(tradingMode)}}/>
-                      <span style={{fontSize:9,fontWeight:600,color:modeAccent(tradingMode),fontFamily:'monospace'}}>
-                        {(scheduleStatus as any).nextOrderTime}
-                      </span>
-                      {(scheduleStatus as any)?.nextOrderInSeconds != null && (
-                        <span style={{fontSize:9,color:C.muted,marginLeft:'auto'}}>
-                          {(scheduleStatus as any).nextOrderInSeconds}s
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div style={{flex:1}}>
-                    {ModeSession(true, true, ()=>setOrderModalOpen(true), mobileStartStopBtn)}
-                  </div>
+                <div style={{flex:2,display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:6,minWidth:0}}>
+                  {mobileStartStopBtn}
                 </div>
               ) : (
                 <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>

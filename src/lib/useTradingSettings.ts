@@ -52,7 +52,7 @@ const DEFAULTS: TradingSettings = {
   isDemo:               true,
   duration:             60,
   amount:               50_000,
-  martingale:           { enabled: false, maxStep: 3, multiplier: 2, alwaysSignal: false },
+  martingale:           { enabled: false, maxStep: 3, multiplier: 2.5, alwaysSignal: false },
   ftTf:                 '1m',
   stopLoss:             0,
   stopProfit:           0,
