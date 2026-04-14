@@ -3192,33 +3192,148 @@ export default function DashboardPage() {
   },[ftStatus?.totalWins,ftStatus?.totalLosses]); // eslint-disable-line
 
   // ── Akumulasi schedule history di parent ─────────────────────────────────
-  // Dipindahkan dari OrderInputModal agar tidak reset saat modal ditutup/dibuka.
+  //
+  // ROOT CAUSE (dari analisis backend):
+  //   Backend completeOrder() langsung hapus order via splice() TANPA nulis result
+  //   ke ScheduledOrder. result hanya ada di ExecutionLog + OrderTracking.
+  //   Akibatnya: order yang selesai hilang dari list dengan state terakhir
+  //   {isExecuted:true, isSkipped:false, result:undefined} → resolvePhase='monitoring'.
+  //
+  // STRATEGI FIX (3 lapis):
+  //   Lapis 1 – /schedule/tracking: source of truth, menyimpan SEMUA order +
+  //             trackingStatus final (WIN/LOSE/SKIPPED/...). Trigger setiap
+  //             scheduleOrders atau scheduleLogs berubah.
+  //   Lapis 2 – scheduleLogs (sekarang fresh karena ikut polling): enrich
+  //             removedFinished dengan result dari log.
+  //   Lapis 3 – justFinished: order yang masih di list dan sudah terminal.
+
   useEffect(() => {
+    let cancelled = false;
+
+    // ── Lapis 1: Fetch /schedule/tracking sebagai source of truth ────────────
+    const syncFromTracking = async () => {
+      try {
+        const tracking = await api.scheduleTracking();
+        if (cancelled || !isMounted.current) return;
+
+        const TERMINAL = new Set(['WIN', 'LOSE', 'DRAW', 'FAILED', 'SKIPPED']);
+
+        // Map TrackingOrder → ScheduleOrder dengan result yang benar
+        const terminalFromTracking = tracking.orders
+          .filter(o => TERMINAL.has(o.trackingStatus))
+          .map(o => {
+            // Normalkan result dari trackingStatus
+            let result: string | undefined = o.result;
+            if (!result || result === 'SKIPPED') {
+              if (o.trackingStatus === 'WIN')     result = 'WIN';
+              else if (o.trackingStatus === 'LOSE')    result = 'LOSE';
+              else if (o.trackingStatus === 'DRAW')    result = 'DRAW';
+              else if (o.trackingStatus === 'FAILED')  result = 'FAILED';
+              else if (o.trackingStatus === 'SKIPPED') result = 'SKIPPED';
+            }
+            return {
+              ...o,
+              result,
+              isExecuted: o.isExecuted || TERMINAL.has(o.trackingStatus),
+              // isSkipped hanya true untuk SKIPPED/FAILED, bukan WIN/LOSE
+              isSkipped: o.trackingStatus === 'SKIPPED' || o.trackingStatus === 'FAILED',
+            } as unknown as ScheduleOrder;
+          });
+
+        // Tambah order baru ke history (yang belum ada)
+        const newEntries = terminalFromTracking.filter(
+          o => !scheduleHistoryIdsRef.current.has(o.id)
+        );
+        if (newEntries.length > 0) {
+          newEntries.forEach(o => scheduleHistoryIdsRef.current.add(o.id));
+          setScheduleHistoryOrders(prev => {
+            // Replace entri lama yang mungkin stale (tanpa result)
+            const existingIds = new Set(newEntries.map(o => o.id));
+            return [...newEntries, ...prev.filter(o => !existingIds.has(o.id))];
+          });
+        } else {
+          // Patch entri yang sudah ada tapi result masih kosong
+          setScheduleHistoryOrders(prev => {
+            const byId = new Map(terminalFromTracking.map(o => [o.id, o]));
+            let changed = false;
+            const updated = prev.map(o => {
+              if (o.result && !/^SKIPPED$/i.test(o.result)) return o; // sudah punya result valid
+              const fresh = byId.get(o.id);
+              if (!fresh?.result) return o;
+              changed = true;
+              return fresh;
+            });
+            return changed ? updated : prev;
+          });
+        }
+      } catch {
+        // tracking endpoint gagal → tetap jalan dengan fallback di bawah
+      }
+    };
+
+    syncFromTracking();
+
+    // ── Lapis 2 & 3: Fallback legacy (pakai logs + diff list) ────────────────
     const getLogForOrder = (o: ScheduleOrder): ExecutionLog | undefined =>
       scheduleLogs.find(l => l.orderId === o.id) ?? scheduleLogs.find(l => l.time === o.time);
 
     const prev    = schedulePrevOrdersRef.current;
     const currIds = new Set(scheduleOrders.map(o => o.id));
 
-    // Order yang sudah dihapus server (selesai di backend)
-    const removedFinished = prev.filter(
+    // Lapis 2: Order hilang dari list → enrich dengan log (logs kini fresh dari polling)
+    const removedRaw = prev.filter(
       o => !currIds.has(o.id) && !scheduleHistoryIdsRef.current.has(o.id)
     );
+    const removedFinished = removedRaw.map(o => {
+      const log = getLogForOrder(o);
+      if (!log?.result) return o;
+      const resultUp = log.result.toUpperCase();
+      return {
+        ...o,
+        result:     log.result,
+        isExecuted: true,
+        isSkipped:  resultUp === 'WIN' || resultUp === 'LOSE' || resultUp === 'DRAW'
+          ? false : o.isSkipped,
+      } as ScheduleOrder;
+    });
 
-    // Order yang masih di server tapi statusnya sudah WIN/LOSE/SKIPPED
+    // Lapis 3: Order masih di list, tapi sudah terminal
     const justFinished = scheduleOrders.filter(o => {
       if (scheduleHistoryIdsRef.current.has(o.id)) return false;
       const ph = resolvePhase(o, getLogForOrder);
       return ph === 'win' || ph === 'lose' || ph === 'skipped';
     });
 
-    const toAdd = [...removedFinished, ...justFinished];
+    const toAdd = [...removedFinished, ...justFinished].filter(
+      o => !scheduleHistoryIdsRef.current.has(o.id)
+    );
     if (toAdd.length > 0) {
       toAdd.forEach(o => scheduleHistoryIdsRef.current.add(o.id));
-      setScheduleHistoryOrders(h => [...toAdd, ...h]); // terbaru di atas
+      setScheduleHistoryOrders(h => [...toAdd, ...h]);
     }
 
+    // Patch entri stale yang result-nya kosong (log baru tiba di poll berikutnya)
+    setScheduleHistoryOrders(prev => {
+      let changed = false;
+      const updated = prev.map(o => {
+        if (o.result) return o;
+        const log = getLogForOrder(o);
+        if (!log?.result) return o;
+        changed = true;
+        const resultUp = log.result.toUpperCase();
+        return {
+          ...o,
+          result:     log.result,
+          isExecuted: true,
+          isSkipped:  resultUp === 'WIN' || resultUp === 'LOSE' || resultUp === 'DRAW'
+            ? false : o.isSkipped,
+        } as ScheduleOrder;
+      });
+      return changed ? updated : prev;
+    });
+
     schedulePrevOrdersRef.current = scheduleOrders;
+    return () => { cancelled = true; };
   }, [scheduleOrders, scheduleLogs]); // eslint-disable-line
 
   const [modeBlock,setModeBlock] = useState<string|null>(null);
@@ -3303,16 +3418,21 @@ export default function DashboardPage() {
     const iv=setInterval(async()=>{
       const results = await Promise.allSettled([
         api.scheduleStatus(),api.fastradeStatus(),api.getOrders(),
+        api.scheduleLogs(500),   // ✅ FIX: Logs harus ikut di-poll — backend hapus order setelah
+                                 // selesai tanpa nulis result ke ScheduledOrder, result hanya ada
+                                 // di ExecutionLog. Tanpa ini, scheduleLogs selalu stale dan
+                                 // history detection tidak bisa detect WIN/LOSE.
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
         api.realtimeProfit(),
       ]);
       if(!isMounted.current)return;
-      const [sRes,fRes,oRes,ftlRes,aiRes,aiPendRes,indRes,momRes,tpRes] = results;
+      const [sRes,fRes,oRes,logRes,ftlRes,aiRes,aiPendRes,indRes,momRes,tpRes] = results;
       if(sRes.status==='fulfilled')setScheduleStatus(sRes.value);
       if(fRes.status==='fulfilled')setFtStatus(fRes.value);
       if(oRes.status==='fulfilled')setScheduleOrders(oRes.value);
+      if(logRes.status==='fulfilled')setScheduleLogs(logRes.value);  // ✅ Update logs dari polling
       if(ftlRes.status==='fulfilled')setFtLogs(ftlRes.value);
       if(aiRes.status==='fulfilled')setAiStatus(aiRes.value);
       if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
@@ -4375,8 +4495,87 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : isActiveMode && tradingMode === 'schedule' ? (
-                <div style={{flex:2,display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:6,minWidth:0}}>
-                  {mobileStartStopBtn}
+                <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
+                  {/* mode bar */}
+                  <div style={{
+                    display:'flex',alignItems:'center',
+                    padding:'8px 12px',borderRadius:12,
+                    background:`${modeAccent(tradingMode)}0a`,
+                    border:`1px solid ${modeAccent(tradingMode)}30`,
+                  }}>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{width:6,height:6,borderRadius:'50%',background:modeAccent(tradingMode),animation:'pulse 1.6s ease-in-out infinite',boxShadow:`0 0 5px ${modeAccent(tradingMode)}`}}/>
+                      <span style={{fontSize:11,fontWeight:700,color:modeAccent(tradingMode)}}>Signal Mode</span>
+                    </div>
+                  </div>
+                  {/* P&L + Stats card */}
+                  <div style={{
+                    padding:'10px 12px',borderRadius:12,
+                    background:C.card2,
+                    border:`1px solid ${modeAccent(tradingMode)}28`,
+                    boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)`,
+                    display:'flex',flexDirection:'column',gap:7,
+                    flex:1,minHeight:0,
+                  }}>
+                    {/* P&L */}
+                    <div>
+                      <span style={{fontSize:8,color:C.muted,textTransform:'uppercase',letterSpacing:'0.1em',display:'block',marginBottom:2}}>{T('dashboard.sessionPnl')}</span>
+                      <span style={{fontSize:13,fontWeight:800,fontFamily:'monospace',letterSpacing:'-0.02em',color:sessionPnL>=0?modeAccent(tradingMode):C.coral}}>
+                        {sessionPnL>=0?'+':'-'}{Math.round(Math.abs(sessionPnL/100)).toLocaleString('id-ID',{maximumFractionDigits:0})}
+                      </span>
+                    </div>
+                    <div style={{height:1,background:`${modeAccent(tradingMode)}15`}}/>
+                    {/* Win / Loss / WR dari scheduleLogs */}
+                    {(()=>{
+                      const ac = modeAccent(tradingMode);
+                      const wins   = scheduleLogs.filter(l=>/^win$/i.test(l.result??'')).length;
+                      const losses = scheduleLogs.filter(l=>/^los/i.test(l.result??'')).length;
+                      const total  = wins+losses;
+                      const wr     = total>0?Math.round((wins/total)*100):null;
+                      const asActive = (scheduleStatus as any)?.alwaysSignalActive;
+                      const asStep   = (scheduleStatus as any)?.alwaysSignalStep ?? 0;
+                      return (
+                        <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                          <div style={{display:'flex',gap:4}}>
+                            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.cyan}0c`,border:`1px solid ${C.cyan}20`}}>
+                              <span style={{fontSize:14,fontWeight:800,color:C.cyan,lineHeight:1,fontFamily:'monospace'}}>{wins}</span>
+                              <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Win</span>
+                            </div>
+                            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.coral}0c`,border:`1px solid ${C.coral}20`}}>
+                              <span style={{fontSize:14,fontWeight:800,color:C.coral,lineHeight:1,fontFamily:'monospace'}}>{losses}</span>
+                              <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Loss</span>
+                            </div>
+                            {wr!==null&&(
+                              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:wr>=50?`${ac}0c`:`${C.coral}0c`,border:`1px solid ${wr>=50?ac:C.coral}20`}}>
+                                <span style={{fontSize:14,fontWeight:800,color:wr>=50?ac:C.coral,lineHeight:1,fontFamily:'monospace'}}>{wr}%</span>
+                                <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>WR</span>
+                              </div>
+                            )}
+                            {asActive&&asStep>0&&(
+                              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.amber}0c`,border:`1px solid ${C.amber}20`}}>
+                                <span style={{fontSize:11,fontWeight:800,color:C.amber,lineHeight:1,fontFamily:'monospace'}}>K{asStep}</span>
+                                <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>AS</span>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{display:'flex',alignItems:'flex-end',gap:2,height:22}}>
+                            {[0.4,0.7,0.5,1,0.6,0.85,0.45,0.9,0.55,0.75].map((h,i)=>(
+                              <div key={i} style={{flex:1,height:`${h*100}%`,borderRadius:2,background:ac,opacity:0.2+h*0.5,animation:`pulse ${1.1+i*0.12}s ease-in-out infinite`,animationDelay:`${i*0.07}s`}}/>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <div style={{height:1,background:`${modeAccent(tradingMode)}15`}}/>
+                    <button
+                      onClick={()=>setOrderModalOpen(true)}
+                      style={{display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'6px 0',borderRadius:8,background:`${modeAccent(tradingMode)}14`,border:`1px solid ${modeAccent(tradingMode)}35`,color:modeAccent(tradingMode),fontSize:'clamp(8px,2.8vw,10px)',fontWeight:700,letterSpacing:'0.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden'}}
+                    >
+                      <Info style={{width:11,height:11,flexShrink:0}}/>
+                      {T('dashboard.viewSession')}
+                    </button>
+                    {mobileStartStopBtn}
+                  </div>
                 </div>
               ) : (
                 <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>

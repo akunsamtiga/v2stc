@@ -551,6 +551,43 @@ export const api = {
   scheduleLogs:   (limit = 100) =>
     req<ExecutionLog[]>('GET', `/schedule/logs?limit=${limit}`),
 
+  /**
+   * GET /schedule/tracking
+   * Source of truth untuk history order — menyimpan SEMUA order beserta
+   * trackingStatus (WIN/LOSE/SKIPPED/MONITORING/PENDING/FAILED) meski order
+   * sudah dihapus dari active list oleh backend.
+   */
+  scheduleTracking: () =>
+    req<{
+      botState: string;
+      orders: Array<{
+        id: string;
+        time: string;
+        trend: 'call' | 'put';
+        timeInMillis: number;
+        isExecuted: boolean;
+        isSkipped: boolean;
+        skipReason?: string;
+        result?: string;
+        trackingStatus: string;  // 'PENDING'|'MONITORING'|'WIN'|'LOSE'|'DRAW'|'FAILED'|'SKIPPED'|'MARTINGALE_STEP_N'
+        profit?: number;
+        amount?: number;
+        executedAt?: number;
+        completedAt?: number;
+        currentMartingaleStep: number;
+        martingaleState?: {
+          isActive: boolean;
+          currentStep: number;
+          maxSteps: number;
+          isCompleted: boolean;
+          totalLoss: number;
+          totalRecovered: number;
+        };
+      }>;
+      sessionPnL: number;
+      timestamp: number;
+    }>('GET', '/schedule/tracking'),
+
   // ── Fastrade (FTT + CTC) ──────────────────
   fastradeStart:  (data: StartFastradePayload) =>
     req<{ message: string; mode: string; status: FastradeStatus }>('POST', '/fastrade/start', data),
