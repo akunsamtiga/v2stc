@@ -1179,15 +1179,15 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                 <div style={{display:'flex',flexDirection:'column',gap:6,paddingTop:8}}>
 
                   {/* ── HISTORY SECTION (selesai: WIN/LOSE/SKIP) ── */}
-                  {historyOrders.length > 0 && (
+                  {historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').length > 0 && (
                     <div style={{marginBottom:4}}>
                       {/* Section header */}
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
                         <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>History</span>
                         <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.bdr},transparent)`}}/>
-                        <span style={{fontSize:9,color:C.muted,background:C.card2,border:`1px solid ${C.bdr}`,borderRadius:99,padding:'1px 6px'}}>{historyOrders.length}</span>
+                        <span style={{fontSize:9,color:C.muted,background:C.card2,border:`1px solid ${C.bdr}`,borderRadius:99,padding:'1px 6px'}}>{historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').length}</span>
                       </div>
-                      {historyOrders.map(o => {
+                      {historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').map(o => {
                         const ph   = resolvePhase(o, getLog);
                         const log  = getLog(o);
                         const isBuy = o.trend === 'call';
