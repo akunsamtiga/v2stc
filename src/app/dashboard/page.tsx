@@ -44,12 +44,12 @@ function getColors(isDark: boolean) {
   // borderColor=#D6DADF
   return {
     // Surfaces
-    bg:    isDark ? '#161616' : '#F8F9FA',   // Kotlin: background
-    card:  isDark ? '#2C2C2C' : '#FFFFFF',   // Kotlin: cardBackground ~#323232, softer
-    card2: isDark ? '#1F1F1F' : '#EBEBEB',   // Kotlin: surface / surface3
+    bg:    isDark ? '#1C1C1C' : '#F8F9FA',   // Kotlin: background
+    card:  isDark ? '#313131' : '#FFFFFF',   // Kotlin: cardBackground ~#323232, softer
+    card2: isDark ? '#252525' : '#EBEBEB',   // Kotlin: surface / surface3
     // Borders
-    bdr:   isDark ? 'rgba(73,73,73,0.75)' : 'rgba(214,218,223,0.90)', // Kotlin: #494949 / #D6DADF
-    bdrAct:'rgba(16,185,129,0.55)',
+    bdr:   isDark ? 'rgba(88,88,88,0.88)' : 'rgba(214,218,223,0.90)', // Kotlin: #494949 / #D6DADF
+    bdrAct:'rgba(16,185,129,0.72)',
     // Primary accent — successColor in Kotlin
     cyan:  isDark ? '#10B981' : '#059669',   // Kotlin: successColor dark / light
     cyand: isDark ? 'rgba(16,185,129,0.18)' : 'rgba(5,150,105,0.10)',
@@ -290,7 +290,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
         <div style={{display:'flex',alignItems:'center',gap:4}}>
           <span suppressHydrationWarning style={{fontSize:8,color:C.sub,fontWeight:500}}>{time?fmtDay(time):''}</span>
           <span style={{width:2,height:2,borderRadius:'50%',background:C.muted}}/>
-          <span suppressHydrationWarning style={{fontSize:8,color:C.muted}}>{time?fmtDate(time):''}</span>
+          <span suppressHydrationWarning style={{fontSize:8,color:C.sub}}>{time?fmtDate(time):''}</span>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:4}}>
           <span style={{
@@ -527,9 +527,12 @@ const TodayProfitCard: React.FC<{
   data: TodayProfitSummary | null;
   localProfit: number;
   isLoading?: boolean;
+  isRefreshing?: boolean;
+  lastUpdatedAt?: number | null;
   flash?: 'win' | 'lose' | null;
+  onRefresh?: () => void;
   t: (k: string) => string;
-}> = ({ data, localProfit, isLoading, flash, t }) => {
+}> = ({ data, localProfit, isLoading, isRefreshing, lastUpdatedAt, flash, onRefresh, t }) => {
   const profit  = data ? data.totalPnL : localProfit;
   const isPos   = profit >= 0;
   const col     = isPos ? C.cyan : C.coral;
@@ -537,6 +540,7 @@ const TodayProfitCard: React.FC<{
   const [animKey, setAnimKey] = useState(0);
   const [dir, setDir]         = useState<'up' | 'down'>('up');
   const [hidden, setHidden]   = useState(false);
+  const [secAgo, setSecAgo]   = useState<number | null>(null);
 
   useEffect(() => {
     if (profit !== prevR.current) {
@@ -546,15 +550,41 @@ const TodayProfitCard: React.FC<{
     }
   }, [profit]);
 
+  // Update "X detik lalu" counter setiap 5 detik
+  useEffect(() => {
+    if (!lastUpdatedAt) { setSecAgo(null); return; }
+    const tick = () => setSecAgo(Math.floor((Date.now() - lastUpdatedAt) / 1000));
+    tick();
+    const iv = setInterval(tick, 5000);
+    return () => clearInterval(iv);
+  }, [lastUpdatedAt]);
+
   const displayValue = Math.round(Math.abs(profit / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+  const ageLabel = secAgo === null ? null
+    : secAgo < 60 ? `${secAgo}d` : `${Math.floor(secAgo/60)}m`;
 
   return (
     <Card style={{ padding: '12px 16px', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 68 }} flash={flash}>
-      {/* Baris 1: Label + eye toggle */}
+      {/* Baris 1: Label + age + eye toggle + refresh */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: C.muted, whiteSpace: 'nowrap' }}>
           {t('dashboard.profitToday')}
         </span>
+        {/* Age badge */}
+        {ageLabel && !isRefreshing && (
+          <span style={{ fontSize: 8, color: C.muted, opacity: 0.6, fontFamily: 'monospace' }}>{ageLabel}</span>
+        )}
+        {/* Refresh spinner / button */}
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            title="Refresh profit"
+            style={{ background: 'transparent', border: 'none', cursor: isRefreshing ? 'default' : 'pointer', color: C.muted, padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', opacity: isRefreshing ? 0.4 : 0.7 }}
+          >
+            <RefreshCw style={{ width: 10, height: 10, animation: isRefreshing ? 'stc-spin 0.8s linear infinite' : undefined }} />
+          </button>
+        )}
         <button
           onClick={() => setHidden(h => !h)}
           style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.muted, padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}
@@ -576,7 +606,7 @@ const TodayProfitCard: React.FC<{
         </div>
       ) : (
         <p key={animKey} style={{
-          fontWeight: 800,
+          fontWeight: 700,
           letterSpacing: '-0.03em',
           lineHeight: 1,
           color: col,
@@ -586,6 +616,9 @@ const TodayProfitCard: React.FC<{
           textOverflow: 'ellipsis',
           textAlign: 'center',
           animation: animKey > 0 ? `profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both` : undefined,
+          opacity: isRefreshing ? 0.6 : 1,
+          transition: 'opacity 0.2s',
+          textShadow: `0 0 18px ${col}90, 0 0 6px ${col}55`,
         }}>
           {isPos ? '+' : '−'}Rp {displayValue}
         </p>
@@ -1187,7 +1220,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                         <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.bdr},transparent)`}}/>
                         <span style={{fontSize:9,color:C.muted,background:C.card2,border:`1px solid ${C.bdr}`,borderRadius:99,padding:'1px 6px'}}>{historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').length}</span>
                       </div>
-                      {historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').map(o => {
+                      {historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').sort((a, b) => a.time.localeCompare(b.time)).map((o, idx) => {
                         const ph   = resolvePhase(o, getLog);
                         const log  = getLog(o);
                         const isBuy = o.trend === 'call';
@@ -1204,20 +1237,22 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                             borderRadius:10,background:phaseBg,border:`1px solid ${phaseBdr}`,
                             marginBottom:4,opacity:0.85,
                           }}>
-                            <span style={{fontSize:12,fontWeight:800,color:phaseColor,width:18,textAlign:'center',flexShrink:0}}>{phaseIcon}</span>
+                            <div style={{width:20,height:20,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${phaseColor}12`,border:`1px solid ${phaseColor}28`}}>
+                              <span style={{fontSize:9,fontWeight:700,color:phaseColor}}>{idx+1}</span>
+                            </div>
                             <span style={{fontSize:13,fontWeight:600,color:C.sub,fontFamily:'monospace'}}>{o.time}</span>
                             <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,background:isBuy?`${C.cyan}15`:`${C.coral}15`,color:isBuy?C.cyan:C.coral,border:`1px solid ${isBuy?C.cyan:C.coral}25`,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
-                            <span style={{fontSize:8,fontWeight:700,padding:'1px 6px',borderRadius:99,background:`${phaseColor}15`,border:`1px solid ${phaseColor}28`,color:phaseColor,flexShrink:0}}>{phaseLabel}</span>
                             {ms && (ms.currentStep??0) > 0 && (
                               <span style={{fontSize:8,color:C.amber,fontFamily:'monospace',flexShrink:0}}>K{ms.currentStep}</span>
                             )}
-                            {profit != null ? (
-                              <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',flexShrink:0,color:profit>=0?C.cyan:C.coral}}>
-                                {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
-                              </span>
-                            ) : (
-                              <span style={{marginLeft:'auto'}}/>
-                            )}
+                            <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+                              {profit != null && (
+                                <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',color:profit>=0?C.cyan:C.coral}}>
+                                  {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
+                                </span>
+                              )}
+                              <span style={{fontSize:8,fontWeight:700,padding:'1px 6px',borderRadius:99,background:`${phaseColor}15`,border:`1px solid ${phaseColor}28`,color:phaseColor}}>{phaseLabel}</span>
+                            </div>
                           </div>
                         );
                       })}
@@ -1317,16 +1352,18 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                               color:isBuy?C.cyan:C.coral,
                               border:`1px solid ${isBuy?C.cyan:C.coral}35`,
                             }}>{isBuy?'BUY':'SELL'}</span>
-                            <span style={{fontSize:10,color:C.muted,marginLeft:'auto'}}>Menunggu…</span>
-                            {!isRunning && (
-                              <button onClick={()=>onDelete(o.id)} style={{
-                                width:28,height:28,borderRadius:'50%',flexShrink:0,
-                                display:'flex',alignItems:'center',justifyContent:'center',
-                                background:`${C.coral}18`,border:'none',cursor:'pointer',color:C.coral,
-                              }}>
-                                <Trash2 style={{width:12,height:12}}/>
-                              </button>
-                            )}
+                            <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+                              {i === 0 && <span style={{fontSize:10,color:C.muted}}>Menunggu…</span>}
+                              {!isRunning && (
+                                <button onClick={()=>onDelete(o.id)} style={{
+                                  width:28,height:28,borderRadius:'50%',flexShrink:0,
+                                  display:'flex',alignItems:'center',justifyContent:'center',
+                                  background:`${C.coral}18`,border:'none',cursor:'pointer',color:C.coral,
+                                }}>
+                                  <Trash2 style={{width:12,height:12}}/>
+                                </button>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -1369,14 +1406,19 @@ const StatGrid: React.FC<{stats:{l:string;v:string|number;c:string}[]}> = ({stat
 // ═══════════════════════════════════════════
 // SCHEDULE PANEL
 // ═══════════════════════════════════════════
-const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpenModal:()=>void;isRunning:boolean;isLoading:boolean;fillHeight?:boolean;compact?:boolean;onViewSession?:()=>void}> =
-({orders,logs,onOpenModal,isRunning,isLoading,fillHeight,compact,onViewSession}) => {
+const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpenModal:()=>void;isRunning:boolean;isLoading:boolean;fillHeight?:boolean;compact?:boolean;onViewSession?:()=>void;historyIdsRef?:React.MutableRefObject<Set<string>>}> =
+({orders,logs,onOpenModal,isRunning,isLoading,fillHeight,compact,onViewSession,historyIdsRef}) => {
   const listRef  = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement|null)[]>([]);
   const [activeIdx,setActiveIdx] = useState(-1);
 
-  const pendingOrders   = orders.filter(o => !o.isExecuted && !o.isSkipped);
-  const monitoringOrders = orders.filter(o => o.isExecuted && !o.result && !(o.result === 'WIN' || o.result === 'LOSE' || o.result === 'DRAW'));
+  // Exclude orders yang sudah masuk history (sudah WIN/LOSE/SKIPPED)
+  const liveOrders = historyIdsRef
+    ? orders.filter(o => !historyIdsRef.current.has(o.id))
+    : orders;
+
+  const pendingOrders   = liveOrders.filter(o => !o.isExecuted && !o.isSkipped);
+  const monitoringOrders = liveOrders.filter(o => o.isExecuted && !o.result && !(o.result === 'WIN' || o.result === 'LOSE' || o.result === 'DRAW'));
 
   useEffect(()=>{
     const update=()=>{
@@ -1396,7 +1438,7 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
     c.scrollTo({top:el.offsetTop-c.clientHeight/2+el.offsetHeight/2,behavior:'smooth'});
   },[activeIdx]);
 
-  const doneCount = orders.length - pendingOrders.length;
+  const doneCount = liveOrders.length - pendingOrders.length;
 
   return (
     <Card style={{display:'flex',flexDirection:'column'}}>
@@ -2318,12 +2360,14 @@ const ModeSessionPanel: React.FC<{
   compact?: boolean;
   onViewSession?: () => void;
   startStopButton?: React.ReactNode;
+  historyIdsRef?: React.MutableRefObject<Set<string>>;
 }> = ({
   mode, onModeChange, locked, blockedModes,
   orders, logs, onOpenModal, isRunning,
   ftStatus, ftLogs, ftLoading,
   aiStatus, aiPending,
   indicatorStatus, momentumStatus, fillHeight, compact, onViewSession, startStopButton,
+  historyIdsRef,
 }) => {
   const [modePickerOpen, setModePickerOpen] = useState(false);
 
@@ -2406,6 +2450,7 @@ const ModeSessionPanel: React.FC<{
             orders={orders} logs={logs} onOpenModal={onOpenModal}
             isRunning={isRunning} isLoading={false} fillHeight={fillHeight}
             compact={compact} onViewSession={onViewSession}
+            historyIdsRef={historyIdsRef}
           />
         )}
         {(mode === 'fastrade' || mode === 'ctc') && (
@@ -3150,6 +3195,8 @@ export default function DashboardPage() {
   const [indicatorStatus,setIndicatorStatus] = useState<IndicatorStatus|null>(null);
   const [momentumStatus,setMomentumStatus] = useState<MomentumStatus|null>(null);
   const [todayProfitData,setTodayProfitData] = useState<TodayProfitSummary|null>(null);
+  const [profitRefreshing,setProfitRefreshing] = useState(false);
+  const [profitLastUpdated,setProfitLastUpdated] = useState<number|null>(null);
 
   // ── Persistent trading settings (auto-save ke localStorage) ────────────────
   const { settings: _s, loaded: settingsLoaded, update: _upd } = useTradingSettings();
@@ -3395,7 +3442,7 @@ export default function DashboardPage() {
       if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
       if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
       if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
-      if(tpRes.status==='fulfilled')setTodayProfitData(tpRes.value);
+      if(tpRes.status==='fulfilled'){setTodayProfitData(tpRes.value);setProfitLastUpdated(Date.now());}
 
       // ✅ FIX: Auto-detect mode aktif hanya saat load pertama (bukan silent)
       if (!silent) {
@@ -3434,7 +3481,24 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  // ✅ Polling interval 10 detik
+  // ── Manual profit refresh (dipanggil dari tombol refresh di TodayProfitCard) ──
+  const refreshProfit = useCallback(async () => {
+    if (profitRefreshing) return;
+    setProfitRefreshing(true);
+    try {
+      const result = await api.todayProfit();
+      if (isMounted.current) {
+        setTodayProfitData(result);
+        setProfitLastUpdated(Date.now());
+      }
+    } catch (e) {
+      console.warn('[Profit] manual refresh error:', e);
+    } finally {
+      if (isMounted.current) setProfitRefreshing(false);
+    }
+  }, [profitRefreshing]);
+
+  // ── Fast poll 10 detik: trading status + realtime profit (cepat, pakai Stockity cache) ──
   useEffect(()=>{
     const iv=setInterval(async()=>{
       const results = await Promise.allSettled([
@@ -3446,6 +3510,7 @@ export default function DashboardPage() {
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
+        // ✅ realtimeProfit sekarang cepat (~200ms) karena backend pakai cached Stockity data
         api.realtimeProfit(),
       ]);
       if(!isMounted.current)return;
@@ -3453,17 +3518,38 @@ export default function DashboardPage() {
       if(sRes.status==='fulfilled')setScheduleStatus(sRes.value);
       if(fRes.status==='fulfilled')setFtStatus(fRes.value);
       if(oRes.status==='fulfilled')setScheduleOrders(oRes.value);
-      if(logRes.status==='fulfilled')setScheduleLogs(logRes.value);  // ✅ Update logs dari polling
+      if(logRes.status==='fulfilled')setScheduleLogs(logRes.value);
       if(ftlRes.status==='fulfilled')setFtLogs(ftlRes.value);
       if(aiRes.status==='fulfilled')setAiStatus(aiRes.value);
       if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
       if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
       if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
-      if(tpRes.status==='fulfilled')setTodayProfitData(tpRes.value);
+      if(tpRes.status==='fulfilled'){
+        setTodayProfitData(tpRes.value);
+        setProfitLastUpdated(Date.now());
+      }
       const balRes = await api.balance().catch(()=>null);
       if(balRes&&isMounted.current)setBalance(balRes);
     },10000);
     return()=>clearInterval(iv);
+  },[]); // eslint-disable-line
+
+  // ── Full Stockity refresh setiap 30 detik (update backend cache + dapat data terbaru) ──
+  useEffect(()=>{
+    // Delay pertama 30s — loadAll() sudah fetch saat mount
+    const iv = setInterval(async () => {
+      if (!isMounted.current) return;
+      try {
+        const result = await api.todayProfit();
+        if (isMounted.current) {
+          setTodayProfitData(result);
+          setProfitLastUpdated(Date.now());
+        }
+      } catch (e) {
+        console.warn('[Profit] 30s full refresh error:', e);
+      }
+    }, 30_000);
+    return () => clearInterval(iv);
   },[]); // eslint-disable-line
 
   const botState = scheduleStatus?.botState??'IDLE';
@@ -3632,7 +3718,7 @@ export default function DashboardPage() {
   const g = deviceType==='desktop'?20:deviceType==='tablet'?18:16;
   const px = 16;
 
-  const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} isLoading={isLoading} flash={flash} t={t}/>;
+  const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} isLoading={isLoading} isRefreshing={profitRefreshing} lastUpdatedAt={profitLastUpdated} flash={flash} onRefresh={refreshProfit} t={t}/>;
 
   const InfoRow = (
     <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(3,1fr)':deviceType==='tablet'?'repeat(2,1fr)':'1fr 1fr',gap:g}}>
@@ -3664,6 +3750,7 @@ export default function DashboardPage() {
       compact={compact}
       onViewSession={onViewSession}
       startStopButton={startStopButton}
+      historyIdsRef={scheduleHistoryIdsRef}
     />
   );
 
@@ -3818,10 +3905,10 @@ export default function DashboardPage() {
 
         @media (max-width: 767px) {
           .ds-card, .ds-card:hover {
-            border: 0.5px solid ${isDarkMode ? 'rgba(20,184,166,0.35)' : 'rgba(20,184,166,0.28)'} !important;
+            border: 1px solid ${isDarkMode ? 'rgba(20,184,166,0.52)' : 'rgba(20,184,166,0.38)'} !important;
             box-shadow: ${isDarkMode
-              ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(20,184,166,0.05), 0 2px 8px rgba(0,0,0,0.12)'
-              : '0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px rgba(0,0,0,0.06), 0 0 28px rgba(20,184,166,0.04), 0 2px 6px rgba(0,0,0,0.05)'
+              ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(20,184,166,0.08), 0 2px 8px rgba(0,0,0,0.12)'
+              : '0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px rgba(0,0,0,0.06), 0 0 28px rgba(20,184,166,0.06), 0 2px 6px rgba(0,0,0,0.05)'
             } !important;
             transform: none !important;
           }
@@ -4416,7 +4503,7 @@ export default function DashboardPage() {
                   }}>
                     <div style={{display:'flex',alignItems:'center',gap:6}}>
                       <span style={{width:6,height:6,borderRadius:'50%',background:modeAccent(tradingMode),animation:'pulse 1.6s ease-in-out infinite',boxShadow:`0 0 5px ${modeAccent(tradingMode)}`}}/>
-                      <span style={{fontSize:11,fontWeight:700,color:modeAccent(tradingMode)}}>
+                      <span style={{fontSize:'clamp(8px,2.8vw,11px)',fontWeight:700,color:modeAccent(tradingMode)}}>
                         {{schedule:'Signal Mode',fastrade:'Fastrade FTT',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'}[tradingMode]}
                       </span>
                     </div>
@@ -4575,7 +4662,7 @@ export default function DashboardPage() {
                                   animation:'pulse 1.6s ease-in-out infinite',
                                   boxShadow:`0 0 5px ${ac}`,
                                 }}/>
-                                <span style={{fontWeight:700,color:ac,fontSize:11,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>Signal Mode</span>
+                                <span style={{fontWeight:700,color:ac,fontSize:'clamp(8px,2.8vw,11px)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>Signal Mode</span>
                               </div>
                             </div>
                           </div>
@@ -4613,7 +4700,7 @@ export default function DashboardPage() {
                                     <div style={{display:'flex',alignItems:'center',gap:4,flexWrap:'nowrap'}}>
                                       <span style={{fontSize:'clamp(9px,2.6vw,11px)',fontWeight:700,color:isRunning?C.text:C.sub,fontFamily:'monospace',lineHeight:1,flexShrink:0}}>{order.time}</span>
                                       <span style={{fontSize:'clamp(7px,2vw,8px)',fontWeight:700,padding:'1px 4px',borderRadius:4,color:dirCol,background:`${dirCol}14`,border:`1px solid ${dirCol}28`,flexShrink:0}}>
-                                        {isCall ? 'BUY' : 'SELL'}
+                                        {isCall ? 'B' : 'S'}
                                       </span>
                                       {showMart && (
                                         <span style={{fontSize:'clamp(7px,2vw,8px)',fontWeight:700,padding:'1px 4px',borderRadius:4,color:C.amber,background:`${C.amber}14`,border:`1px solid ${C.amber}30`,flexShrink:0,letterSpacing:'0.04em'}}>

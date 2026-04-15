@@ -13,7 +13,7 @@
   const AUTH_CHECK_DELAY = 400;
   const INITIAL_DELAY = 200;
   const CAPACITOR_EXTRA_DELAY = 300;
-  const SPLASH_MIN_DURATION = 800;     // Minimum splash screen duration untuk smooth UX
+  const SPLASH_MIN_DURATION = 4500;        // Minimum splash screen duration untuk smooth UX
 
   export function ClientLayout({ children }: { children: React.ReactNode }) {
     const router   = useRouter();
