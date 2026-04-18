@@ -25,6 +25,7 @@ import {
   PlayCircle, StopCircle, PauseCircle, RefreshCw, Timer, Copy,
   ArrowRight, Radio, BarChart, Waves,
   Wallet, Clock, CreditCard, Eye, EyeOff,
+  ClipboardPaste, Check,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
@@ -532,7 +533,8 @@ const TodayProfitCard: React.FC<{
   flash?: 'win' | 'lose' | null;
   onRefresh?: () => void;
   t: (k: string) => string;
-}> = ({ data, localProfit, isLoading, isRefreshing, lastUpdatedAt, flash, onRefresh, t }) => {
+  isMobile?: boolean;
+}> = ({ data, localProfit, isLoading, isRefreshing, lastUpdatedAt, flash, onRefresh, t, isMobile }) => {
   const profit  = data ? data.totalPnL : localProfit;
   const isPos   = profit >= 0;
   const col     = isPos ? C.cyan : C.coral;
@@ -618,7 +620,7 @@ const TodayProfitCard: React.FC<{
           animation: animKey > 0 ? `profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both` : undefined,
           opacity: isRefreshing ? 0.6 : 1,
           transition: 'opacity 0.2s',
-          textShadow: `0 0 18px ${col}90, 0 0 6px ${col}55`,
+          textShadow: isMobile ? 'none' : `0 0 18px ${col}90, 0 0 6px ${col}55`,
         }}>
           {isPos ? '+' : '−'}Rp {displayValue}
         </p>
@@ -982,6 +984,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   const { t } = useLanguage();
   const [input,setInput]              = useState('');
   const [clearLoading,setClearLoading] = useState(false);
+  const [pasteStatus,setPasteStatus]   = useState<'idle'|'ok'|'err'>('idle');
   const [view,setView]                = useState<'list'|'input'>('list');
   const scrollRef      = useRef<HTMLDivElement>(null);
   const monitoringRef  = useRef<HTMLDivElement>(null);
@@ -1021,6 +1024,20 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
     await onAdd(input);
     setInput('');
     setView('list');
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) { setPasteStatus('err'); setTimeout(()=>setPasteStatus('idle'),1500); return; }
+      setInput(prev => prev ? prev.trimEnd()+'\n'+text : text);
+      setPasteStatus('ok');
+      setTimeout(() => setPasteStatus('idle'), 1800);
+    } catch {
+      // Clipboard API ditolak (permission / browser lama) → coba fallback
+      setPasteStatus('err');
+      setTimeout(() => setPasteStatus('idle'), 1800);
+    }
   };
 
   const isBusy = loading || clearLoading;
@@ -1090,8 +1107,8 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
               : `Format: 09:30 B · 14:00 S · satu per baris`}
           </p>
 
-          {/* Row 3: action buttons (only in list view, only if orders exist) */}
-          {view==='list' && orders.length>0 && (
+          {/* Row 3: action buttons (always visible in list view) */}
+          {view==='list' && (
             <div style={{display:'flex',gap:8,marginTop:2}}>
               {/* Input Signal */}
               <button
@@ -1140,15 +1157,54 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                   Contoh: <span style={{color:C.cyan,fontWeight:600}}>09:30 call</span> · <span style={{color:C.coral}}>14:15 put</span> · <span style={{color:C.cyan,fontWeight:600}}>09.30 B</span> · <span style={{color:C.coral}}>14.15 S</span>
                 </p>
               </div>
-              <textarea
-                className="ds-input"
-                autoFocus
-                value={input}
-                onChange={e=>setInput(e.target.value)}
-                placeholder={"09:00 B\n09.30 S\n10:00 B\n14:00 S"}
-                rows={9}
-                style={{resize:'vertical'}}
-              />
+              <div style={{position:'relative'}}>
+                <textarea
+                  className="ds-input"
+                  autoFocus
+                  value={input}
+                  onChange={e=>setInput(e.target.value)}
+                  placeholder={"09:00 B\n09.30 S\n10:00 B\n14:00 S"}
+                  rows={9}
+                  style={{resize:'vertical', paddingRight: 48}}
+                />
+                {/* Paste button — pojok kanan atas textarea */}
+                <button
+                  type="button"
+                  onClick={handlePaste}
+                  title="Paste dari clipboard"
+                  style={{
+                    position:'absolute',top:8,right:8,
+                    width:32,height:32,
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    borderRadius:8,
+                    background: pasteStatus==='ok'
+                      ? `${C.cyan}22`
+                      : pasteStatus==='err'
+                      ? `${C.coral}18`
+                      : C.card2,
+                    border: `1px solid ${
+                      pasteStatus==='ok' ? `${C.cyan}55`
+                      : pasteStatus==='err' ? `${C.coral}44`
+                      : C.bdr
+                    }`,
+                    color: pasteStatus==='ok'
+                      ? C.cyan
+                      : pasteStatus==='err'
+                      ? C.coral
+                      : C.sub,
+                    cursor:'pointer',
+                    transition:'all 0.2s',
+                    flexShrink:0,
+                  }}
+                >
+                  {pasteStatus==='ok'
+                    ? <Check style={{width:14,height:14}}/>
+                    : pasteStatus==='err'
+                    ? <X style={{width:14,height:14}}/>
+                    : <ClipboardPaste style={{width:14,height:14}}/>
+                  }
+                </button>
+              </div>
               <div style={{display:'flex',gap:8}}>
                 <button
                   onClick={handleAdd}
@@ -1600,7 +1656,6 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
         <div style={{overflowY:'auto',maxHeight:240}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
-          <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?accent:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
           <Row label={T('dashboard.fastTrade.phase')} right={<span style={{color:accent,fontSize:10}}>{phaseMap[phase]??phase}</span>}/>
           {trend&&<Row label={T('dashboard.fastTrade.trend')} right={<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:trend==='call'?C.cyan:C.coral,background:trend==='call'?`${C.cyan}12`:`${C.coral}12`}}>{trend==='call'?'↑ CALL':'↓ PUT'}</span>} border={logs.length===0}/>}
           {logs.length>0&&(
@@ -1807,29 +1862,6 @@ const AISignalPanel: React.FC<{
                 <span style={{ color: C.muted }}> / </span>
                 <span style={{ color: C.sub }}>{total}</span>
               </span>
-            }
-          />
-          <Row
-            label={T('dashboard.fastTrade.winRate')}
-            right={wr !== null
-              ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {/* Mini bar */}
-                  <span style={{ display: 'flex', gap: 1, alignItems: 'flex-end', height: 10 }}>
-                    {[...Array(5)].map((_, i) => (
-                      <span key={i} style={{
-                        width: 3, borderRadius: 2,
-                        height: `${Math.max(30, (i + 1) * 20)}%`,
-                        background: i < Math.round(wr / 20) ? (wr >= 50 ? C.sky : C.coral) : C.bdr,
-                      }} />
-                    ))}
-                  </span>
-                  <span style={{ color: wr >= 60 ? C.sky : wr >= 50 ? C.cyan : C.coral, fontWeight: 700 }}>
-                    {wr}%
-                  </span>
-                </span>
-              )
-              : <span style={{ color: C.muted }}>—</span>
             }
           />
  
@@ -2044,7 +2076,6 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
         <div style={{overflowY:'auto',maxHeight:240}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
-          <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?C.orange:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
           <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.orange,fontSize:10}}>{status?.lastStatus||T('dashboard.indicator.monitoring')}</span>}/>
           <Row label={T('dashboard.indicator.signalLabel')} right={lastTrend?<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:lastTrend==='call'?C.cyan:C.coral,background:lastTrend==='call'?`${C.cyan}12`:`${C.coral}12`}}>{lastTrend==='call'?'↑ CALL':'↓ PUT'}</span>:<span style={{color:C.muted}}>—</span>}/>
           {status?.currentIndicatorValue!=null&&(
@@ -2112,7 +2143,6 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
         <div style={{overflowY:'auto',maxHeight:240}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
-          <Row label="Win Rate" right={wr!==null?<span style={{color:wr>=50?C.pink:C.coral}}>{wr}%</span>:<span style={{color:C.muted}}>—</span>}/>
           <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.pink,fontSize:10}}>{status?.lastStatus||T('dashboard.momentum.scanning')}</span>}/>
           {status?.lastDetectedPattern?(
             <Row
@@ -2643,6 +2673,34 @@ const SettingsCard: React.FC<{
   const [pickerOpen,setPickerOpen] = useState<string|null>(null);
   const [amtDrop,setAmtDrop] = useState(false);
   const [showMartingaleDialog, setShowMartingaleDialog] = useState(false);
+  // Stop Loss / Stop Profit toggle state — mirrors Kotlin StopLossProfitCard
+  const [slEnabled, setSlEnabled] = useState(() => stopLoss > 0);
+  const [spEnabled, setSpEnabled] = useState(() => stopProfit > 0);
+  const [showSlInput, setShowSlInput] = useState(false);
+  const [showSpInput, setShowSpInput] = useState(false);
+  const [slInputValue, setSlInputValue] = useState(() => stopLoss > 0 ? String(stopLoss) : '');
+  const [spInputValue, setSpInputValue] = useState(() => stopProfit > 0 ? String(stopProfit) : '');
+  // Sync when external stopLoss/stopProfit changes (e.g. reset)
+  useEffect(() => {
+    setSlEnabled(stopLoss > 0);
+    setSlInputValue(stopLoss > 0 ? String(stopLoss) : '');
+  }, [stopLoss]);
+  useEffect(() => {
+    setSpEnabled(stopProfit > 0);
+    setSpInputValue(stopProfit > 0 ? String(stopProfit) : '');
+  }, [stopProfit]);
+  // Parse flexible input: "100K" → 100000, "1.5M" → 1500000, "500000" → 500000
+  const parseFlexibleInput = (input: string): number | null => {
+    const s = input.trim().toUpperCase();
+    if (!s) return null;
+    try {
+      if (s.endsWith('B')) return (parseFloat(s.slice(0,-1)) * 1_000_000_000) || null;
+      if (s.endsWith('M')) return (parseFloat(s.slice(0,-1)) * 1_000_000) || null;
+      if (s.endsWith('K')) return (parseFloat(s.slice(0,-1)) * 1_000) || null;
+      const n = parseFloat(s.replace(/[^0-9.]/g,''));
+      return isNaN(n) ? null : n;
+    } catch { return null; }
+  };
   // Local string state for amount input — avoids iOS number-input editing issues
   const [amtStr, setAmtStr] = useState(amount > 0 ? String(amount) : '');
   const [amtFocused, setAmtFocused] = useState(false);
@@ -2938,27 +2996,165 @@ const SettingsCard: React.FC<{
               )}
             </div>
 
-            {/* Risk Management */}
+            {/* Risk Management — Kotlin StopLossProfitCard style */}
             {!isNewMode&&(
               <div>
                 <div style={{ height:1,background:C.bdr,marginBottom:16 }}/>
                 <SL accent="rgba(255,69,58,0.55)">Risk Management</SL>
-                <div style={{ padding:12,borderRadius:12,background:'rgba(255,69,58,0.05)',border:'1px solid rgba(255,69,58,0.12)' }}>
-                  <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
-                    <div><FL>Stop Loss</FL>
-                      <div style={{ position:'relative' }}>
-                        <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
-                        <input type="number" className="ds-input" value={stopLoss||''} onChange={e=>onSlChange(e.target.value?+e.target.value:0)} disabled={disabled} placeholder="Opsional" style={{ paddingLeft:30 }}/>
-                      </div>
-                    </div>
-                    <div><FL>Take Profit</FL>
-                      <div style={{ position:'relative' }}>
-                        <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
-                        <input type="number" className="ds-input" value={stopProfit||''} onChange={e=>onSpChange(e.target.value?+e.target.value:0)} disabled={disabled} placeholder="Opsional" style={{ paddingLeft:30 }}/>
-                      </div>
-                    </div>
+
+                {/* Toggle Buttons Row — mirrors Kotlin's two Surface buttons */}
+                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:(slEnabled&&showSlInput)||(spEnabled&&showSpInput)?12:0 }}>
+                  {/* Stop Loss Button */}
+                  <div style={{ position:'relative',height:48 }}>
+                    {/* Shadow layer — Kotlin: Box offset y=2dp */}
+                    <div style={{
+                      position:'absolute',inset:0,borderRadius:14,
+                      background: slEnabled&&!disabled ? `${C.coral}7a` : 'transparent',
+                      transform:'translateY(2px)',
+                      transition:'background 0.2s',
+                    }}/>
+                    <button
+                      onClick={()=>{
+                        if(disabled) return;
+                        const next = !slEnabled;
+                        setSlEnabled(next);
+                        if(next){ setShowSlInput(true); }
+                        else{ onSlChange(0); setShowSlInput(false); setSlInputValue(''); }
+                      }}
+                      disabled={disabled}
+                      style={{
+                        position:'relative',width:'100%',height:'100%',borderRadius:14,
+                        background: slEnabled
+                          ? `linear-gradient(180deg,${C.coral}26 0%,${C.coral}0d 100%)`
+                          : `linear-gradient(180deg,rgba(126,126,126,0.4) 0%,rgba(126,126,126,0.4) 100%)`,
+                        border:`0.8px solid ${slEnabled?'rgba(88,88,88,0.5)':C.bdr}`,
+                        color: slEnabled ? C.text : C.sub,
+                        fontSize:12,fontWeight:600,letterSpacing:'0.3px',
+                        cursor:disabled?'not-allowed':'pointer',
+                        transition:'all 0.2s',
+                      }}
+                    >Stop Loss</button>
+                  </div>
+
+                  {/* Target Profit Button */}
+                  <div style={{ position:'relative',height:48 }}>
+                    <div style={{
+                      position:'absolute',inset:0,borderRadius:14,
+                      background: spEnabled&&!disabled ? `${C.cyan}7a` : 'transparent',
+                      transform:'translateY(2px)',
+                      transition:'background 0.2s',
+                    }}/>
+                    <button
+                      onClick={()=>{
+                        if(disabled) return;
+                        const next = !spEnabled;
+                        setSpEnabled(next);
+                        if(next){ setShowSpInput(true); }
+                        else{ onSpChange(0); setShowSpInput(false); setSpInputValue(''); }
+                      }}
+                      disabled={disabled}
+                      style={{
+                        position:'relative',width:'100%',height:'100%',borderRadius:14,
+                        background: spEnabled
+                          ? `linear-gradient(180deg,${C.cyan}26 0%,${C.cyan}0d 100%)`
+                          : `linear-gradient(180deg,rgba(126,126,126,0.4) 0%,rgba(126,126,126,0.4) 100%)`,
+                        border:`0.8px solid ${spEnabled?'rgba(88,88,88,0.5)':C.bdr}`,
+                        color: spEnabled ? C.text : C.sub,
+                        fontSize:12,fontWeight:600,letterSpacing:'0.3px',
+                        cursor:disabled?'not-allowed':'pointer',
+                        transition:'all 0.2s',
+                      }}
+                    >Target Profit</button>
                   </div>
                 </div>
+
+                {/* Stop Loss Input Panel — Kotlin: AnimatedVisibility */}
+                {slEnabled&&showSlInput&&(
+                  <div style={{
+                    background:C.card2,borderRadius:16,
+                    border:`1px solid ${C.coral}80`,
+                    padding:16,marginBottom:10,
+                    display:'flex',flexDirection:'column',gap:12,
+                  }}>
+                    <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                      <span style={{ color:C.coral,fontSize:14,fontWeight:700 }}>Stop Loss Settings</span>
+                      <button onClick={()=>setShowSlInput(false)} style={{ background:'none',border:'none',cursor:'pointer',padding:4,display:'flex',alignItems:'center',justifyContent:'center' }}>
+                        <X style={{ width:18,height:18,color:C.coral }}/>
+                      </button>
+                    </div>
+                    <div style={{ position:'relative' }}>
+                      <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                      <input
+                        className="ds-input"
+                        value={slInputValue}
+                        onChange={e=>setSlInputValue(e.target.value)}
+                        onKeyDown={e=>{
+                          if(e.key==='Enter'){
+                            const v=parseFlexibleInput(slInputValue);
+                            if(v&&v>0){ onSlChange(v); setShowSlInput(false); }
+                          }
+                        }}
+                        onBlur={()=>{
+                          const v=parseFlexibleInput(slInputValue);
+                          if(v&&v>0){ onSlChange(v); }
+                        }}
+                        placeholder="Contoh: 100K, 1M, 500000"
+                        style={{ paddingLeft:30,borderColor:`${C.coral}aa` }}
+                      />
+                    </div>
+                    {stopLoss>0&&(
+                      <div style={{ background:C.card,borderRadius:10,padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+                        <span style={{ color:C.sub,fontSize:11,fontWeight:500 }}>Maks. Loss Saat Ini</span>
+                        <span style={{ color:C.coral,fontSize:13,fontWeight:700 }}>Rp {stopLoss.toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    <span style={{ color:C.muted,fontSize:10,lineHeight:'1.4' }}>Format: angka biasa, K (ribu), M (juta), B (miliar)</span>
+                  </div>
+                )}
+
+                {/* Target Profit Input Panel */}
+                {spEnabled&&showSpInput&&(
+                  <div style={{
+                    background:C.card2,borderRadius:16,
+                    border:`1px solid ${C.cyan}80`,
+                    padding:16,
+                    display:'flex',flexDirection:'column',gap:12,
+                  }}>
+                    <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                      <span style={{ color:C.cyan,fontSize:14,fontWeight:700 }}>Target Profit Settings</span>
+                      <button onClick={()=>setShowSpInput(false)} style={{ background:'none',border:'none',cursor:'pointer',padding:4,display:'flex',alignItems:'center',justifyContent:'center' }}>
+                        <X style={{ width:18,height:18,color:C.cyan }}/>
+                      </button>
+                    </div>
+                    <div style={{ position:'relative' }}>
+                      <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                      <input
+                        className="ds-input"
+                        value={spInputValue}
+                        onChange={e=>setSpInputValue(e.target.value)}
+                        onKeyDown={e=>{
+                          if(e.key==='Enter'){
+                            const v=parseFlexibleInput(spInputValue);
+                            if(v&&v>0){ onSpChange(v); setShowSpInput(false); }
+                          }
+                        }}
+                        onBlur={()=>{
+                          const v=parseFlexibleInput(spInputValue);
+                          if(v&&v>0){ onSpChange(v); }
+                        }}
+                        placeholder="Contoh: 100K, 1M, 500000"
+                        style={{ paddingLeft:30,borderColor:`${C.cyan}aa` }}
+                      />
+                    </div>
+                    {stopProfit>0&&(
+                      <div style={{ background:C.card,borderRadius:10,padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+                        <span style={{ color:C.sub,fontSize:11,fontWeight:500 }}>Target Profit Saat Ini</span>
+                        <span style={{ color:C.cyan,fontSize:13,fontWeight:700 }}>Rp {stopProfit.toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    <span style={{ color:C.muted,fontSize:10,lineHeight:'1.4' }}>Format: angka biasa, K (ribu), M (juta), B (miliar)</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -3242,6 +3438,7 @@ export default function DashboardPage() {
   // (resize listener → re-render saat keyboard muncul di mobile)
   const [deviceType,setDeviceType] = useState<'mobile'|'tablet'|'desktop'>('mobile');
 
+  const [isModeChosen, setIsModeChosen] = useState(false);
   const [mobileSessionOpen,setMobileSessionOpen] = useState(false);
   const [mobileModePickerOpen,setMobileModePickerOpen] = useState(false);
   const [assetPickerOpen,setAssetPickerOpen] = useState(false);
@@ -3454,14 +3651,19 @@ export default function DashboardPage() {
 
         if (ftData?.isRunning) {
           setTradingMode(ftData.mode === 'CTC' ? 'ctc' : 'fastrade');
+          setIsModeChosen(true);
         } else if (aiData?.botState === 'RUNNING' || (!aiData?.botState && aiData?.isActive)) {
           setTradingMode('aisignal');
+          setIsModeChosen(true);
         } else if (indData?.isRunning) {
           setTradingMode('indicator');
+          setIsModeChosen(true);
         } else if (momData?.isRunning) {
           setTradingMode('momentum');
+          setIsModeChosen(true);
         } else if (schData?.botState === 'RUNNING' || schData?.botState === 'PAUSED') {
           setTradingMode('schedule');
+          setIsModeChosen(true);
         }
       }
     }catch(e:any){
@@ -3613,6 +3815,7 @@ export default function DashboardPage() {
     if(m===tradingMode)return;
     if(blockedModes.includes(m)){showBlock(T('dashboard.modePicker.stopActiveFirst'));return;}
     setTradingMode(m);setError(null);
+    setIsModeChosen(true);
   };
 
   const handleStart = async()=>{
@@ -3718,7 +3921,7 @@ export default function DashboardPage() {
   const g = deviceType==='desktop'?20:deviceType==='tablet'?18:16;
   const px = 16;
 
-  const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} isLoading={isLoading} isRefreshing={profitRefreshing} lastUpdatedAt={profitLastUpdated} flash={flash} onRefresh={refreshProfit} t={t}/>;
+  const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} isLoading={isLoading} isRefreshing={profitRefreshing} lastUpdatedAt={profitLastUpdated} flash={flash} onRefresh={refreshProfit} t={t} isMobile={deviceType==='mobile'}/>;
 
   const InfoRow = (
     <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(3,1fr)':deviceType==='tablet'?'repeat(2,1fr)':'1fr 1fr',gap:g}}>
@@ -4743,7 +4946,51 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
-                  {ModeSession(true, true, ()=>setMobileSessionOpen(true), mobileStartStopBtn)}
+                  {!isModeChosen ? (
+                    <>
+                      {/* Mode picker modal — mode dikosongkan agar tidak ada yang terceklist */}
+                      <ModePickerModal
+                        open={mobileModePickerOpen}
+                        onClose={() => setMobileModePickerOpen(false)}
+                        mode={'' as TradingMode}
+                        onModeChange={(m) => { handleModeChange(m); }}
+                        locked={isActiveMode}
+                        blockedModes={blockedModes}
+                      />
+                      {/* Pilih Mode placeholder card */}
+                      <Card style={{flex:1,padding:0,display:'flex',flexDirection:'column',minHeight:140,overflow:'hidden'}}>
+                        {/* Header: tombol Pilih Mode */}
+                        <div style={{padding:'8px 12px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
+                          <button
+                            onClick={() => setMobileModePickerOpen(true)}
+                            style={{
+                              width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+                              padding:'8px 12px',borderRadius:12,
+                              background:`${C.muted}0a`,
+                              border:`1px solid ${C.bdr}`,
+                              cursor:'pointer',
+                            }}
+                          >
+                            <div style={{display:'flex',alignItems:'center',gap:6}}>
+                              <span style={{width:6,height:6,borderRadius:'50%',background:C.muted,opacity:0.5}}/>
+                              <span style={{fontWeight:700,color:C.sub,fontSize:'clamp(8px,2.8vw,11px)',whiteSpace:'nowrap'}}>Pilih Mode</span>
+                            </div>
+                            <ChevronDown style={{width:12,height:12,color:C.muted}}/>
+                          </button>
+                        </div>
+                        {/* Body: deskripsi — diperpanjang dengan minHeight & padding lebih besar */}
+                        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,padding:'20px 14px',minHeight:100}}>
+                          <Radio style={{width:26,height:26,color:C.muted,opacity:0.35}}/>
+                          <span style={{fontSize:11,color:C.muted,textAlign:'center',fontWeight:500,lineHeight:1.6}}>
+                            Pilih Mode Sesuai Style Trading Anda
+                          </span>
+                        </div>
+                      </Card>
+                      {mobileStartStopBtn}
+                    </>
+                  ) : (
+                    ModeSession(true, true, ()=>setMobileSessionOpen(true), mobileStartStopBtn)
+                  )}
                 </div>
               )}
             </div>
