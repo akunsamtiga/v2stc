@@ -1462,8 +1462,8 @@ const StatGrid: React.FC<{stats:{l:string;v:string|number;c:string}[]}> = ({stat
 // ═══════════════════════════════════════════
 // SCHEDULE PANEL
 // ═══════════════════════════════════════════
-const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpenModal:()=>void;isRunning:boolean;isLoading:boolean;fillHeight?:boolean;compact?:boolean;onViewSession?:()=>void;historyIdsRef?:React.MutableRefObject<Set<string>>}> =
-({orders,logs,onOpenModal,isRunning,isLoading,fillHeight,compact,onViewSession,historyIdsRef}) => {
+const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpenModal:()=>void;isRunning:boolean;isLoading:boolean;fillHeight?:boolean;compact?:boolean;onViewSession?:()=>void;historyIdsRef?:React.MutableRefObject<Set<string>>;inModal?:boolean}> =
+({orders,logs,onOpenModal,isRunning,isLoading,fillHeight,compact,onViewSession,historyIdsRef,inModal}) => {
   const listRef  = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement|null)[]>([]);
   const [activeIdx,setActiveIdx] = useState(-1);
@@ -1496,8 +1496,12 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
 
   const doneCount = liveOrders.length - pendingOrders.length;
 
+  const PanelWrap: React.FC<{children: React.ReactNode}> = ({children}) =>
+    inModal ? <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>{children}</div>
+            : <Card style={{display:'flex',flexDirection:'column'}}>{children}</Card>;
+
   return (
-    <Card style={{display:'flex',flexDirection:'column'}}>
+    <PanelWrap>
       {!compact&&(
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -1522,7 +1526,7 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
         </div>
       ):(
         <>
-        <div ref={listRef} style={{overflowY:'auto',overflowX:'hidden',maxHeight:compact?100:210,flex:'none'}}>
+        <div ref={listRef} style={{overflowY:'auto',overflowX:'hidden',maxHeight:inModal?undefined:compact?100:210,flex:inModal?'1':'none',minHeight:0}}>
           {/* Monitoring / active orders */}
           {monitoringOrders.map(o => {
             const isCall = o.trend === 'call';
@@ -1591,15 +1595,12 @@ const SchedulePanel: React.FC<{orders:ScheduleOrder[];logs:ExecutionLog[];onOpen
           {isRunning ? T('dashboard.viewSession') : (pendingOrders.length===0 ? T('dashboard.schedule.add') : 'View')}
         </button>
       </div>
-    </Card>
+    </PanelWrap>
   );
 };
-
 // ═══════════════════════════════════════════
-// FASTRADE PANEL
-// ═══════════════════════════════════════════
-const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isLoading:boolean;fillHeight?:boolean}> =
-({status,logs,isLoading,fillHeight}) => {
+const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isLoading:boolean;fillHeight?:boolean;inModal?:boolean}> =
+({status,logs,isLoading,fillHeight,inModal}) => {
   const isOn   = status?.isRunning??false;
   const pnl    = status?.sessionPnL??0;
   const wins   = status?.totalWins??0;
@@ -1626,8 +1627,12 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
     </div>
   );
 
+  const FTPanelWrap: React.FC<{children: React.ReactNode}> = ({children}) =>
+    inModal ? <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>{children}</div>
+            : <Card style={{display:'flex',flexDirection:'column'}}>{children}</Card>;
+
   return (
-    <Card style={{display:'flex',flexDirection:'column'}}>
+    <FTPanelWrap>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
         {isOn ? (
           <>
@@ -1653,7 +1658,7 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
           <p style={{fontSize:12,color:C.muted,textAlign:'center'}}>{T('dashboard.fastTrade.noActiveSession')}</p>
         </div>
       ):(
-        <div style={{overflowY:'auto',maxHeight:240}}>
+        <div style={{overflowY:'auto',maxHeight:inModal?undefined:240,flex:inModal?1:undefined,minHeight:0}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label={T('dashboard.fastTrade.phase')} right={<span style={{color:accent,fontSize:10}}>{phaseMap[phase]??phase}</span>}/>
@@ -1679,7 +1684,7 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
           )}
         </div>
       )}
-    </Card>
+    </FTPanelWrap>
   );
 };
 
@@ -1691,7 +1696,8 @@ const AISignalPanel: React.FC<{
   pendingOrders: AISignalOrder[];
   isLoading: boolean;
   fillHeight?: boolean;
-}> = ({ status, pendingOrders, isLoading }) => {
+  inModal?: boolean;
+}> = ({ status, pendingOrders, isLoading, inModal }) => {
   const isOn   = status?.botState === 'RUNNING' || (!status?.botState && status?.isActive === true);
   const pnl    = status?.sessionPnL ?? status?.stats?.sessionPnL ?? 0;
   const wins   = status?.totalWins  ?? status?.stats?.wins   ?? 0;
@@ -1758,8 +1764,12 @@ const AISignalPanel: React.FC<{
     }} />
   );
  
+  const AIPanelWrap: React.FC<{children: React.ReactNode}> = ({children}) =>
+    inModal ? <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>{children}</div>
+            : <Card style={{ display: 'flex', flexDirection: 'column' }}>{children}</Card>;
+
   return (
-    <Card style={{ display: 'flex', flexDirection: 'column' }}>
+    <AIPanelWrap>
  
       {/* ── Header ── */}
       <div style={{
@@ -1815,7 +1825,7 @@ const AISignalPanel: React.FC<{
  
       ) : (
         /* ── Active state ── */
-        <div style={{ overflowY: 'auto' }}>
+        <div style={{ overflowY: 'auto', flex: inModal ? 1 : undefined, minHeight: 0 }}>
  
           {/* ── Infra Status Row ── */}
           <div style={{
@@ -2015,21 +2025,17 @@ const AISignalPanel: React.FC<{
                   }} />
                 ))}
               </div>
-              <span style={{ fontSize: 10, color: `${C.muted}88` }}>sedang konfigurasi analysis ai system</span>
             </div>
           )}
         </div>
       )}
  
-    </Card>
+    </AIPanelWrap>
   );
 };
- 
 // ═══════════════════════════════════════════
-// INDICATOR PANEL
-// ═══════════════════════════════════════════
-const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fillHeight?:boolean}> =
-({status,isLoading,fillHeight}) => {
+const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fillHeight?:boolean;inModal?:boolean}> =
+({status,isLoading,fillHeight,inModal}) => {
   const isOn   = status?.isRunning??false;
   const pnl    = status?.sessionPnL??0;
   const wins   = status?.totalWins??0;
@@ -2047,8 +2053,12 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
     </div>
   );
 
+  const IndPanelWrap: React.FC<{children: React.ReactNode}> = ({children}) =>
+    inModal ? <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>{children}</div>
+            : <Card style={{display:'flex',flexDirection:'column'}}>{children}</Card>;
+
   return (
-    <Card style={{display:'flex',flexDirection:'column'}}>
+    <IndPanelWrap>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${isOn ? 'rgba(255,107,53,0.2)' : C.bdr}`,flexShrink:0}}>
         {isOn ? (
           <>
@@ -2073,7 +2083,7 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
           <p style={{fontSize:12,color:C.muted,textAlign:'center'}}>{T('dashboard.indicator.notActive')}</p>
         </div>
       ):(
-        <div style={{overflowY:'auto',maxHeight:240}}>
+        <div style={{overflowY:'auto',maxHeight:inModal?undefined:240,flex:inModal?1:undefined,minHeight:0}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.orange,fontSize:10}}>{status?.lastStatus||T('dashboard.indicator.monitoring')}</span>}/>
@@ -2083,15 +2093,15 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
           )}
         </div>
       )}
-    </Card>
+    </IndPanelWrap>
   );
 };
 
 // ═══════════════════════════════════════════
 // MOMENTUM PANEL
 // ═══════════════════════════════════════════
-const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fillHeight?:boolean}> =
-({status,isLoading,fillHeight}) => {
+const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fillHeight?:boolean;inModal?:boolean}> =
+({status,isLoading,fillHeight,inModal}) => {
   const isOn   = status?.isRunning??false;
   const pnl    = status?.sessionPnL??0;
   const wins   = status?.totalWins??0;
@@ -2114,8 +2124,12 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
     </div>
   );
 
+  const MomPanelWrap: React.FC<{children: React.ReactNode}> = ({children}) =>
+    inModal ? <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>{children}</div>
+            : <Card style={{display:'flex',flexDirection:'column'}}>{children}</Card>;
+
   return (
-    <Card style={{display:'flex',flexDirection:'column'}}>
+    <MomPanelWrap>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderBottom:`1px solid ${isOn ? 'rgba(255,55,95,0.2)' : C.bdr}`,flexShrink:0}}>
         {isOn ? (
           <>
@@ -2140,7 +2154,7 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
           <p style={{fontSize:12,color:C.muted,textAlign:'center'}}>{T('dashboard.momentum.notActive')}</p>
         </div>
       ):(
-        <div style={{overflowY:'auto',maxHeight:240}}>
+        <div style={{overflowY:'auto',maxHeight:inModal?undefined:240,flex:inModal?1:undefined,minHeight:0}}>
           <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.pink,fontSize:10}}>{status?.lastStatus||T('dashboard.momentum.scanning')}</span>}/>
@@ -2158,7 +2172,7 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
           )}
         </div>
       )}
-    </Card>
+    </MomPanelWrap>
   );
 };
 
@@ -2193,7 +2207,7 @@ const MobileSessionSheet: React.FC<{
   if (!open) return null;
 
   return (
-    <div style={{position:'fixed',inset:0,zIndex:80,display:'flex',alignItems:'center',justifyContent:'center',padding:16,animation:'fade-in 0.15s ease'}}>
+    <div style={{position:'fixed',inset:0,zIndex:80,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px 16px calc(56px + env(safe-area-inset-bottom, 0px) + 8px) 16px',animation:'fade-in 0.15s ease'}}>
       {/* backdrop */}
       <div
         onClick={onClose}
@@ -2233,21 +2247,21 @@ const MobileSessionSheet: React.FC<{
           </button>
         </div>
         {/* content */}
-        <div style={{flex:1,overflowY:'auto',background:C.bg,WebkitOverflowScrolling:'touch' as any}}>
+        <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',background:C.bg,WebkitOverflowScrolling:'touch' as any,minHeight:0}}>
           {(mode==='fastrade'||mode==='ctc')&&(
-            <FastradePanel status={ftStatus} logs={ftLogs} isLoading={false} fillHeight={false}/>
+            <FastradePanel status={ftStatus} logs={ftLogs} isLoading={false} fillHeight={false} inModal={true}/>
           )}
           {mode==='aisignal'&&(
-            <AISignalPanel status={aiStatus} pendingOrders={aiPending} isLoading={false} fillHeight={false}/>
+            <AISignalPanel status={aiStatus} pendingOrders={aiPending} isLoading={false} fillHeight={false} inModal={true}/>
           )}
           {mode==='indicator'&&(
-            <IndicatorPanel status={indicatorStatus} isLoading={false} fillHeight={false}/>
+            <IndicatorPanel status={indicatorStatus} isLoading={false} fillHeight={false} inModal={true}/>
           )}
           {mode==='momentum'&&(
-            <MomentumPanel status={momentumStatus} isLoading={false} fillHeight={false}/>
+            <MomentumPanel status={momentumStatus} isLoading={false} fillHeight={false} inModal={true}/>
           )}
           {mode==='schedule'&&(
-            <SchedulePanel orders={orders} logs={logs} onOpenModal={()=>{onOpenModal();onClose();}} isRunning={isRunning} isLoading={false} fillHeight={false}/>
+            <SchedulePanel orders={orders} logs={logs} onOpenModal={()=>{onOpenModal();onClose();}} isRunning={isRunning} isLoading={false} fillHeight={false} inModal={true}/>
           )}
         </div>
       </div>
@@ -4982,7 +4996,7 @@ export default function DashboardPage() {
                         <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,padding:'20px 14px',minHeight:100}}>
                           <Radio style={{width:26,height:26,color:C.muted,opacity:0.35}}/>
                           <span style={{fontSize:11,color:C.muted,textAlign:'center',fontWeight:500,lineHeight:1.6}}>
-                            Pilih Mode Sesuai Style Trading Anda
+                            Pilih Mode Sesuai Style Pengaturan Trading Anda
                           </span>
                         </div>
                       </Card>
