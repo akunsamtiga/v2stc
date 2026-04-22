@@ -986,6 +986,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   const [clearLoading,setClearLoading] = useState(false);
   const [pasteStatus,setPasteStatus]   = useState<'idle'|'ok'|'err'>('idle');
   const [view,setView]                = useState<'list'|'input'>('list');
+  const [historyCollapsed,setHistoryCollapsed] = useState(false);
   const scrollRef      = useRef<HTMLDivElement>(null);
   const monitoringRef  = useRef<HTMLDivElement>(null);
   const pendingRef     = useRef<HTMLDivElement>(null);
@@ -1270,13 +1271,28 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                   {/* ── HISTORY SECTION (selesai: WIN/LOSE/SKIP) ── */}
                   {historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').length > 0 && (
                     <div style={{marginBottom:4}}>
-                      {/* Section header */}
-                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                      {/* Section header — tappable untuk collapse/expand */}
+                      <button
+                        onClick={() => setHistoryCollapsed(v => !v)}
+                        style={{
+                          width:'100%',display:'flex',alignItems:'center',gap:8,marginBottom:historyCollapsed?0:6,
+                          background:'transparent',border:'none',cursor:'pointer',padding:'2px 0',
+                        }}
+                      >
                         <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.muted}}>History</span>
                         <div style={{flex:1,height:1,background:`linear-gradient(to right,${C.bdr},transparent)`}}/>
                         <span style={{fontSize:9,color:C.muted,background:C.card2,border:`1px solid ${C.bdr}`,borderRadius:99,padding:'1px 6px'}}>{historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').length}</span>
-                      </div>
-                      {historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').sort((a, b) => a.time.localeCompare(b.time)).map((o, idx) => {
+                        <span style={{
+                          display:'flex',alignItems:'center',justifyContent:'center',
+                          width:18,height:18,borderRadius:5,
+                          background:`${C.muted}14`,border:`1px solid ${C.bdr}`,
+                          color:C.muted,flexShrink:0,transition:'transform 0.2s',
+                          transform: historyCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                        }}>
+                          <ChevronDown style={{width:10,height:10}}/>
+                        </span>
+                      </button>
+                      {!historyCollapsed && historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').sort((a, b) => a.time.localeCompare(b.time)).map((o, idx) => {
                         const ph   = resolvePhase(o, getLog);
                         const log  = getLog(o);
                         const isBuy = o.trend === 'call';
@@ -2720,6 +2736,18 @@ const SettingsCard: React.FC<{
   const [amtFocused, setAmtFocused] = useState(false);
   // Sync amtStr when amount changes externally (e.g. quick-pick)
   useEffect(()=>{ setAmtStr(amount > 0 ? String(amount) : ''); },[amount]);
+  // Local string state for period input — avoids number-input editing issues on mobile
+  const [periodStr, setPeriodStr] = useState(String(indicatorPeriod));
+  const [periodFocused, setPeriodFocused] = useState(false);
+  // Sync periodStr when indicatorPeriod changes externally
+  useEffect(()=>{ setPeriodStr(String(indicatorPeriod)); },[indicatorPeriod]);
+  // Local string state for RSI overbought / oversold
+  const [obStr, setObStr] = useState(String(rsiOverbought));
+  const [obFocused, setObFocused] = useState(false);
+  const [osStr, setOsStr] = useState(String(rsiOversold));
+  const [osFocused, setOsFocused] = useState(false);
+  useEffect(()=>{ setObStr(String(rsiOverbought)); },[rsiOverbought]);
+  useEffect(()=>{ setOsStr(String(rsiOversold)); },[rsiOversold]);
   // SELALU formatted dengan titik ribuan — live saat mengetik, nilai internal tetap integer
   const amtDisplay = amtStr && parseInt(amtStr,10) > 0
     ? parseInt(amtStr,10).toLocaleString('id-ID')
@@ -2888,7 +2916,52 @@ const SettingsCard: React.FC<{
                   </div>
                 </div>
                 <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-                  <div><FL>Period</FL><input type="number" className="ds-input" value={indicatorPeriod} onChange={e=>onIndicatorPeriodChange(+e.target.value||14)} disabled={disabled} min={2} max={200}/></div>
+                  <div><FL>Period</FL>
+                    <div style={{ position:'relative' }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="off"
+                        className="ds-input"
+                        value={periodFocused ? periodStr : indicatorPeriod}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/[^0-9]/g, '');
+                          setPeriodStr(raw);
+                          const n = parseInt(raw, 10);
+                          if (!isNaN(n) && n >= 2 && n <= 200) onIndicatorPeriodChange(n);
+                        }}
+                        onFocus={e => { setPeriodFocused(true); setPeriodStr(String(indicatorPeriod)); setTimeout(()=>e.target.select(),0); }}
+                        onBlur={() => {
+                          setPeriodFocused(false);
+                          const n = parseInt(periodStr, 10);
+                          if (isNaN(n) || n < 2) { onIndicatorPeriodChange(2); setPeriodStr('2'); }
+                          else if (n > 200) { onIndicatorPeriodChange(200); setPeriodStr('200'); }
+                          else { onIndicatorPeriodChange(n); }
+                        }}
+                        onKeyDown={e => { if(e.key==='Enter'||(e as any).keyCode===13) e.currentTarget.blur(); }}
+                        disabled={disabled}
+                        placeholder="14"
+                        style={{ paddingRight: 40 }}
+                      />
+                      <button
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); (e.currentTarget.previousElementSibling as HTMLInputElement|null)?.blur(); }}
+                        disabled={disabled}
+                        style={{
+                          position:'absolute', right:6, top:'50%', transform:'translateY(-50%)',
+                          width:28, height:24, borderRadius:6,
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                          background: periodFocused ? `${C.orange}22` : C.card2,
+                          border: `1px solid ${periodFocused ? `${C.orange}55` : C.bdr}`,
+                          color: periodFocused ? C.orange : C.muted,
+                          cursor:'pointer', transition:'all 0.15s', flexShrink:0,
+                          fontSize:16, fontWeight:700, lineHeight:1,
+                        }}
+                        title="Konfirmasi"
+                      >↵</button>
+                    </div>
+                  </div>
                   <div><FL>{T('dashboard.indicator.sensitivity')}</FL>
                     <div style={{ display:'flex',gap:4 }}>
                       {[0.1,0.5,1,5,10].map(s=>(<button key={s} disabled={disabled} onClick={()=>onSensitivityChange(s)} style={{ flex:1,padding:'6px 0',borderRadius:6,fontSize:10,fontWeight:700,cursor:'pointer',background:indicatorSensitivity===s?`${C.orange}18`:C.card2,border:`1px solid ${indicatorSensitivity===s?`${C.orange}55`:C.bdr}`,color:indicatorSensitivity===s?C.orange:C.muted }}>{s}</button>))}
@@ -2897,8 +2970,30 @@ const SettingsCard: React.FC<{
                 </div>
                 {indicatorType==='RSI'&&(
                   <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-                    <div><FL>Overbought</FL><input type="number" className="ds-input" value={rsiOverbought} onChange={e=>onOverboughtChange(+e.target.value||70)} disabled={disabled} min={50} max={100}/></div>
-                    <div><FL>Oversold</FL><input type="number" className="ds-input" value={rsiOversold} onChange={e=>onOversoldChange(+e.target.value||30)} disabled={disabled} min={0} max={50}/></div>
+                    <div><FL>Overbought</FL>
+                      <input
+                        type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off"
+                        className="ds-input"
+                        value={obFocused ? obStr : rsiOverbought}
+                        onChange={e => { const raw=e.target.value.replace(/[^0-9]/g,''); setObStr(raw); const n=parseInt(raw,10); if(!isNaN(n)&&n>=50&&n<=100) onOverboughtChange(n); }}
+                        onFocus={e => { setObFocused(true); setObStr(String(rsiOverbought)); setTimeout(()=>e.target.select(),0); }}
+                        onBlur={() => { setObFocused(false); const n=parseInt(obStr,10); if(isNaN(n)||n<50){onOverboughtChange(50);setObStr('50');}else if(n>100){onOverboughtChange(100);setObStr('100');}else onOverboughtChange(n); }}
+                        onKeyDown={e=>{ if(e.key==='Enter') e.currentTarget.blur(); }}
+                        disabled={disabled} placeholder="70"
+                      />
+                    </div>
+                    <div><FL>Oversold</FL>
+                      <input
+                        type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off"
+                        className="ds-input"
+                        value={osFocused ? osStr : rsiOversold}
+                        onChange={e => { const raw=e.target.value.replace(/[^0-9]/g,''); setOsStr(raw); const n=parseInt(raw,10); if(!isNaN(n)&&n>=0&&n<=50) onOversoldChange(n); }}
+                        onFocus={e => { setOsFocused(true); setOsStr(String(rsiOversold)); setTimeout(()=>e.target.select(),0); }}
+                        onBlur={() => { setOsFocused(false); const n=parseInt(osStr,10); if(isNaN(n)||n<0){onOversoldChange(0);setOsStr('0');}else if(n>50){onOversoldChange(50);setOsStr('50');}else onOversoldChange(n); }}
+                        onKeyDown={e=>{ if(e.key==='Enter') e.currentTarget.blur(); }}
+                        disabled={disabled} placeholder="30"
+                      />
+                    </div>
                   </div>
                 )}
                 <div><FL>{T('dashboard.indicator.amountPerOrder')}</FL>
