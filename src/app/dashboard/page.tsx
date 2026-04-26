@@ -986,7 +986,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   const [clearLoading,setClearLoading] = useState(false);
   const [pasteStatus,setPasteStatus]   = useState<'idle'|'ok'|'err'>('idle');
   const [view,setView]                = useState<'list'|'input'>('list');
-  const [historyCollapsed,setHistoryCollapsed] = useState(false);
+  const [historyCollapsed,setHistoryCollapsed] = useState(true);
   const scrollRef      = useRef<HTMLDivElement>(null);
   const monitoringRef  = useRef<HTMLDivElement>(null);
   const pendingRef     = useRef<HTMLDivElement>(null);
@@ -3058,7 +3058,7 @@ const SettingsCard: React.FC<{
                 <Radio style={{ width:14,height:14,color:C.sky,flexShrink:0,marginTop:2 }}/>
                 <div>
                   <p style={{ fontSize:11,fontWeight:600,color:C.sky,marginBottom:4 }}>Mode AI Signal</p>
-                  <p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>Terima sinyal CALL/PUT dari Telegram/AI via endpoint <code style={{ color:C.sky }}>/aisignal/signal</code></p>
+                  <p style={{ fontSize:10,color:C.muted,lineHeight:1.5 }}>System sedang mengkonfigurasi sinyal AI</p>
                 </div>
               </div>
             )}
@@ -4917,7 +4917,10 @@ export default function DashboardPage() {
               ) : isActiveMode && tradingMode === 'schedule' ? (
                 <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
                   {(() => {
-                    const pending = scheduleOrders.filter(o => !o.isExecuted && !o.isSkipped);
+                    // Sort by time chronologically first, so slot +1/+2 always points to the next upcoming signal
+                    const pending = scheduleOrders
+                      .filter(o => !o.isExecuted && !o.isSkipped)
+                      .sort((a, b) => a.time.localeCompare(b.time));
                     const ac = modeAccent('schedule');
                     const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
                     let activeIdx = 0, minDiff = Infinity;
@@ -4927,9 +4930,10 @@ export default function DashboardPage() {
                       if (d < 0) d += 24 * 60;
                       if (d < minDiff) { minDiff = d; activeIdx = i; }
                     });
+                    // No wrap-around — hanya tampilkan signal berikutnya ke depan, bukan putar balik ke sinyal lama
                     const slots = [0, 1, 2].map(offset => {
-                      const idx = pending.length > 0 ? (activeIdx + offset) % pending.length : -1;
-                      return idx >= 0 ? { order: pending[idx], offset } : null;
+                      const idx = activeIdx + offset;
+                      return idx < pending.length ? { order: pending[idx], offset } : null;
                     }).filter(Boolean) as { order: ScheduleOrder; offset: number }[];
 
                     const martStep   = (scheduleStatus as any)?.alwaysSignalStep ?? 0;
