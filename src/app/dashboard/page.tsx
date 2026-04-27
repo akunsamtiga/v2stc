@@ -1128,13 +1128,13 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
               {/* Clear Pending */}
               <button
                 onClick={handleClear}
-                disabled={isBusy||pendingOrders.length===0||isRunning}
+                disabled={isBusy||pendingOrders.length===0}
                 style={{
                   flex:1,height:36,display:'flex',alignItems:'center',justifyContent:'center',gap:6,
-                  borderRadius:12,cursor:(isBusy||pendingOrders.length===0||isRunning)?'not-allowed':'pointer',
+                  borderRadius:12,cursor:(isBusy||pendingOrders.length===0)?'not-allowed':'pointer',
                   background:`${C.coral}1a`,border:`1px solid ${C.coral}33`,color:C.coral,
                   fontSize:12,fontWeight:500,
-                  opacity:(isBusy||pendingOrders.length===0||isRunning)?0.35:1,
+                  opacity:(isBusy||pendingOrders.length===0)?0.35:1,
                 }}
               >
                 {clearLoading
@@ -1426,15 +1426,14 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                             }}>{isBuy?'BUY':'SELL'}</span>
                             <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
                               {i === 0 && <span style={{fontSize:10,color:C.muted}}>Menunggu…</span>}
-                              {!isRunning && (
-                                <button onClick={()=>onDelete(o.id)} style={{
-                                  width:28,height:28,borderRadius:'50%',flexShrink:0,
-                                  display:'flex',alignItems:'center',justifyContent:'center',
-                                  background:`${C.coral}18`,border:'none',cursor:'pointer',color:C.coral,
-                                }}>
-                                  <Trash2 style={{width:12,height:12}}/>
-                                </button>
-                              )}
+                              <button onClick={()=>onDelete(o.id)} disabled={isBusy} style={{
+                                width:28,height:28,borderRadius:'50%',flexShrink:0,
+                                display:'flex',alignItems:'center',justifyContent:'center',
+                                background:`${C.coral}18`,border:'none',cursor:isBusy?'not-allowed':'pointer',color:C.coral,
+                                opacity:isBusy?0.4:1,
+                              }}>
+                                <Trash2 style={{width:12,height:12}}/>
+                              </button>
                             </div>
                           </div>
                         );
@@ -3921,9 +3920,9 @@ export default function DashboardPage() {
   const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
 
   const handleModeChange = (m:TradingMode)=>{
-    if(m===tradingMode)return;
     if(blockedModes.includes(m)){showBlock(T('dashboard.modePicker.stopActiveFirst'));return;}
-    setTradingMode(m);setError(null);
+    if(m!==tradingMode) setTradingMode(m);
+    setError(null);
     setIsModeChosen(true);
   };
 
