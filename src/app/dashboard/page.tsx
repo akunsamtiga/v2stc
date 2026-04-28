@@ -213,7 +213,7 @@ const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:bo
     <div style={{
       borderRadius:16,overflow:'hidden',height:'100%',
       background:C.card,
-      border:`1px solid rgba(16,185,129,0.40)`,
+      border:`1px solid rgba(255,255,255,0.20)`,
       boxShadow:C.bg==='#161616'?`0 4px 18px rgba(0,0,0,0.28)`:`0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)`,
       padding:'14px 14px 10px',
       display:'flex',flexDirection:'column',gap:6,
@@ -222,7 +222,7 @@ const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:bo
       <div style={{
         height:46,borderRadius:12,
         background:C.card2,
-        border:`1px solid rgba(16,185,129,0.35)`,
+        border:`1px solid rgba(255,255,255,0.14)`,
         display:'flex',alignItems:'center',justifyContent:'center',
       }}>
         <p suppressHydrationWarning style={{
@@ -264,7 +264,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
     <div style={{
       width:'100%',borderRadius:14,overflow:'hidden',
       background:C.bg,
-      border:`1px solid ${C.cyan}40`,
+      border:`1px solid rgba(255,255,255,0.20)`,
       boxShadow:C.bg==='#161616'
         ?`0 2px 0 ${C.cyan}08 inset, 0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.25)`
         :`0 2px 0 ${C.cyan}08 inset, 0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)`,
@@ -275,7 +275,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
       <div style={{
         borderRadius:10,
         background:C.card2,
-        border:`1px solid rgba(16,185,129,0.32)`,
+        border:`1px solid rgba(255,255,255,0.14)`,
         display:'flex',alignItems:'center',justifyContent:'center',
         padding:'7px 0',
       }}>
@@ -979,13 +979,14 @@ function resolvePhase(o: ScheduleOrder, getLog: (o:ScheduleOrder)=>ExecutionLog|
   return 'monitoring';
 }
 
-const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];logs:ExecutionLog[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>Promise<void>;loading:boolean;isRunning?:boolean;historyOrders:ScheduleOrder[];historyIdsRef:React.MutableRefObject<Set<string>>}> =
-({open,onClose,orders,logs,onAdd,onDelete,onClear,loading,isRunning,historyOrders,historyIdsRef}) => {
+const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOrder[];logs:ExecutionLog[];onAdd:(s:string)=>Promise<void>;onDelete:(id:string)=>void;onClear:()=>Promise<void>;loading:boolean;isRunning?:boolean;historyOrders:ScheduleOrder[];historyIdsRef:React.MutableRefObject<Set<string>>;initialView?:'list'|'input'}> =
+({open,onClose,orders,logs,onAdd,onDelete,onClear,loading,isRunning,historyOrders,historyIdsRef,initialView='list'}) => {
   const { t } = useLanguage();
   const [input,setInput]              = useState('');
   const [clearLoading,setClearLoading] = useState(false);
   const [pasteStatus,setPasteStatus]   = useState<'idle'|'ok'|'err'>('idle');
-  const [view,setView]                = useState<'list'|'input'>('list');
+  const [view,setView]                = useState<'list'|'input'>(initialView);
+  useEffect(() => { if(open) setView(initialView); }, [open]); // eslint-disable-line
   const [historyCollapsed,setHistoryCollapsed] = useState(true);
   const scrollRef      = useRef<HTMLDivElement>(null);
   const monitoringRef  = useRef<HTMLDivElement>(null);
@@ -3541,6 +3542,7 @@ export default function DashboardPage() {
   const [error,setError] = useState<string|null>(null);
   const [actionLoading,setActionLoading] = useState(false);
   const [orderModalOpen,setOrderModalOpen] = useState(false);
+  const [orderModalInitialView,setOrderModalInitialView] = useState<'list'|'input'>('list');
   const [addOrderLoading,setAddOrderLoading] = useState(false);
   // ✅ FIX: Deteksi device SEKALI saat mount, tidak pakai resize listener
   // (resize listener → re-render saat keyboard muncul di mobile)
@@ -3924,6 +3926,10 @@ export default function DashboardPage() {
     if(m!==tradingMode) setTradingMode(m);
     setError(null);
     setIsModeChosen(true);
+    if(m==='schedule'){
+      setOrderModalInitialView('input');
+      setOrderModalOpen(true);
+    }
   };
 
   const handleStart = async()=>{
@@ -4261,6 +4267,7 @@ export default function DashboardPage() {
         isRunning={isSchedRunning||isSchedPaused}
         historyOrders={scheduleHistoryOrders}
         historyIdsRef={scheduleHistoryIdsRef}
+        initialView={orderModalInitialView}
       />
       {deviceType==='mobile'&&(
         <MobileSessionSheet
@@ -4776,7 +4783,7 @@ export default function DashboardPage() {
             {TopCards}
             <div style={{display:'flex',flexDirection:'row',gap:g,alignItems:'stretch'}}>
               {/* LEFT: chart card — stretches to match right column height */}
-              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${isDarkMode?'rgba(16,185,129,0.38)':'rgba(5,150,105,0.28)'}`,boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`}}>
+              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid rgba(255,255,255,0.20)`,boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`}}>
                 {/* Clock header inside chart card */}
                 <div style={{
                   marginBottom:8,
