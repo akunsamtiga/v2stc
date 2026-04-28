@@ -3950,7 +3950,9 @@ export default function DashboardPage() {
     if(m!==tradingMode) setTradingMode(m);
     setError(null);
     setIsModeChosen(true);
-    if(m==='schedule'){
+    // ✅ FIX: Buka input popup hanya jika belum ada pending schedule.
+    // Jika sudah ada schedule → mode langsung aktif normal tanpa popup input.
+    if(m==='schedule' && pendingOrders.length === 0){
       setOrderModalInitialView('input');
       setOrderModalOpen(true);
     }
@@ -5067,7 +5069,7 @@ export default function DashboardPage() {
                           {/* Card footer — view session button */}
                           <div style={{padding:'0 12px 10px',flexShrink:0,borderTop:`1px solid ${C.bdr}`,paddingTop:8}}>
                             <button
-                              onClick={() => setOrderModalOpen(true)}
+                              onClick={() => { setOrderModalInitialView('list'); setOrderModalOpen(true); }}
                               style={{
                                 width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:5,
                                 padding:'7px 0',borderRadius:8,
