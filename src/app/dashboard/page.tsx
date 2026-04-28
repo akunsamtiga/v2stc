@@ -987,7 +987,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
   const [pasteStatus,setPasteStatus]   = useState<'idle'|'ok'|'err'>('idle');
   const [view,setView]                = useState<'list'|'input'>(initialView);
   useEffect(() => { if(open) setView(initialView); }, [open]); // eslint-disable-line
-  const [historyCollapsed,setHistoryCollapsed] = useState(true);
+  const [historyCollapsed,setHistoryCollapsed] = useState(false); // default expanded — tampil 3 item terakhir di atas monitoring
   const scrollRef      = useRef<HTMLDivElement>(null);
   const monitoringRef  = useRef<HTMLDivElement>(null);
   const pendingRef     = useRef<HTMLDivElement>(null);
@@ -1293,42 +1293,66 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                           <ChevronDown style={{width:10,height:10}}/>
                         </span>
                       </button>
-                      {!historyCollapsed && historyOrders.filter(o => resolvePhase(o, getLog) !== 'skipped').sort((a, b) => a.time.localeCompare(b.time)).map((o, idx) => {
-                        const ph   = resolvePhase(o, getLog);
-                        const log  = getLog(o);
-                        const isBuy = o.trend === 'call';
-                        const ms   = o.martingaleState;
-                        const profit = log?.profit;
-                        const phaseColor = ph==='win'?C.cyan : ph==='lose'?C.coral : ph==='skipped'?C.amber : C.muted;
-                        const phaseBg   = ph==='win'?`${C.cyan}08` : ph==='lose'?`${C.coral}08` : `${C.amber}06`;
-                        const phaseBdr  = ph==='win'?`${C.cyan}25` : ph==='lose'?`${C.coral}25` : `${C.amber}20`;
-                        const phaseIcon = ph==='win'?'✓' : ph==='lose'?'✗' : ph==='skipped'?'⊘' : ph==='martingale'?`K${ms?.currentStep??1}` : '◎';
-                        const phaseLabel = ph==='win'?'WIN' : ph==='lose'?'LOSE' : ph==='skipped'?'SKIP' : ph==='martingale'?`K${ms?.currentStep??1}` : 'DONE';
+                      {!historyCollapsed && (()=>{
+                        const allHistory = historyOrders
+                          .filter(o => resolvePhase(o, getLog) !== 'skipped')
+                          .sort((a, b) => a.time.localeCompare(b.time));
+                        // Tampilkan hanya 3 item terakhir (paling dekat dengan monitoring)
+                        const SHOW_LAST = 3;
+                        const hiddenCount = Math.max(0, allHistory.length - SHOW_LAST);
+                        const visibleHistory = allHistory.slice(-SHOW_LAST);
                         return (
-                          <div key={`hist-${o.id}`} style={{
-                            display:'flex',alignItems:'center',gap:8,padding:'8px 10px',
-                            borderRadius:10,background:phaseBg,border:`1px solid ${phaseBdr}`,
-                            marginBottom:4,opacity:0.85,
-                          }}>
-                            <div style={{width:20,height:20,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${phaseColor}12`,border:`1px solid ${phaseColor}28`}}>
-                              <span style={{fontSize:9,fontWeight:700,color:phaseColor}}>{idx+1}</span>
-                            </div>
-                            <span style={{fontSize:13,fontWeight:600,color:C.sub,fontFamily:'monospace'}}>{o.time}</span>
-                            <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,background:isBuy?`${C.cyan}15`:`${C.coral}15`,color:isBuy?C.cyan:C.coral,border:`1px solid ${isBuy?C.cyan:C.coral}25`,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
-                            {ms && (ms.currentStep??0) > 0 && (
-                              <span style={{fontSize:8,color:C.amber,fontFamily:'monospace',flexShrink:0}}>K{ms.currentStep}</span>
-                            )}
-                            <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
-                              {profit != null && (
-                                <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',color:profit>=0?C.cyan:C.coral}}>
-                                  {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
+                          <>
+                            {/* Indikator item tersembunyi — tap buka modal history penuh jika diperlukan */}
+                            {hiddenCount > 0 && (
+                              <div style={{
+                                display:'flex',alignItems:'center',gap:6,padding:'4px 10px',marginBottom:4,
+                                borderRadius:8,background:`${C.muted}08`,border:`1px dashed ${C.bdr}`,
+                              }}>
+                                <span style={{fontSize:9,color:C.muted,fontStyle:'italic'}}>
+                                  ...dan {hiddenCount} signal sebelumnya
                                 </span>
-                              )}
-                              <span style={{fontSize:8,fontWeight:700,padding:'1px 6px',borderRadius:99,background:`${phaseColor}15`,border:`1px solid ${phaseColor}28`,color:phaseColor}}>{phaseLabel}</span>
-                            </div>
-                          </div>
+                              </div>
+                            )}
+                            {visibleHistory.map((o, idx) => {
+                              const ph   = resolvePhase(o, getLog);
+                              const log  = getLog(o);
+                              const isBuy = o.trend === 'call';
+                              const ms   = o.martingaleState;
+                              const profit = log?.profit;
+                              const phaseColor = ph==='win'?C.cyan : ph==='lose'?C.coral : ph==='skipped'?C.amber : C.muted;
+                              const phaseBg   = ph==='win'?`${C.cyan}08` : ph==='lose'?`${C.coral}08` : `${C.amber}06`;
+                              const phaseBdr  = ph==='win'?`${C.cyan}25` : ph==='lose'?`${C.coral}25` : `${C.amber}20`;
+                              const phaseLabel = ph==='win'?'WIN' : ph==='lose'?'LOSE' : ph==='skipped'?'SKIP' : ph==='martingale'?`K${ms?.currentStep??1}` : 'DONE';
+                              const globalIdx  = hiddenCount + idx + 1; // nomor urut global
+                              return (
+                                <div key={`hist-${o.id}`} style={{
+                                  display:'flex',alignItems:'center',gap:8,padding:'8px 10px',
+                                  borderRadius:10,background:phaseBg,border:`1px solid ${phaseBdr}`,
+                                  marginBottom:4,opacity:0.85,
+                                }}>
+                                  <div style={{width:20,height:20,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${phaseColor}12`,border:`1px solid ${phaseColor}28`}}>
+                                    <span style={{fontSize:9,fontWeight:700,color:phaseColor}}>{globalIdx}</span>
+                                  </div>
+                                  <span style={{fontSize:13,fontWeight:600,color:C.sub,fontFamily:'monospace'}}>{o.time}</span>
+                                  <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:4,background:isBuy?`${C.cyan}15`:`${C.coral}15`,color:isBuy?C.cyan:C.coral,border:`1px solid ${isBuy?C.cyan:C.coral}25`,flexShrink:0}}>{isBuy?'BUY':'SELL'}</span>
+                                  {ms && (ms.currentStep??0) > 0 && (
+                                    <span style={{fontSize:8,color:C.amber,fontFamily:'monospace',flexShrink:0}}>K{ms.currentStep}</span>
+                                  )}
+                                  <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+                                    {profit != null && (
+                                      <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',color:profit>=0?C.cyan:C.coral}}>
+                                        {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
+                                      </span>
+                                    )}
+                                    <span style={{fontSize:8,fontWeight:700,padding:'1px 6px',borderRadius:99,background:`${phaseColor}15`,border:`1px solid ${phaseColor}28`,color:phaseColor}}>{phaseLabel}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </>
                         );
-                      })}
+                      })()}
                     </div>
                   )}
 
