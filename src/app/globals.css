@@ -166,6 +166,10 @@ body::before {
   opacity: 0.3;
   pointer-events: none;
   z-index: 0;
+  /* ✅ FIX: Promote ke GPU compositing layer sendiri agar tidak
+     ikut repaint saat scroll — krusial untuk performa mobile */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 body::after {
@@ -174,6 +178,9 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
+  /* ✅ FIX: GPU layer agar animasi shimmer tidak block scroll thread */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 /* Dark mode gradient — subtle, befitting Kotlin's #161616 base */
@@ -207,6 +214,15 @@ body:not([data-theme="light"])::after {
     );
   background-size: 200% 100%, 100% 100%, 100% 100%, 100% 100%;
   animation: shimmer-h 22s ease-in-out infinite;
+  /* ✅ FIX: Isolate layer agar animasi tidak trigger repaint konten lain */
+  contain: strict;
+}
+
+/* ✅ FIX: Matikan animasi berat di mode hemat baterai Android */
+@media (prefers-reduced-motion: reduce) {
+  body:not([data-theme="light"])::after {
+    animation: none;
+  }
 }
 
 /* Light mode gradient */

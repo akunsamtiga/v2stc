@@ -19,7 +19,9 @@
     const router   = useRouter();
     const pathname = usePathname();
     const [ready, setReady] = useState(false);
-    const [fadeOut, setFadeOut] = useState(false);  // State untuk fade animation
+    const [fadeOut, setFadeOut] = useState(false);  // State untuk fade animation splash
+    // ✅ FIX: Curtain terpisah — hilang hanya setelah double-RAF (children sudah paint)
+    const [pageVisible, setPageVisible] = useState(false);
     const authCheckRef = useRef(false);
     const splashStartRef = useRef(Date.now());
 
@@ -125,16 +127,19 @@
       return () => window.removeEventListener('stc:unauthorized', handleUnauthorized);
     }, [router]);
 
-    // Hide initial HTML splash screen when React is ready
+    // ✅ FIX: Tunggu double-RAF setelah children mount agar tidak ada flash grid
     useEffect(() => {
-      if (ready) {
-        const htmlSplash = document.getElementById('__stc_splash');
-        if (htmlSplash) {
-          htmlSplash.classList.add('hide');
-          // Remove from DOM after fade
-          setTimeout(() => htmlSplash.remove(), 350);
-        }
-      }
+      if (!ready) return;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setPageVisible(true);
+          const htmlSplash = document.getElementById('__stc_splash');
+          if (htmlSplash) {
+            htmlSplash.classList.add('hide');
+            setTimeout(() => htmlSplash.remove(), 500);
+          }
+        });
+      });
     }, [ready]);
 
     if (!ready) {
@@ -253,12 +258,30 @@
                 margin: 0,
                 padding: 0,
                 height: '100dvh',
-                overflowY: 'auto',
-                WebkitOverflowScrolling: 'touch',
+                overflowY: 'scroll',
+                willChange: 'scroll-position',
+                transform: 'translateZ(0)',
+                contain: 'strict',
+                // WebkitOverflowScrolling removed — deprecated, causes jank on modern WebView
               } as React.CSSProperties}>
               {children}
             </main>
             {!isPublic && <BottomNav />}
+
+            {/* ✅ FIX: Curtain overlay — menutupi flash grid background saat children belum paint.
+                Selalu render, opacity berubah 1→0 saat pageVisible=true (smooth fade 250ms).
+                pointerEvents: none agar tidak block interaksi user. */}
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: '#0a0a0a',
+                zIndex: 9998,
+                pointerEvents: 'none',
+                opacity: pageVisible ? 0 : 1,
+                transition: 'opacity 0.25s ease-out',
+              }}
+            />
           </ThemeWrapper>
         </LanguageProvider>
       </DarkModeProvider>

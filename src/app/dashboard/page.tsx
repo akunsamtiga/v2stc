@@ -45,35 +45,35 @@ function getColors(isDark: boolean) {
   // borderColor=#D6DADF
   return {
     // Surfaces
-    bg:    isDark ? '#1C1C1C' : '#F8F9FA',   // Kotlin: background
-    card:  isDark ? '#313131' : '#FFFFFF',   // Kotlin: cardBackground ~#323232, softer
-    card2: isDark ? '#252525' : '#EBEBEB',   // Kotlin: surface / surface3
+    bg:    isDark ? '#111111' : '#EAECEF',   // light: lebih terang agar zona waktu bg tidak terlalu gelap
+    card:  isDark ? '#1C1C1C' : '#FFFFFF',
+    card2: isDark ? '#242424' : '#F0F2F5',   // light: lebih terang dari bg tapi beda dari card
     // Borders
-    bdr:   isDark ? 'rgba(88,88,88,0.88)' : 'rgba(214,218,223,0.90)', // Kotlin: #494949 / #D6DADF
-    bdrAct:'rgba(16,185,129,0.72)',
-    // Primary accent — successColor in Kotlin
-    cyan:  isDark ? '#10B981' : '#059669',   // Kotlin: successColor dark / light
-    cyand: isDark ? 'rgba(16,185,129,0.18)' : 'rgba(5,150,105,0.10)',
+    bdr:   isDark ? 'rgba(255,255,255,0.28)' : '#9CA3AF',
+    bdrAct:'rgba(16,185,129,0.80)',
+    // Primary accent
+    cyan:  isDark ? '#22D3A0' : '#047857',   // light: lebih gelap agar kontras di bg putih
+    cyand: isDark ? 'rgba(34,211,160,0.20)' : 'rgba(4,120,87,0.10)',
     // Error / loss
-    coral: isDark ? '#EF4444' : '#DC2626',   // Kotlin: errorColor
-    cord:  isDark ? 'rgba(239,68,68,0.16)'  : 'rgba(220,38,38,0.09)',
+    coral: isDark ? '#F87171' : '#B91C1C',   // light: lebih gelap
+    cord:  isDark ? 'rgba(248,113,113,0.18)' : 'rgba(185,28,28,0.10)',
     // Warning / martingale
-    amber: isDark ? '#FBBF24' : '#D97706',   // Kotlin: warningColor
-    ambd:  isDark ? 'rgba(251,191,36,0.15)' : 'rgba(217,119,6,0.09)',
+    amber: isDark ? '#FCD34D' : '#B45309',   // light: lebih gelap agar terbaca
+    ambd:  isDark ? 'rgba(252,211,77,0.18)'  : 'rgba(180,83,9,0.10)',
     // Misc accent colors
-    violet: isDark ? '#C96CF5' : '#BF5AF2',
-    vltd:  isDark ? 'rgba(201,108,245,0.14)' : 'rgba(191,90,242,0.09)',
-    sky:   isDark ? '#34D399' : '#34D399',   // emerald-400 (accentProfit area)
-    skyd:  isDark ? 'rgba(52,211,153,0.14)' : 'rgba(52,211,153,0.09)',
+    violet: isDark ? '#D37EFF' : '#7C3AED',
+    vltd:  isDark ? 'rgba(211,126,255,0.16)' : 'rgba(124,58,237,0.10)',
+    sky:   isDark ? '#4ADE80' : '#15803D',
+    skyd:  isDark ? 'rgba(74,222,128,0.16)'  : 'rgba(21,128,61,0.10)',
     orange:'#FF6B35',
-    orgd:  isDark ? 'rgba(255,107,53,0.14)' : 'rgba(255,107,53,0.09)',
-    pink:  '#FF375F',
-    pinkd: isDark ? 'rgba(255,55,95,0.14)'  : 'rgba(255,55,95,0.09)',
+    orgd:  isDark ? 'rgba(255,107,53,0.16)'  : 'rgba(255,107,53,0.10)',
+    pink:  isDark ? '#FF375F' : '#BE185D',
+    pinkd: isDark ? 'rgba(255,55,95,0.16)'   : 'rgba(190,24,93,0.10)',
     // Text
-    text:  isDark ? '#EBEBEB' : '#1F2937',   // Kotlin: textPrimary
-    sub:   isDark ? '#BAC1CB' : '#6B7280',   // Kotlin: textSecondary
-    muted: isDark ? 'rgba(126,126,126,0.80)' : '#9CA3AF', // Kotlin: textMuted
-    faint: isDark ? 'rgba(16,185,129,0.08)'  : 'rgba(5,150,105,0.05)',
+    text:  isDark ? '#F0F4FF' : '#0D1117',
+    sub:   isDark ? '#9BAAC4' : '#2D3748',   // light: lebih gelap
+    muted: isDark ? 'rgba(155,170,196,0.70)' : '#4A5568',   // light: lebih gelap agar terbaca
+    faint: isDark ? 'rgba(34,211,160,0.08)'  : 'rgba(4,120,87,0.06)',
   };
 }
 
@@ -213,7 +213,7 @@ const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:bo
     <div style={{
       borderRadius:16,overflow:'hidden',height:'100%',
       background:C.card,
-      border:`1px solid rgba(255,255,255,0.20)`,
+      border:`1px solid ${C.bdr}`,
       boxShadow:C.bg==='#161616'?`0 4px 18px rgba(0,0,0,0.28)`:`0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)`,
       padding:'14px 14px 10px',
       display:'flex',flexDirection:'column',gap:6,
@@ -222,7 +222,7 @@ const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:bo
       <div style={{
         height:46,borderRadius:12,
         background:C.card2,
-        border:`1px solid rgba(255,255,255,0.14)`,
+        border:`1px solid ${C.bdr}`,
         display:'flex',alignItems:'center',justifyContent:'center',
       }}>
         <p suppressHydrationWarning style={{
@@ -264,7 +264,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
     <div style={{
       width:'100%',borderRadius:14,overflow:'hidden',
       background:C.bg,
-      border:`1px solid rgba(255,255,255,0.20)`,
+      border:`1px solid ${C.bdr}`,
       boxShadow:C.bg==='#161616'
         ?`0 2px 0 ${C.cyan}08 inset, 0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.25)`
         :`0 2px 0 ${C.cyan}08 inset, 0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)`,
@@ -275,7 +275,7 @@ const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunn
       <div style={{
         borderRadius:10,
         background:C.card2,
-        border:`1px solid rgba(255,255,255,0.14)`,
+        border:`1px solid ${C.bdr}`,
         display:'flex',alignItems:'center',justifyContent:'center',
         padding:'7px 0',
       }}>
@@ -815,17 +815,17 @@ const PickerModal: React.FC<{open:boolean;onClose:()=>void;title:string;options:
   
   // Theme-aware colors
   const modalBg = isDark 
-    ? 'linear-gradient(160deg,#18181c 0%,#101012 100%)'
-    : 'linear-gradient(160deg,#ffffff 0%,#f8f9fa 100%)';
-  const headerBorder = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-  const closeBtnBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
-  const closeBtnBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-  const closeBtnColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
-  const itemBorder = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
-  const iconBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-  const iconBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-  const iconColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
-  const radioBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+    ? 'linear-gradient(160deg,#242424 0%,#1C1C1C 100%)'
+    : 'linear-gradient(160deg,#ffffff 0%,#F2F4F8 100%)';
+  const headerBorder = isDark ? 'rgba(255,255,255,0.12)' : '#9CA3AF';
+  const closeBtnBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const closeBtnBorder = isDark ? 'rgba(255,255,255,0.16)' : '#9CA3AF';
+  const closeBtnColor = isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)';
+  const itemBorder = isDark ? 'rgba(255,255,255,0.10)' : '#9CA3AF';
+  const iconBg = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)';
+  const iconBorder = isDark ? 'rgba(255,255,255,0.18)' : '#9CA3AF';
+  const iconColor = isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)';
+  const radioBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
   
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',padding:'16px',animation:'fade-in 0.15s ease'}}>
@@ -1065,7 +1065,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
         background:C.bg,
         borderRadius:24,
         border:`0.4px solid rgba(52,211,153,0.40)`,
-        boxShadow:'0 32px 80px rgba(0,0,0,0.70), 0 8px 24px rgba(0,0,0,0.50)',
+        boxShadow:`0 32px 80px rgba(0,0,0,${C.bg==='#111111'?'0.70':'0.18'}), 0 8px 24px rgba(0,0,0,${C.bg==='#111111'?'0.50':'0.10'})`,
         overflow:'hidden',
         animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
       }}>
@@ -1276,7 +1276,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                       <button
                         onClick={() => setHistoryCollapsed(v => !v)}
                         style={{
-                          width:'100%',display:'flex',alignItems:'center',gap:8,marginBottom:historyCollapsed?0:6,
+                          width:'100%',display:'flex',alignItems:'center',gap:8,marginBottom:historyCollapsed?6:6,
                           background:'transparent',border:'none',cursor:'pointer',padding:'2px 0',
                         }}
                       >
@@ -1288,31 +1288,37 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                           width:18,height:18,borderRadius:5,
                           background:`${C.muted}14`,border:`1px solid ${C.bdr}`,
                           color:C.muted,flexShrink:0,transition:'transform 0.2s',
-                          transform: historyCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                          transform: historyCollapsed ? 'rotate(180deg)' : 'rotate(0deg)',
                         }}>
                           <ChevronDown style={{width:10,height:10}}/>
                         </span>
                       </button>
-                      {!historyCollapsed && (()=>{
+                      {(()=>{
                         const allHistory = historyOrders
                           .filter(o => resolvePhase(o, getLog) !== 'skipped')
                           .sort((a, b) => a.time.localeCompare(b.time));
-                        // Tampilkan hanya 3 item terakhir (paling dekat dengan monitoring)
+                        // historyCollapsed=false (default) → tampilkan 3 item terbaru
+                        // historyCollapsed=true  (diklik)  → tampilkan SEMUA item
                         const SHOW_LAST = 3;
-                        const hiddenCount = Math.max(0, allHistory.length - SHOW_LAST);
-                        const visibleHistory = allHistory.slice(-SHOW_LAST);
+                        const showAll = historyCollapsed;
+                        const visibleHistory = showAll ? allHistory : allHistory.slice(-SHOW_LAST);
+                        const hiddenCount    = showAll ? 0 : Math.max(0, allHistory.length - SHOW_LAST);
                         return (
                           <>
-                            {/* Indikator item tersembunyi — tap buka modal history penuh jika diperlukan */}
+                            {/* Indikator item tersembunyi — muncul saat compact */}
                             {hiddenCount > 0 && (
-                              <div style={{
-                                display:'flex',alignItems:'center',gap:6,padding:'4px 10px',marginBottom:4,
-                                borderRadius:8,background:`${C.muted}08`,border:`1px dashed ${C.bdr}`,
-                              }}>
+                              <button
+                                onClick={() => setHistoryCollapsed(true)}
+                                style={{
+                                  width:'100%',display:'flex',alignItems:'center',gap:6,padding:'4px 10px',marginBottom:4,
+                                  borderRadius:8,background:`${C.muted}08`,border:`1px dashed ${C.bdr}`,
+                                  cursor:'pointer',
+                                }}
+                              >
                                 <span style={{fontSize:9,color:C.muted,fontStyle:'italic'}}>
-                                  ...dan {hiddenCount} signal sebelumnya
+                                  ...dan {hiddenCount} signal sebelumnya (tap untuk lihat semua)
                                 </span>
-                              </div>
+                              </button>
                             )}
                             {visibleHistory.map((o, idx) => {
                               const ph   = resolvePhase(o, getLog);
@@ -1324,7 +1330,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                               const phaseBg   = ph==='win'?`${C.cyan}08` : ph==='lose'?`${C.coral}08` : `${C.amber}06`;
                               const phaseBdr  = ph==='win'?`${C.cyan}25` : ph==='lose'?`${C.coral}25` : `${C.amber}20`;
                               const phaseLabel = ph==='win'?'WIN' : ph==='lose'?'LOSE' : ph==='skipped'?'SKIP' : ph==='martingale'?`K${ms?.currentStep??1}` : 'DONE';
-                              const globalIdx  = hiddenCount + idx + 1; // nomor urut global
+                              const globalIdx  = showAll ? idx + 1 : hiddenCount + idx + 1;
                               return (
                                 <div key={`hist-${o.id}`} style={{
                                   display:'flex',alignItems:'center',gap:8,padding:'8px 10px',
@@ -2260,7 +2266,7 @@ const MobileSessionSheet: React.FC<{
         background:C.bg,
         borderRadius:24,
         border:`0.4px solid ${ac}66`,
-        boxShadow:'0 32px 80px rgba(0,0,0,0.70), 0 8px 24px rgba(0,0,0,0.50)',
+        boxShadow:`0 32px 80px rgba(0,0,0,${C.bg==='#111111'?'0.70':'0.18'}), 0 8px 24px rgba(0,0,0,${C.bg==='#111111'?'0.50':'0.10'})`,
         overflow:'hidden',
         animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
       }}>
@@ -2339,7 +2345,7 @@ const ModePickerModal: React.FC<{
         borderRadius:20,
         border:`1px solid ${C.bdr}`,
         animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
-        boxShadow:'0 20px 60px rgba(0,0,0,0.6)',
+        boxShadow:`0 20px 60px rgba(0,0,0,${C.bg==='#111111'?'0.60':'0.14'})`,
         maxHeight:'85dvh',
         overflowY:'auto',
       }}>
@@ -2453,6 +2459,7 @@ const ModeSessionPanel: React.FC<{
   indicatorStatus, momentumStatus, fillHeight, compact, onViewSession, startStopButton,
   historyIdsRef,
 }) => {
+  const { isDarkMode } = useDarkMode();
   const [modePickerOpen, setModePickerOpen] = useState(false);
 
   const MODE_LIST = [
@@ -2474,7 +2481,7 @@ const ModeSessionPanel: React.FC<{
       overflow: 'hidden',
       padding: 0,
       background: locked ? undefined : C.card2,
-      boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)`,
+      boxShadow: isDarkMode ? `0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)` : 'none',
     }}>
       {/* Mode picker modal */}
       <ModePickerModal
@@ -2593,7 +2600,7 @@ const MartingaleDialog: React.FC<{
       <div style={{
         position:'relative',width:'100%',maxWidth:420,maxHeight:'88dvh',
         background:C.card, borderRadius:20,border:`1px solid ${C.bdr}`,
-        boxShadow:'0 20px 60px rgba(0,0,0,0.55)',
+        boxShadow:`0 20px 60px rgba(0,0,0,${C.bg==='#111111'?'0.55':'0.12'})`,
         overflow:'hidden',display:'flex',flexDirection:'column',
         animation:'slide-up 0.22s cubic-bezier(0.32,0.72,0,1)',
       }}>
@@ -2723,6 +2730,7 @@ const SettingsCard: React.FC<{
   onMomentumPatternsChange:(p:any)=>void;
   disabled?:boolean;
 }> = ({mode,assets,assetRic,onAssetChange,isDemo,onDemoChange,duration,onDurationChange,amount,onAmountChange,martingale,onMartingaleChange,ftTf,onFtTfChange,stopLoss,onSlChange,stopProfit,onSpChange,indicatorType,onIndicatorTypeChange,indicatorPeriod,onIndicatorPeriodChange,indicatorSensitivity,onSensitivityChange,rsiOverbought,onOverboughtChange,rsiOversold,onOversoldChange,momentumPatterns,onMomentumPatternsChange,disabled}) => {
+  const { isDarkMode } = useDarkMode();
   const [open,setOpen] = useState(!disabled);
   const [pickerOpen,setPickerOpen] = useState<string|null>(null);
   const [amtDrop,setAmtDrop] = useState(false);
@@ -2794,7 +2802,7 @@ const SettingsCard: React.FC<{
       <PickerModal open={pickerOpen==='duration'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.orderDuration')} options={durationOpts} value={String(duration)} onSelect={v=>onDurationChange(+v)}/>
       <PickerModal open={pickerOpen==='ftTf'} onClose={()=>setPickerOpen(null)} title={T('dashboard.settings.fastradeTimeframe')} options={FT_TF.map(t=>({value:t.value,label:t.label}))} value={ftTf} onSelect={v=>onFtTfChange(v as FastTradeTimeframe)}/>
 
-      <Card style={{ opacity:disabled?0.65:1, border:`1px solid ${C.bdr}`, boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)` }}>
+      <Card style={{ opacity:disabled?0.65:1, border:`1px solid ${C.bdr}`, boxShadow: isDarkMode ? `0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)` : 'none' }}>
         {/* Header */}
         <button onClick={()=>setOpen(!open)} style={{ width:'100%',display:'flex',alignItems:'center',gap:10,padding:'16px 18px',background:'transparent',border:'none',borderBottom:open?`1px solid ${C.bdr}`:'none',cursor:'pointer',textAlign:'left' }}>
             <div style={{ width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${ac}14`,border:`1px solid ${ac}30` }}>
@@ -2824,7 +2832,7 @@ const SettingsCard: React.FC<{
                 <button disabled={disabled} onClick={()=>setPickerOpen('actype')} style={{
                   flex:'0 0 auto',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',
                   background:`${acctCol}16`,border:`0.8px solid ${acctCol}55`,transition:'all 0.15s',minWidth:0,
-                  boxShadow:`0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)`,
+                  boxShadow: isDarkMode ? `0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` : 'none',
                 }}>
                   <Wallet style={{ width:14,height:14,color:acctCol,flexShrink:0 }}/>
                   <span style={{ fontSize:11,fontWeight:700,color:C.text,whiteSpace:'nowrap' }}>{isDemo?'Demo':'Real'}</span>
@@ -2833,14 +2841,14 @@ const SettingsCard: React.FC<{
                 {/* Durasi / Timeframe */}
                 <div style={{ flex:'0 0 auto',minWidth:0 }}>
                   {!isNewMode&&(mode==='fastrade'
-                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow:`0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` }}>
+                    ?<button disabled={disabled} onClick={()=>setPickerOpen('ftTf')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow: isDarkMode ? `0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` : 'none' }}>
                        <Clock style={{ width:13,height:13,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:11,fontWeight:600,color:C.text,flex:1,textAlign:'left',whiteSpace:'nowrap' }}>{FT_TF.find(t=>t.value===ftTf)?.label||''}</span><ChevronDown style={{ width:12,height:12,color:C.muted,flexShrink:0 }}/>
                      </button>
                     :mode==='ctc'
                     ?<div style={{ height:44,borderRadius:12,display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.faint,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
                        <Copy style={{ width:13,height:13,color:C.violet }}/><span style={{ fontSize:11,color:C.violet,whiteSpace:'nowrap' }}>1 Menit</span>
                      </div>
-                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow:`0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` }}>
+                    :<button disabled={disabled} onClick={()=>setPickerOpen('duration')} style={{ width:'100%',height:44,borderRadius:12,cursor:'pointer',display:'flex',alignItems:'center',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0,boxShadow: isDarkMode ? `0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` : 'none' }}>
                        <Clock style={{ width:13,height:13,color:C.muted,flexShrink:0 }}/><span style={{ fontSize:11,fontWeight:600,color:C.text,flex:1,textAlign:'left',whiteSpace:'nowrap' }}>{durationOpts.find(d=>d.value===String(duration))?.label||''}</span><ChevronDown style={{ width:12,height:12,color:C.muted,flexShrink:0 }}/>
                      </button>
                   )}
@@ -2904,7 +2912,7 @@ const SettingsCard: React.FC<{
                     >↵</button>
                   </div>
                   <div style={{ position:'relative',flexShrink:0 }}>
-                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer',boxShadow:`0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` }}>
+                    <button type="button" disabled={disabled} onClick={()=>setAmtDrop(v=>!v)} style={{ height:'100%',padding:'0 12px',display:'flex',alignItems:'center',gap:5,borderRadius:12,fontSize:12,fontWeight:700,background:amtDrop?`${C.cyan}18`:C.card2,border:`0.8px solid ${amtDrop?`${C.cyan}50`:C.bdr}`,color:amtDrop?C.cyan:C.text,cursor:disabled?'not-allowed':'pointer',boxShadow: isDarkMode ? `0 1px 0 ${C.cyan}08 inset, 0 4px 14px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)` : 'none' }}>
                       <Zap style={{ width:13,height:13 }}/> Quick
                     </button>
                     {amtDrop&&!disabled&&(
@@ -3313,6 +3321,7 @@ const ControlCard: React.FC<{
   isBelowMin:boolean;
   martingale:MartingaleConfig;
 }> = ({mode,scheduleStatus,orders,ftStatus,aiStatus,indicatorStatus,momentumStatus,canStart,isLoading,profit,onStart,onStop,onPause,onResume,error,isBelowMin,martingale}) => {
+  const { isDarkMode } = useDarkMode();
   const [open,setOpen] = useState(true);
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
@@ -3371,7 +3380,7 @@ const ControlCard: React.FC<{
   return (
     <Card style={{
       border:`1px solid ${C.bdr}`,
-      boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)`,
+      boxShadow: isDarkMode ? `0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)` : 'none',
     }}>
       {/* ── Header: LEFT-aligned title + state pill + chevron ── */}
       <button onClick={()=>setOpen(!open)} style={{
@@ -3448,7 +3457,7 @@ const ControlCard: React.FC<{
                 background:`rgba(239,68,68,0.60)`,
                 color:'#fff',fontSize:13,fontWeight:700,letterSpacing:'0.02em',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-                boxShadow:`0 1px 0 ${C.coral}15 inset, 0 8px 24px ${C.coral}50, 0 3px 8px rgba(0,0,0,0.25)`,
+                boxShadow: isDarkMode ? `0 1px 0 ${C.coral}15 inset, 0 8px 24px ${C.coral}50, 0 3px 8px rgba(0,0,0,0.25)` : `0 2px 8px ${C.coral}30`,
                 opacity:(!canStopBot||isLoading)?0.45:1,transition:'opacity 0.2s',
               }}>
                 <StopCircle style={{width:16,height:16}}/> Stop
@@ -3463,7 +3472,7 @@ const ControlCard: React.FC<{
                 background:`linear-gradient(180deg,${ac}CC,${ac}AA)`,
                 color:'#fff',fontSize:14,fontWeight:700,letterSpacing:'0.02em',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-                boxShadow:`0 1px 0 rgba(255,255,255,0.18) inset, 0 10px 28px ${ac}55, 0 3px 10px rgba(0,0,0,0.45)`,
+                boxShadow: isDarkMode ? `0 1px 0 rgba(255,255,255,0.18) inset, 0 10px 28px ${ac}55, 0 3px 10px rgba(0,0,0,0.45)` : `0 2px 10px ${ac}40`,
                 opacity:(isLoading||!canStart||isBelowMin)?0.45:1,transition:'opacity 0.2s',
               }}>
                 <PlayCircle style={{width:18,height:18}}/> Start
@@ -4084,7 +4093,7 @@ export default function DashboardPage() {
   const ModeSession = (fillH:boolean, compact?:boolean, onViewSession?:()=>void, startStopButton?:React.ReactNode) => (
     <ModeSessionPanel
       mode={tradingMode} onModeChange={handleModeChange} locked={isActiveMode} blockedModes={blockedModes}
-      orders={scheduleOrders} logs={scheduleLogs} onOpenModal={()=>setOrderModalOpen(true)} isRunning={isSchedRunning}
+      orders={scheduleOrders} logs={scheduleLogs} onOpenModal={()=>{ setOrderModalInitialView('list'); setOrderModalOpen(true); }} isRunning={isSchedRunning}
       ftStatus={ftStatus} ftLogs={ftLogs} ftLoading={false}
       aiStatus={aiStatus} aiPending={aiPendingOrders}
       indicatorStatus={indicatorStatus}
@@ -4184,7 +4193,7 @@ export default function DashboardPage() {
             borderRadius:18,border:'1px solid rgba(255,255,255,0.10)',
             overflow:'hidden',
             animation:'slide-up 0.24s cubic-bezier(0.32,0.72,0,1)',
-            boxShadow:'0 20px 60px rgba(0,0,0,0.6)',
+            boxShadow:`0 20px 60px rgba(0,0,0,${C.bg==='#111111'?'0.60':'0.14'})`,
           }}>
             {/* Icon + Title + Desc */}
             <div style={{padding:'28px 24px 20px',textAlign:'center',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
@@ -4240,18 +4249,18 @@ export default function DashboardPage() {
 }
           .ds-card {
           background: ${isDarkMode ? C.card : '#ffffff'};
-          border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'};
+          border: 0.3px solid ${isDarkMode ? 'rgba(255,255,255,0.14)' : '#9CA3AF'};
           border-radius: 14px;
-          box-shadow: ${isDarkMode ? '0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)' : '0 1px 3px rgba(0,0,0,0.04)'};
+          box-shadow: ${isDarkMode ? '0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)' : 'none'};
           transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
         }
 
         @media (max-width: 767px) {
           .ds-card, .ds-card:hover {
-            border: 1px solid ${isDarkMode ? 'rgba(20,184,166,0.52)' : 'rgba(20,184,166,0.38)'} !important;
+            border: 0.3px solid ${isDarkMode ? 'rgba(255,255,255,0.22)' : '#9CA3AF'} !important;
             box-shadow: ${isDarkMode
-              ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(20,184,166,0.08), 0 2px 8px rgba(0,0,0,0.12)'
-              : '0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px rgba(0,0,0,0.06), 0 0 28px rgba(20,184,166,0.06), 0 2px 6px rgba(0,0,0,0.05)'
+              ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.12)'
+              : '0 1px 3px rgba(0,0,0,0.06)'
             } !important;
             transform: none !important;
           }
@@ -4262,8 +4271,8 @@ export default function DashboardPage() {
           padding: 9px 12px;
           border-radius: 8px;
           font-size: 13px;
-          background: ${isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(16,185,129,0.03)'};
-          border: 1px solid ${isDarkMode ? 'rgba(41,151,255,0.18)' : 'rgba(16,185,129,0.15)'};
+          background: ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(16,185,129,0.04)'};
+          border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.16)' : '#9CA3AF'};
           color: ${isDarkMode ? '#ffffff' : '#1C1C1E'};
           outline: none;
           font-family: inherit;
@@ -4271,11 +4280,11 @@ export default function DashboardPage() {
           resize: vertical;
           box-sizing: border-box;
         }
-        .ds-input:focus { border-color: ${isDarkMode ? 'rgba(41,151,255,0.45)' : 'rgba(16,185,129,0.45)'}; }
-        .ds-input::placeholder { color: ${isDarkMode ? 'rgba(255,255,255,0.28)' : 'rgba(60,60,67,0.40)'}; }
+        .ds-input:focus { border-color: ${isDarkMode ? 'rgba(34,211,160,0.60)' : 'rgba(5,150,105,0.55)'}; }
+        .ds-input::placeholder { color: ${isDarkMode ? 'rgba(255,255,255,0.35)' : 'rgba(60,60,67,0.45)'}; }
 
         .schedule-item { transition: background 0.15s; }
-        .schedule-item:hover { background: ${isDarkMode ? 'rgba(41,151,255,0.04)' : 'rgba(16,185,129,0.06)'} !important; }
+        .schedule-item:hover { background: ${isDarkMode ? 'rgba(34,211,160,0.07)' : 'rgba(5,150,105,0.07)'} !important; }
       `}</style>
 
       <OrderInputModal
@@ -4341,8 +4350,8 @@ export default function DashboardPage() {
               <div style={{
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
-                background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',
-                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,
+                background:isDarkMode?C.card2:C.card,
+                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,
                 backdropFilter:'blur(8px)',
               }}>
                 <div style={{
@@ -4369,8 +4378,8 @@ export default function DashboardPage() {
               <div style={{
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
-                background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',
-                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,
+                background:isDarkMode?C.card2:C.card,
+                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,
               }}>
                 {(()=>{
                   const rawAmt = isDemo?(balance?.demo_balance??balance?.balance??0):(balance?.real_balance??balance?.balance??0);
@@ -4400,8 +4409,8 @@ export default function DashboardPage() {
               <div style={{
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
-                background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',
-                border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}25`:isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,
+                background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?C.card2:C.card,
+                border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}25`:isDarkMode?C.bdr:'#9CA3AF'}`,
                 transition:'all 0.3s ease',
               }}>
                 <div style={{
@@ -4430,8 +4439,8 @@ export default function DashboardPage() {
               <div style={{
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
-                background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',
-                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,
+                background:isDarkMode?C.card2:C.card,
+                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,
               }}>
                 {(()=>{
                   const pnl = todayProfitData?.totalPnL ?? profitToday;
@@ -4472,15 +4481,15 @@ export default function DashboardPage() {
                 {/* Chart */}
                 <div style={{
                   borderRadius:16,overflow:'hidden',
-                  background:isDarkMode?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.95)',
-                  border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,
+                  background:isDarkMode?C.card2:C.card,
+                  border:`1px solid ${isDarkMode?'rgba(255,255,255,0.32)':'#9CA3AF'}`,
                   padding:4,
                 }}>
                   {/* Clock header */}
                   <div style={{
                     display:'flex',alignItems:'center',justifyContent:'space-between',
                     padding:'10px 14px 8px',
-                    borderBottom:`1px solid ${isDarkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'}`,
+                    borderBottom:`1px solid ${isDarkMode?C.bdr:'#9CA3AF'}`,
                   }}>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       <Activity style={{width:13,height:13,color:C.coral}}/>
@@ -4551,8 +4560,8 @@ export default function DashboardPage() {
                     return statCards.map((s,i)=>(
                       <div key={i} style={{
                         padding:'12px 14px',borderRadius:12,
-                        background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',
-                        border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,
+                        background:isDarkMode?C.card2:C.card,
+                        border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,
                       }}>
                         <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
                           <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
@@ -4586,7 +4595,7 @@ export default function DashboardPage() {
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
 
               {/* Asset */}
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
                 <div style={{width:34,height:34,borderRadius:9,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`}}>
                   {selectedAsset?.iconUrl
                     ?<img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:5}}/>
@@ -4608,7 +4617,7 @@ export default function DashboardPage() {
                 const amt=rawAmt/100;
                 const col=isDemo?C.amber:C.cyan;
                 return (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`}}>
                     <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
                       <Wallet style={{width:15,height:15,color:col}}/>
                     </div>
@@ -4627,7 +4636,7 @@ export default function DashboardPage() {
               })()}
 
               {/* Mode + Status */}
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}25`:isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,transition:'all 0.3s ease'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?C.card2:C.card,border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}25`:isDarkMode?C.bdr:'#9CA3AF'}`,transition:'all 0.3s ease'}}>
                 <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`,position:'relative'}}>
                   <span style={{color:modeAccent(tradingMode)}}>
                     {{schedule:<Calendar style={{width:15,height:15}}/>,fastrade:<Zap style={{width:15,height:15}}/>,ctc:<Copy style={{width:15,height:15}}/>,aisignal:<Radio style={{width:15,height:15}}/>,indicator:<BarChart style={{width:15,height:15}}/>,momentum:<Waves style={{width:15,height:15}}/>}[tradingMode]}
@@ -4652,7 +4661,7 @@ export default function DashboardPage() {
                 const col=isPos?C.cyan:C.coral;
                 const wr=todayProfitData?.winRate;
                 return (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`}}>
                     <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
                       {isPos?<TrendingUp style={{width:15,height:15,color:col}}/>:<TrendingDown style={{width:15,height:15,color:col}}/>}
                     </div>
@@ -4682,12 +4691,12 @@ export default function DashboardPage() {
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
 
                 {/* Chart card — clock header compact, tidak melebar */}
-                <div style={{borderRadius:16,overflow:'hidden',background:isDarkMode?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.95)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`,padding:4}}>
+                <div style={{borderRadius:16,overflow:'hidden',background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode ? 'rgba(255,255,255,0.32)' : '#9CA3AF'}`,padding:4}}>
                   {/* Clock header — compact, left-aligned, tidak space-between */}
                   <div style={{
                     display:'flex',alignItems:'center',gap:10,
                     padding:'9px 14px 9px',
-                    borderBottom:`1px solid ${isDarkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'}`,
+                    borderBottom:`1px solid ${isDarkMode?C.bdr:'#9CA3AF'}`,
                   }}>
                     {/* Kiri: label + dot */}
                     <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
@@ -4729,7 +4738,7 @@ export default function DashboardPage() {
                         :{label:'Mode',icon:<Radio style={{width:13,height:13}}/>,value:({schedule:'Signal Mode',fastrade:'Fastrade FTT Mode',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'} as Record<string,string>)[tradingMode],col:ac},
                     ];
                     return statCards.map((s,i)=>(
-                      <div key={i} style={{padding:'11px 13px',borderRadius:12,background:isDarkMode?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.9)',border:`1px solid ${isDarkMode?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}`}}>
+                      <div key={i} style={{padding:'11px 13px',borderRadius:12,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`}}>
                         <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
                           <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
                           <span style={{fontSize:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</span>
@@ -4777,7 +4786,7 @@ export default function DashboardPage() {
     zIndex: 0,
   }}/>
   <img 
-    src="/header.png" 
+    src={isDarkMode ? "/headerdark.png" : "/headerlight.png"}
     alt="STC AutoTrade" 
     style={{
       width:'100%',
@@ -4797,10 +4806,10 @@ export default function DashboardPage() {
   backgroundSize: '300% 100%',
   animation: 'header-shimmer 12s ease-in-out infinite',
   pointerEvents: 'none',
-  WebkitMaskImage: 'url(/header.png)',
+  WebkitMaskImage: `url(${isDarkMode ? '/headerdark.png' : '/headerlight.png'})`,
   WebkitMaskSize: '100% 100%',
   WebkitMaskRepeat: 'no-repeat',
-  maskImage: 'url(/header.png)',
+  maskImage: `url(${isDarkMode ? '/headerdark.png' : '/headerlight.png'})`,
   maskSize: '100% 100%',
   maskRepeat: 'no-repeat',
 }}/>
@@ -4809,7 +4818,7 @@ export default function DashboardPage() {
             {TopCards}
             <div style={{display:'flex',flexDirection:'row',gap:g,alignItems:'stretch'}}>
               {/* LEFT: chart card — stretches to match right column height */}
-              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid rgba(255,255,255,0.20)`,boxShadow:`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`}}>
+              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${isDarkMode ? 'rgba(255,255,255,0.32)' : '#9CA3AF'}`,boxShadow:isDarkMode?`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`:'none'}}>
                 {/* Clock header inside chart card */}
                 <div style={{
                   marginBottom:8,
@@ -4857,7 +4866,7 @@ export default function DashboardPage() {
                     padding:'10px 12px',borderRadius:12,
                     background:C.card2,
                     border:`1px solid ${modeAccent(tradingMode)}28`,
-                    boxShadow:`0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)`,
+                    boxShadow: isDarkMode ? `0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)` : 'none',
                     display:'flex',flexDirection:'column',gap:7,
                     flex:1,minHeight:0,
                   }}>
