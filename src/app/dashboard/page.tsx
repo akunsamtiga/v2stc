@@ -49,7 +49,7 @@ function getColors(isDark: boolean) {
     card:  isDark ? '#1C1C1C' : '#FFFFFF',
     card2: isDark ? '#242424' : '#F0F2F5',   // light: lebih terang dari bg tapi beda dari card
     // Borders
-    bdr:   isDark ? 'rgba(255,255,255,0.28)' : '#9CA3AF',
+    bdr:   isDark ? 'rgba(125,211,252,0.40)' : '#9CA3AF',
     bdrAct:'rgba(16,185,129,0.80)',
     // Primary accent
     cyan:  isDark ? '#22D3A0' : '#047857',   // light: lebih gelap agar kontras di bg putih
@@ -4249,7 +4249,7 @@ export default function DashboardPage() {
 }
           .ds-card {
           background: ${isDarkMode ? C.card : '#ffffff'};
-          border: 0.3px solid ${isDarkMode ? 'rgba(255,255,255,0.14)' : '#9CA3AF'};
+          border: 0.3px solid ${isDarkMode ? 'rgba(125,211,252,0.40)' : '#9CA3AF'};
           border-radius: 14px;
           box-shadow: ${isDarkMode ? '0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)' : 'none'};
           transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
@@ -4257,7 +4257,7 @@ export default function DashboardPage() {
 
         @media (max-width: 767px) {
           .ds-card, .ds-card:hover {
-            border: 0.3px solid ${isDarkMode ? 'rgba(255,255,255,0.22)' : '#9CA3AF'} !important;
+            border: 0.3px solid ${isDarkMode ? 'rgba(125,211,252,0.50)' : '#9CA3AF'} !important;
             box-shadow: ${isDarkMode
               ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.12)'
               : '0 1px 3px rgba(0,0,0,0.06)'
@@ -4272,7 +4272,7 @@ export default function DashboardPage() {
           border-radius: 8px;
           font-size: 13px;
           background: ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(16,185,129,0.04)'};
-          border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.16)' : '#9CA3AF'};
+          border: 1px solid ${isDarkMode ? 'rgba(125,211,252,0.35)' : '#9CA3AF'};
           color: ${isDarkMode ? '#ffffff' : '#1C1C1E'};
           outline: none;
           font-family: inherit;
@@ -4351,7 +4351,7 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
                 background:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,
+                border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
                 backdropFilter:'blur(8px)',
               }}>
                 <div style={{
@@ -4379,7 +4379,7 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
                 background:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,
+                border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
               }}>
                 {(()=>{
                   const rawAmt = isDemo?(balance?.demo_balance??balance?.balance??0):(balance?.real_balance??balance?.balance??0);
@@ -4440,7 +4440,7 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
                 background:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,
+                border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
               }}>
                 {(()=>{
                   const pnl = todayProfitData?.totalPnL ?? profitToday;
@@ -4482,7 +4482,7 @@ export default function DashboardPage() {
                 <div style={{
                   borderRadius:16,overflow:'hidden',
                   background:isDarkMode?C.card2:C.card,
-                  border:`1px solid ${isDarkMode?'rgba(255,255,255,0.32)':'#9CA3AF'}`,
+                  border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
                   padding:4,
                 }}>
                   {/* Clock header */}
@@ -4561,7 +4561,7 @@ export default function DashboardPage() {
                       <div key={i} style={{
                         padding:'12px 14px',borderRadius:12,
                         background:isDarkMode?C.card2:C.card,
-                        border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,
+                        border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
                       }}>
                         <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
                           <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
@@ -4595,7 +4595,7 @@ export default function DashboardPage() {
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
 
               {/* Asset */}
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`,cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
                 <div style={{width:34,height:34,borderRadius:9,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`}}>
                   {selectedAsset?.iconUrl
                     ?<img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:5}}/>
@@ -4617,7 +4617,7 @@ export default function DashboardPage() {
                 const amt=rawAmt/100;
                 const col=isDemo?C.amber:C.cyan;
                 return (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`}}>
                     <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
                       <Wallet style={{width:15,height:15,color:col}}/>
                     </div>
@@ -4661,7 +4661,7 @@ export default function DashboardPage() {
                 const col=isPos?C.cyan:C.coral;
                 const wr=todayProfitData?.winRate;
                 return (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`}}>
                     <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
                       {isPos?<TrendingUp style={{width:15,height:15,color:col}}/>:<TrendingDown style={{width:15,height:15,color:col}}/>}
                     </div>
@@ -4691,7 +4691,7 @@ export default function DashboardPage() {
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
 
                 {/* Chart card — clock header compact, tidak melebar */}
-                <div style={{borderRadius:16,overflow:'hidden',background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode ? 'rgba(255,255,255,0.32)' : '#9CA3AF'}`,padding:4}}>
+                <div style={{borderRadius:16,overflow:'hidden',background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode ? 'rgba(125,211,252,0.40)' : '#9CA3AF'}`,padding:4}}>
                   {/* Clock header — compact, left-aligned, tidak space-between */}
                   <div style={{
                     display:'flex',alignItems:'center',gap:10,
@@ -4738,7 +4738,7 @@ export default function DashboardPage() {
                         :{label:'Mode',icon:<Radio style={{width:13,height:13}}/>,value:({schedule:'Signal Mode',fastrade:'Fastrade FTT Mode',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'} as Record<string,string>)[tradingMode],col:ac},
                     ];
                     return statCards.map((s,i)=>(
-                      <div key={i} style={{padding:'11px 13px',borderRadius:12,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(255,255,255,0.30)':'#9CA3AF'}`}}>
+                      <div key={i} style={{padding:'11px 13px',borderRadius:12,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`}}>
                         <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
                           <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
                           <span style={{fontSize:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</span>
@@ -4818,7 +4818,7 @@ export default function DashboardPage() {
             {TopCards}
             <div style={{display:'flex',flexDirection:'row',gap:g,alignItems:'stretch'}}>
               {/* LEFT: chart card — stretches to match right column height */}
-              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${isDarkMode ? 'rgba(255,255,255,0.32)' : '#9CA3AF'}`,boxShadow:isDarkMode?`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`:'none'}}>
+              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${isDarkMode ? 'rgba(125,211,252,0.40)' : '#9CA3AF'}`,boxShadow:isDarkMode?`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`:'none'}}>
                 {/* Clock header inside chart card */}
                 <div style={{
                   marginBottom:8,

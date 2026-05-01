@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type ProfileBalance } from '@/lib/api';
 import { storage, isSessionValid, sessionLogout, getAuthToken } from '@/lib/storage';
+import { checkIsAdmin, checkIsSuperAdmin } from '@/lib/firebaseRepository';
 import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib/i18n';
 import { LanguageSheet } from '@/components/LanguageSelector';
 import { useDarkMode } from '@/lib/DarkModeContext';
@@ -141,6 +142,8 @@ function ProfilePageContent() {
   const [currencyLoading, setCurrencyLoading] = useState(false);
   const [showLogout, setShowLogout]           = useState(false);
   const [copied, setCopied]                   = useState(false);
+  const [isAdminUser,      setIsAdminUser]      = useState(false);
+  const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
   const [error, setError]                     = useState<string | null>(null);
   const [refreshing, setRefreshing]           = useState(false);
 
@@ -150,6 +153,16 @@ function ProfilePageContent() {
       const sessionValid = await isSessionValid();
       if (!sessionValid) { router.push('/login'); return; }
       loadProfile();
+
+      // ── Check admin status (silently, no block) ──
+      try {
+        const email = await storage.get('stc_email') ?? '';
+        if (email) {
+          const [adm, sup] = await Promise.all([checkIsAdmin(email), checkIsSuperAdmin(email)]);
+          setIsAdminUser(adm || sup);
+          setIsSuperAdminUser(sup);
+        }
+      } catch { /* ignore — non-critical */ }
     };
     init();
   }, []); // eslint-disable-line
@@ -364,7 +377,7 @@ function ProfilePageContent() {
   return (
     <div style={{ height: '100dvh', background: '#f2f2f7', fontFamily: "-apple-system,'SF Pro Display',BlinkMacSystemFont,'Helvetica Neue',sans-serif", WebkitFontSmoothing: 'antialiased', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes skel-pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
         @keyframes bd-in      { from{opacity:0} to{opacity:1} }
         @keyframes pop-in     { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
@@ -433,7 +446,7 @@ function ProfilePageContent() {
           .pf-right > *:nth-child(4) { animation-delay: 0.21s; }
           .pf-right > *:nth-child(5) { animation-delay: 0.26s; }
         }
-      `}</style>
+      ` }} />
 
       {/* ── MOBILE HEADER ── */}
       <div className="pf-mob-header" style={{ position: 'sticky', top: 0, zIndex: 50, flexShrink: 0, background: 'rgba(242,242,247,0.92)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: '0.5px solid rgba(60,60,67,0.16)' }}>
@@ -454,6 +467,20 @@ function ProfilePageContent() {
             <BalanceBlock />
           </div>
           <div style={{ marginTop: 'auto' }}>
+            {isAdminUser && (
+              <div style={{ marginBottom: 12 }}>
+                <Card>
+                  <TappableRow
+                    icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
+                    iconBg="linear-gradient(135deg, #F59E0B, #D97706)"
+                    label="Admin Panel"
+                    value={isSuperAdminUser ? 'Super Admin' : 'Admin'}
+                    onClick={() => router.push('/admin')}
+                    last
+                  />
+                </Card>
+              </div>
+            )}
             <Card>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>}
@@ -593,6 +620,27 @@ function ProfilePageContent() {
               />
             </Card>
           </div>
+
+          {/* ── ADMIN PANEL BUTTON ── */}
+          {isAdminUser && (
+            <div>
+              <SectionLabel>Admin</SectionLabel>
+              <Card>
+                <TappableRow
+                  icon={
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                  }
+                  iconBg="linear-gradient(135deg, #F59E0B, #D97706)"
+                  label="Admin Panel"
+                  value={isSuperAdminUser ? 'Super Admin' : 'Admin'}
+                  onClick={() => router.push('/admin')}
+                  last
+                />
+              </Card>
+            </div>
+          )}
 
           <div>
             <SectionLabel>{t('profile.help')}</SectionLabel>

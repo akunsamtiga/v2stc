@@ -19,9 +19,6 @@
     const router   = useRouter();
     const pathname = usePathname();
     const [ready, setReady] = useState(false);
-    const [fadeOut, setFadeOut] = useState(false);  // State untuk fade animation splash
-    // ✅ FIX: Curtain terpisah — hilang hanya setelah double-RAF (children sudah paint)
-    const [pageVisible, setPageVisible] = useState(false);
     const authCheckRef = useRef(false);
     const splashStartRef = useRef(Date.now());
 
@@ -48,10 +45,7 @@
             const elapsed = Date.now() - splashStartRef.current;
             const remaining = Math.max(0, 500 - elapsed); // Shorter delay untuk public pages
             
-            setTimeout(() => {
-              setFadeOut(true);
-              setTimeout(() => setReady(true), 300);
-            }, remaining);
+            setTimeout(() => setReady(true), remaining);
             
             clearTimeout(fallback);
             return;
@@ -104,11 +98,7 @@
           const elapsed = Date.now() - splashStartRef.current;
           const remaining = Math.max(0, SPLASH_MIN_DURATION - elapsed);
           
-          setTimeout(() => {
-            setFadeOut(true);
-            // Wait for fade animation before showing content
-            setTimeout(() => setReady(true), 300);
-          }, remaining);
+          setTimeout(() => setReady(true), remaining);
           
           clearTimeout(fallback);
         }
@@ -127,161 +117,58 @@
       return () => window.removeEventListener('stc:unauthorized', handleUnauthorized);
     }, [router]);
 
-    // ✅ FIX: Tunggu double-RAF setelah children mount agar tidak ada flash grid
+    // Hide initial HTML splash screen when React is ready
     useEffect(() => {
-      if (!ready) return;
-      requestAnimationFrame(() => {
+      if (ready) {
+        /* ── FIX GRID FLASH ─────────────────────────────────────────────
+           Double requestAnimationFrame: tunggu sampai browser benar-benar
+           selesai paint frame pertama konten sebelum splash mulai fade.
+           Frame 1 → React commit. Frame 2 → browser paint.
+           Crossfade bersih: konten fade-in (0.35s) + splash fade-out (0.5s). */
         requestAnimationFrame(() => {
-          setPageVisible(true);
-          const htmlSplash = document.getElementById('__stc_splash');
-          if (htmlSplash) {
-            htmlSplash.classList.add('hide');
-            setTimeout(() => htmlSplash.remove(), 500);
-          }
+          requestAnimationFrame(() => {
+            const htmlSplash = document.getElementById('__stc_splash');
+            if (htmlSplash) {
+              htmlSplash.classList.add('hide');
+              setTimeout(() => htmlSplash.remove(), 520);
+            }
+          });
         });
-      });
+      }
     }, [ready]);
 
-    if (!ready) {
-      return (
-        <div 
-          className="stc-splash"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%)',
-            fontFamily: "-apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif",
-            WebkitFontSmoothing: 'antialiased',
-            zIndex: 9999,
-            opacity: fadeOut ? 0 : 1,
-            transition: 'opacity 0.3s ease-out',
-          }}
-        >
-          {/* Logo / Brand */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 24,
-          }}>
-            {/* App Icon */}
-            <div style={{
-              width: 80,
-              height: 80,
-              borderRadius: 20,
-              background: 'linear-gradient(135deg, #00d4aa 0%, #00a080 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 8px 32px rgba(0, 212, 170, 0.3)',
-              animation: 'stc-pulse 2s ease-in-out infinite',
-            }}>
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-                <polyline points="16 7 22 7 22 13" />
-              </svg>
-            </div>
-            
-            {/* App Name */}
-            <div style={{ textAlign: 'center' }}>
-              <h1 style={{
-                fontSize: 28,
-                fontWeight: 700,
-                color: '#ffffff',
-                margin: 0,
-                letterSpacing: '-0.5px',
-              }}>
-                STC AutoTrade
-              </h1>
-              <p style={{
-                fontSize: 14,
-                color: 'rgba(255,255,255,0.5)',
-                margin: '8px 0 0 0',
-              }}>
-                Smart Trading Automation
-              </p>
-            </div>
-          </div>
-
-          {/* Loading Indicator */}
-          <div style={{
-            position: 'absolute',
-            bottom: 80,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 16,
-          }}>
-            {/* Spinner */}
-            <div style={{
-              width: 32,
-              height: 32,
-              border: '3px solid rgba(255,255,255,0.1)',
-              borderTopColor: '#00d4aa',
-              borderRadius: '50%',
-              animation: 'stc-spin 0.8s linear infinite',
-            }} />
-            <span style={{
-              fontSize: 13,
-              color: 'rgba(255,255,255,0.4)',
-              letterSpacing: '0.5px',
-            }}>
-              Memuat...
-            </span>
-          </div>
-
-          <style>{`
-            @keyframes stc-spin {
-              to { transform: rotate(360deg); }
-            }
-            @keyframes stc-pulse {
-              0%, 100% { transform: scale(1); }
-              50% { transform: scale(1.05); }
-            }
-          `}</style>
-        </div>
-      );
-    }
-
+    /* ── Selalu render full layout (tersembunyi di balik HTML splash) ──
+       Menghapus React splash component mencegah "component swap" flash.
+       HTML splash di layout.tsx (z-index 99999) yang bertanggung jawab
+       menyembunyikan konten selama loading. Konten fade-in setelah ready. */
     return (
       <DarkModeProvider>
         <LanguageProvider>
           <ThemeWrapper>
-
             <main
               style={{
                 display: 'block',
                 margin: 0,
                 padding: 0,
-                height: '100dvh',
-                overflowY: 'scroll',
-                willChange: 'scroll-position',
-                transform: 'translateZ(0)',
-                contain: 'strict',
-                // WebkitOverflowScrolling removed — deprecated, causes jank on modern WebView
+                /* ── FIX SCROLL LAG ────────────────────────────────────────
+                   height:100% bukan dvh → tidak reflow saat browser chrome
+                   iOS muncul/hilang saat scroll. CSS di globals.css yang
+                   mengatur overflow-y:scroll, will-change, contain. */
+                height: '100%',
+                /* Padding bawah = tinggi BottomNav (56px) + safe area */
+                paddingBottom: !isPublic
+                  ? 'calc(56px + env(safe-area-inset-bottom, 0px))'
+                  : undefined,
+                /* ── FIX GRID FLASH ─────────────────────────────────────────
+                   Konten tidak terlihat selama loading (HTML splash menutupi).
+                   Setelah ready, fade-in smooth bersama splash fade-out.
+                   Gunakan opacity (bukan visibility) agar GPU layer tetap ada. */
+                opacity: ready ? 1 : 0,
+                transition: ready ? 'opacity 0.35s ease-out' : 'none',
               } as React.CSSProperties}>
               {children}
             </main>
             {!isPublic && <BottomNav />}
-
-            {/* ✅ FIX: Curtain overlay — menutupi flash grid background saat children belum paint.
-                Selalu render, opacity berubah 1→0 saat pageVisible=true (smooth fade 250ms).
-                pointerEvents: none agar tidak block interaksi user. */}
-            <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                background: '#0a0a0a',
-                zIndex: 9998,
-                pointerEvents: 'none',
-                opacity: pageVisible ? 0 : 1,
-                transition: 'opacity 0.25s ease-out',
-              }}
-            />
           </ThemeWrapper>
         </LanguageProvider>
       </DarkModeProvider>

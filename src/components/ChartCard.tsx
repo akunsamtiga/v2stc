@@ -525,8 +525,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({ assetSymbol, height = 400 
         inset: 0,
         transition: 'background 0.3s',
         border: isDarkMode
-          ? '1px solid rgba(255,255,255,0.20)'
-          : '1px solid rgba(255,255,255,0.28)',
+          ? '1px solid rgba(125,211,252,0.40)'
+          : '1px solid #9CA3AF',
       }
     : {
         background: bg,
@@ -538,8 +538,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({ assetSymbol, height = 400 
         position: 'relative',
         transition: 'background 0.3s',
         border: isDarkMode
-          ? '1px solid rgba(255,255,255,0.18)'
-          : '1px solid rgba(255,255,255,0.26)',
+          ? '1px solid rgba(125,211,252,0.40)'
+          : '1px solid #9CA3AF',
       };
 
   return (
