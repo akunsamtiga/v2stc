@@ -4785,9 +4785,13 @@ export default function DashboardPage() {
     background: colors.bg,
     zIndex: 0,
   }}/>
-  <img 
-    src={isDarkMode ? "/headerdark.png" : "/headerlight.png"}
-    alt="STC AutoTrade" 
+  <video
+    key={isDarkMode ? 'dark' : 'light'}
+    src={isDarkMode ? "/darkstc.mp4" : "/lightstc.mp4"}
+    autoPlay
+    muted
+    loop
+    playsInline
     style={{
       width:'100%',
       height:'auto',
@@ -4795,7 +4799,7 @@ export default function DashboardPage() {
       position: 'relative',
       zIndex: 1,
     }}
-    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+    onError={(e) => { (e.target as HTMLVideoElement).parentElement!.style.display = 'none'; }}
   />
   {/* Shimmer overlay */}
 <div style={{
@@ -4806,12 +4810,6 @@ export default function DashboardPage() {
   backgroundSize: '300% 100%',
   animation: 'header-shimmer 12s ease-in-out infinite',
   pointerEvents: 'none',
-  WebkitMaskImage: `url(${isDarkMode ? '/headerdark.png' : '/headerlight.png'})`,
-  WebkitMaskSize: '100% 100%',
-  WebkitMaskRepeat: 'no-repeat',
-  maskImage: `url(${isDarkMode ? '/headerdark.png' : '/headerlight.png'})`,
-  maskSize: '100% 100%',
-  maskRepeat: 'no-repeat',
 }}/>
 
 </div>
