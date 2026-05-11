@@ -16,7 +16,7 @@ import { ChartCard } from '@/components/ChartCard';
 import AssetIcon from '@/components/common/AssetIcon';
 import { storage, isSessionValid } from '@/lib/storage';
 import { useTradingSettings } from '@/lib/useTradingSettings';
-import { useLanguage } from '@/lib/i18n';
+import { useLanguage } from '@/lib';
 import { useDarkMode } from '@/lib/DarkModeContext';
 import {
   Activity, AlertCircle, BarChart2, Calendar,
