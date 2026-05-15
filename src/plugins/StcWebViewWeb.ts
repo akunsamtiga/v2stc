@@ -22,11 +22,24 @@ export class StcWebViewWeb extends WebPlugin implements StcWebViewPlugin {
     // no-op on web
   }
 
+  /** Web fallback: hapus cookie via document.cookie (best-effort) */
+  async clearSession(): Promise<void> {
+    // Di browser, hapus semua cookie yang accessible via JS
+    if (typeof document !== 'undefined') {
+      document.cookie.split(';').forEach(cookie => {
+        const eqPos = cookie.indexOf('=');
+        const name  = eqPos > -1 ? cookie.slice(0, eqPos).trim() : cookie.trim();
+        // Hapus dengan semua kombinasi path/domain yang mungkin
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=stockity.id`;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.stockity.id`;
+      });
+    }
+  }
+
   // Implement addListener dari WebPlugin base class
   async addListener(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _eventName: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _listenerFunc: (event: unknown) => void
   ): Promise<PluginListenerHandle> {
     // Web fallback tidak mendukung listener native

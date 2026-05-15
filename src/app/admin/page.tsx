@@ -597,7 +597,7 @@ const StatsDetailDialog: React.FC<{
       default:            users = [...allUsers].sort((a,b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
     }
     return users;
-  }, [filter, allUsers]);
+  }, [filter, allUsers, threshold]);
 
   const meta: Record<StatsFilter, { label: string; color: string }> = {
     total:       { label: 'Total Users',         color: C.info    },
@@ -1020,7 +1020,7 @@ export default function AdminPage() {
               ))
             ) : displayedUsers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: C.muted }}>
-                {search ? <><p style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Tidak ditemukan</p><p style={{ fontSize: 13 }}>untuk "{search}"</p></> : <><p style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Whitelist kosong</p><p style={{ fontSize: 13 }}>Tambah user untuk memulai</p></>}
+                {search ? <><p style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Tidak ditemukan</p><p style={{ fontSize: 13 }}>untuk &quot;{search}&quot;</p></> : <><p style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Whitelist kosong</p><p style={{ fontSize: 13 }}>Tambah user untuk memulai</p></>}
               </div>
             ) : (
               <>

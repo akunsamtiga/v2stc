@@ -175,10 +175,18 @@
                    iOS muncul/hilang saat scroll. CSS di globals.css yang
                    mengatur overflow-y:scroll, will-change, contain. */
                 height: '100%',
-                /* Padding bawah = tinggi BottomNav (56px) + safe area */
-                paddingBottom: !isPublic
-                  ? 'calc(56px + env(safe-area-inset-bottom, 0px))'
-                  : undefined,
+                /* ── FIX ANDROID 15 EDGE-TO-EDGE ───────────────────────────
+                   Android 15 (API 35) memaksa edge-to-edge: konten draw di
+                   bawah status bar. paddingTop ini mendorong konten turun
+                   sesuai tinggi status bar via env(safe-area-inset-top).
+                   Nilai fallback 0px agar tidak berpengaruh di Android < 15. */
+                paddingTop: 'env(safe-area-inset-top, 0px)',
+                /* Padding bawah otomatis memperhitungkan tinggi BottomNav (56px) + safe-area.
+                   Halaman publik (login/register) hanya butuh safe-area tanpa nav.
+                   Halaman yang sebelumnya set paddingBottom sendiri (mis. 88px) bisa dihapus. */
+                paddingBottom: isPublic
+                  ? 'env(safe-area-inset-bottom, 0px)'
+                  : 'calc(56px + env(safe-area-inset-bottom, 0px))',
                 /* ── FIX GRID FLASH ─────────────────────────────────────────
                    Konten tidak terlihat selama loading (HTML splash menutupi).
                    Setelah ready, fade-in smooth bersama splash fade-out.
@@ -195,20 +203,52 @@
     );
   }
 
-  // Wrapper untuk apply theme attribute ke body
+  // Wrapper untuk apply theme attribute ke body + sync status bar
   function ThemeWrapper({ children }: { children: React.ReactNode }) {
     const { isDarkMode } = useDarkMode();
-    
+
+    // Warna harus cocok dengan --bg di globals.css
+    const DARK_BG  = '#000000';
+    const LIGHT_BG = '#F2F2F7';
+
     useEffect(() => {
-      // Apply theme attribute ke body
+      const bgColor = isDarkMode ? DARK_BG : LIGHT_BG;
+
+      // 1. Apply data-theme ke body (light/dark CSS vars)
       if (typeof document !== 'undefined') {
         if (isDarkMode) {
           document.body.removeAttribute('data-theme');
         } else {
           document.body.setAttribute('data-theme', 'light');
         }
+
+        // 2. Sync warna body background agar area padding-top ikut tema
+        document.body.style.background = bgColor;
       }
+
+      // 3. Sync status bar Android/iOS via Capacitor StatusBar plugin
+      const syncStatusBar = async () => {
+        const isCapacitor =
+          typeof window !== 'undefined' &&
+          (window as any).Capacitor?.isNativePlatform?.() === true;
+        if (!isCapacitor) return;
+
+        try {
+          const { StatusBar, Style } = await import('@capacitor/status-bar');
+          // Icon warna: Dark = ikon putih (cocok untuk bg gelap)
+          //             Light = ikon hitam (cocok untuk bg terang)
+          await StatusBar.setStyle({
+            style: isDarkMode ? Style.Dark : Style.Light,
+          });
+          // Background status bar ikut warna tema
+          await StatusBar.setBackgroundColor({ color: bgColor });
+        } catch {
+          // Plugin belum terpasang / bukan native — abaikan
+        }
+      };
+
+      syncStatusBar();
     }, [isDarkMode]);
-    
+
     return <>{children}</>;
   }

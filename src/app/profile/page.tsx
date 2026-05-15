@@ -141,6 +141,7 @@ function ProfilePageContent() {
   const [langSheetOpen, setLangSheetOpen]     = useState(false);
   const [currencyLoading, setCurrencyLoading] = useState(false);
   const [showLogout, setShowLogout]           = useState(false);
+  const [logoutSplash, setLogoutSplash]       = useState(false);
   const [copied, setCopied]                   = useState(false);
   const [isAdminUser,      setIsAdminUser]      = useState(false);
   const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
@@ -149,12 +150,10 @@ function ProfilePageContent() {
 
   useEffect(() => {
     const init = async () => {
-      // ✅ FIXED: Gunakan isSessionValid untuk cek session lengkap
       const sessionValid = await isSessionValid();
       if (!sessionValid) { router.push('/login'); return; }
       loadProfile();
 
-      // ── Check admin status (silently, no block) ──
       try {
         const email = await storage.get('stc_email') ?? '';
         if (email) {
@@ -171,7 +170,6 @@ function ProfilePageContent() {
     if (!silent) setIsLoading(true); else setRefreshing(true);
     setError(null);
     try {
-      // ✅ FIXED: Gunakan getAuthToken yang sudah validasi session
       const token = await getAuthToken();
       if (!token) {
         router.push('/login');
@@ -197,7 +195,6 @@ function ProfilePageContent() {
   const handleUpdateCurrency = async (iso: string) => {
     setCurrencyLoading(true);
     try {
-      // ✅ FIXED: Gunakan getAuthToken
       const token = await getAuthToken();
       if (!token) return;
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/profile/currency`, {
@@ -211,24 +208,29 @@ function ProfilePageContent() {
   };
 
   const handleLogout = async () => {
-    // 1. Hapus session keys (token, userId, dll)
+    // Tutup dialog & tampilkan splash — splash tetap visible sampai halaman berganti
+    setShowLogout(false);
+    setLogoutSplash(true);
+
+    // Semua proses cleanup berjalan di background selama splash tampil
+    await new Promise(res => setTimeout(res, 1800));
+
+    try {
+      const { stcWebView } = await import('@/plugins/StcWebViewPlugin');
+      await stcWebView.clearSession();
+    } catch (e) {
+      console.warn('[Logout] clearSession WebView error (non-fatal):', e);
+    }
+
     await sessionLogout();
 
-    // 2. Simpan remember-me sebelum wipe localStorage
     const rememberEmail = localStorage.getItem('stc_remember_email');
     const rememberPass  = localStorage.getItem('stc_remember_password');
-
-    // 3. Wipe seluruh localStorage (hapus trading settings, cache lokal, dll)
     localStorage.clear();
-
-    // 4. Kembalikan remember-me
     if (rememberEmail) localStorage.setItem('stc_remember_email',    rememberEmail);
     if (rememberPass)  localStorage.setItem('stc_remember_password', rememberPass);
-
-    // 5. Hapus seluruh sessionStorage
     sessionStorage.clear();
 
-    // 6. Hapus Browser Cache API (service worker cache, dll)
     try {
       if ('caches' in window) {
         const keys = await caches.keys();
@@ -236,12 +238,12 @@ function ProfilePageContent() {
       }
     } catch { /* ignore */ }
 
-    // 7. Hapus IndexedDB (Firebase local persistence)
     try {
       const dbs = await indexedDB.databases?.() ?? [];
       await Promise.all(dbs.map(db => db.name ? indexedDB.deleteDatabase(db.name) : Promise.resolve()));
     } catch { /* ignore */ }
 
+    // Splash tetap di atas — Next.js navigasi langsung ganti halaman tanpa flash
     router.push('/login');
   };
 
@@ -385,6 +387,44 @@ function ProfilePageContent() {
         @keyframes spin       { to{transform:rotate(360deg)} }
         @keyframes number-in  { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 
+        @keyframes lo-fade-in { from{opacity:0} to{opacity:1} }
+        @keyframes lo-icon-in { from{opacity:0;transform:scale(0.6)} 70%{transform:scale(1.08)} to{opacity:1;transform:scale(1)} }
+        @keyframes lo-msg-in  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes lo-ring    { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.06);opacity:0.35} }
+        @keyframes lo-orb-1   { from{transform:translate(0,0)} to{transform:translate(30px,22px)} }
+        @keyframes lo-orb-2   { from{transform:translate(0,0)} to{transform:translate(-25px,-18px)} }
+        @keyframes lo-bar     { from{width:0%} to{width:100%} }
+
+        .lo-splash {
+          position: fixed; inset: 0; z-index: 9999;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          font-family: -apple-system,'SF Pro Display',BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+          -webkit-font-smoothing: antialiased;
+          background: linear-gradient(160deg, #fff8f0 0%, #ffffff 50%, #f0f4ff 100%);
+          overflow: hidden;
+          animation: lo-fade-in 0.32s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        .lo-orb {
+          position: absolute; border-radius: 50%; pointer-events: none;
+        }
+        .lo-orb-1 { width:380px;height:380px;background:radial-gradient(circle,rgba(255,149,0,0.18) 0%,transparent 70%);filter:blur(80px);top:-100px;right:-100px;animation:lo-orb-1 7s ease-in-out infinite alternate; }
+        .lo-orb-2 { width:340px;height:340px;background:radial-gradient(circle,rgba(0,122,255,0.14) 0%,transparent 70%);filter:blur(75px);bottom:-80px;left:-80px;animation:lo-orb-2 6s ease-in-out infinite alternate; }
+        .lo-orb-3 { width:260px;height:260px;background:radial-gradient(circle,rgba(191,90,242,0.10) 0%,transparent 70%);filter:blur(70px);top:40%;left:-60px;animation:lo-orb-1 5s ease-in-out infinite alternate; }
+
+        .lo-icon-wrap { position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center;margin-bottom:28px; }
+        .lo-ring      { position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,149,0,0.20);animation:lo-ring 2.2s ease-in-out infinite; }
+        .lo-ring-2    { inset:-12px;border-color:rgba(255,149,0,0.12);animation-delay:0.4s; }
+        .lo-ring-3    { inset:-24px;border-color:rgba(255,149,0,0.06);animation-delay:0.8s; }
+        .lo-icon      { width:90px;height:90px;border-radius:28px;background:#fff;border:1px solid rgba(255,149,0,0.18);box-shadow:0 8px 36px rgba(255,149,0,0.16),0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;z-index:1;animation:lo-icon-in 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.12s both;font-size:40px;line-height:1; }
+
+        .lo-text  { text-align:center;padding:0 32px;animation:lo-msg-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.24s both; }
+        .lo-title { font-size:clamp(26px,8vw,32px);font-weight:800;letter-spacing:-1px;line-height:1.1;margin-bottom:8px;background:linear-gradient(135deg,#1c1c1e 0%,#3a3a3c 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+        .lo-sub   { font-size:14.5px;color:#6e6e73;font-weight:400;line-height:1.6; }
+
+        .lo-bar-wrap { margin-top:36px;width:120px;height:3px;background:rgba(0,0,0,0.07);border-radius:99px;overflow:hidden;animation:lo-msg-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.35s both; }
+        .lo-bar      { height:100%;border-radius:99px;background:linear-gradient(90deg,#ff9500,#ff6b00);animation:lo-bar 1.65s cubic-bezier(0.4,0,0.2,1) 0.4s forwards; }
+
         .pf-tap-row:hover  { background: rgba(0,0,0,0.03) !important; }
         .pf-tap-row:active { background: rgba(0,0,0,0.06) !important; }
         .pf-copy-btn:active { opacity: 0.6; }
@@ -448,6 +488,28 @@ function ProfilePageContent() {
         }
       ` }} />
 
+      {/* ── LOGOUT SPLASH — z-index 9999, menutupi semua sampai halaman baru load ── */}
+      {logoutSplash && (
+        <div className="lo-splash">
+          <div className="lo-orb lo-orb-1" />
+          <div className="lo-orb lo-orb-2" />
+          <div className="lo-orb lo-orb-3" />
+          <div className="lo-icon-wrap">
+            <div className="lo-ring" />
+            <div className="lo-ring lo-ring-2" />
+            <div className="lo-ring lo-ring-3" />
+            <div className="lo-icon">👋</div>
+          </div>
+          <div className="lo-text">
+            <p className="lo-title">Sampai jumpa!</p>
+            <p className="lo-sub">Anda berhasil keluar.<br/>Sampai bertemu kembali.</p>
+          </div>
+          <div className="lo-bar-wrap">
+            <div className="lo-bar" />
+          </div>
+        </div>
+      )}
+
       {/* ── MOBILE HEADER ── */}
       <div className="pf-mob-header" style={{ position: 'sticky', top: 0, zIndex: 50, flexShrink: 0, background: 'rgba(242,242,247,0.92)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: '0.5px solid rgba(60,60,67,0.16)' }}>
         <div style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -497,21 +559,9 @@ function ProfilePageContent() {
           <div className="pf-desk-header">
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.5 }}>{t('profile.title')}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {/* Language Selector Button */}
-              <button 
+              <button
                 onClick={() => setLangSheetOpen(true)}
-                style={{ 
-                  width: 36, 
-                  height: 36, 
-                  borderRadius: 10, 
-                  background: 'rgba(0,0,0,0.05)', 
-                  border: 'none', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 18,
-                }}
+                style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,0,0,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}
                 title={t('language.title')}
               >
                 🌐
@@ -577,41 +627,24 @@ function ProfilePageContent() {
                 </div>
                 <span style={{ flex: 1, fontSize: 15, color: '#1c1c1e' }}>Dark Mode (Dashboard)</span>
                 <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={isDarkMode} 
+                  <input
+                    type="checkbox"
+                    checked={isDarkMode}
                     onChange={toggleDarkMode}
                     style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
                   />
-                  <div style={{
-                    width: 51,
-                    height: 31,
-                    borderRadius: 31,
-                    position: 'relative',
-                    transition: 'all 0.3s',
-                    background: isDarkMode ? '#10B981' : 'rgba(120,120,128,0.16)',
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      top: 2,
-                      width: 27,
-                      height: 27,
-                      borderRadius: '50%',
-                      transition: 'left 0.3s',
-                      left: isDarkMode ? 22 : 2,
-                      background: '#fff',
-                      boxShadow: '0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06)',
-                    }}/>
+                  <div style={{ width: 51, height: 31, borderRadius: 31, position: 'relative', transition: 'all 0.3s', background: isDarkMode ? '#10B981' : 'rgba(120,120,128,0.16)' }}>
+                    <div style={{ position: 'absolute', top: 2, width: 27, height: 27, borderRadius: '50%', transition: 'left 0.3s', left: isDarkMode ? 22 : 2, background: '#fff', boxShadow: '0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06)' }}/>
                   </div>
                 </label>
               </div>
               {/* Language Selector */}
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                iconBg="linear-gradient(135deg, #10B981, #34D399)" 
-                label={t('language.title')} 
+                iconBg="linear-gradient(135deg, #10B981, #34D399)"
+                label={t('language.title')}
                 value={t(`language.${{ en: 'english', id: 'indonesian', ru: 'russian', es: 'spanish', ms: 'malay', hi: 'hindi', th: 'thai', tr: 'turkish' }[language] ?? 'english'}`).toLowerCase()}
-                onClick={() => setLangSheetOpen(true)} 
+                onClick={() => setLangSheetOpen(true)}
               />
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
@@ -621,17 +654,12 @@ function ProfilePageContent() {
             </Card>
           </div>
 
-          {/* ── ADMIN PANEL BUTTON ── */}
           {isAdminUser && (
             <div>
               <SectionLabel>Admin</SectionLabel>
               <Card>
                 <TappableRow
-                  icon={
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                  }
+                  icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
                   iconBg="linear-gradient(135deg, #F59E0B, #D97706)"
                   label="Admin Panel"
                   value={isSuperAdminUser ? 'Super Admin' : 'Admin'}
@@ -657,7 +685,6 @@ function ProfilePageContent() {
           </div>
 
           <div className="pf-mob-only">
-            {/* Mobile Logout Button */}
             <Card>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>}
@@ -680,9 +707,6 @@ function ProfilePageContent() {
 // ─────────────────────────────────────────────
 // EXPORT
 // ─────────────────────────────────────────────
-// LanguageProvider tidak diperlukan di sini — sudah disediakan oleh ClientLayout secara global.
-// Jika dibungkus lagi di sini akan membuat provider lokal yang terpisah dari global,
-// sehingga perubahan bahasa di halaman ini tidak tersinkron ke halaman lain (Dashboard dll).
 export default function ProfilePage() {
   return <ProfilePageContent />;
 }

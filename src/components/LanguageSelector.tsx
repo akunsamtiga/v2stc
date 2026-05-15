@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useLanguage, COUNTRY_ENTRIES, AVAILABLE_LANGUAGES, Language, isWindows } from '@/lib/';
 
 interface LanguageSelectorProps {
@@ -22,12 +23,12 @@ function FlagIcon({ flag, flagImg, name, size = 18 }: FlagIconProps) {
 
   if (useImg) {
     return (
-      <img
+      <Image
         src={flagImg}
         alt={name}
+        width={size + 2}
+        height={Math.round((size + 2) * 0.75)}
         style={{
-          width: size + 2,
-          height: Math.round((size + 2) * 0.75),
           objectFit: 'cover',
           borderRadius: 2,
           display: 'inline-block',

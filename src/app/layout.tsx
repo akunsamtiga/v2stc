@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Image from 'next/image'
 import { ClientLayout } from '@/components/ClientLayout'
 import './globals.css'
 
@@ -151,7 +152,7 @@ export default function RootLayout({
         <div id="__stc_splash">
           <div className="splash-inner">
             {/* Logo besar di tengah */}
-            <img
+            <Image
               src="/logo.png"
               alt="STC AutoTrade"
               className="splash-logo"

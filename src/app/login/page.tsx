@@ -26,6 +26,7 @@ const LOGIN_STYLES = `
     --accent:       #007aff;
     --error:        #ff3b30;
     --error-bg:     rgba(255,59,48,0.07);
+    --success:      #34c759;
     --r-md:         13px;
     --r-xl:         24px;
     --font:         -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
@@ -40,7 +41,10 @@ const LOGIN_STYLES = `
     flex-direction: column;
     align-items:    center;
     justify-content: center;
-    padding:        24px 20px 80px;
+    /* ── FIX ANDROID 15 ─────────────────────────────────────────────────
+       padding-top memperhitungkan tinggi status bar (safe-area-inset-top).
+       max() memastikan minimal 24px agar tetap ada jarak di device lama. */
+    padding:        max(24px, calc(env(safe-area-inset-top, 0px) + 12px)) 20px 80px;
     overflow-y:     auto;
     overflow-x:     hidden;
     -webkit-overflow-scrolling: touch;
@@ -229,7 +233,7 @@ const LOGIN_STYLES = `
   .logo-desktop {
     display: none;
     position: absolute;
-    top: 16px;
+    top: calc(16px + env(safe-area-inset-top, 0px));
     left: 16px;
     z-index: 10;
     align-items: center;
@@ -246,7 +250,7 @@ const LOGIN_STYLES = `
   /* Language Selector */
   .lang-selector {
     position: absolute;
-    top: 16px;
+    top: calc(16px + env(safe-area-inset-top, 0px));
     right: 16px;
     z-index: 10;
   }
@@ -319,7 +323,7 @@ const LOGIN_STYLES = `
     font-weight: 600;
   }
 
-  /* Splash */
+  /* ── Splash ─────────────────────────────────────────────────────────── */
   .splash {
     position: fixed; inset: 0; z-index: 200;
     display: flex; flex-direction: column;
@@ -327,45 +331,27 @@ const LOGIN_STYLES = `
     font-family: var(--font);
     -webkit-font-smoothing: antialiased;
     transition: background 1.2s ease;
+    overflow: hidden;
   }
-  .splash-welcome  { background: #ffffff; }
-  .splash-verified { background: #f0f7ff; }
+  .splash-welcome  { background: linear-gradient(160deg, #eaf3ff 0%, #f5fff8 60%, #fff8ec 100%); }
+  .splash-verified { background: linear-gradient(160deg, #e8faf0 0%, #f0f7ff 100%); }
   .splash-out {
-    background: #f2f2f7;
     animation: sp-fade-out 0.8s ease forwards;
     pointer-events: none;
   }
   @keyframes sp-fade-out { from { opacity: 1; } to { opacity: 0; } }
   .splash-enter { opacity: 1; }
 
-  .sp-icon-wrap {
-    width: 76px; height: 76px; border-radius: 22px;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 32px;
-    transition: background 0.7s ease, border-color 0.7s ease, box-shadow 0.7s ease;
-  }
-  .sp-icon-welcome {
-    background: #f0f7ff;
-    border: 1px solid rgba(0,122,255,0.14);
-    box-shadow: 0 4px 22px rgba(0,122,255,0.10);
-  }
-  .sp-icon-verified {
-    background: #ffffff;
-    border: 1px solid rgba(48,209,88,0.22);
-    box-shadow: 0 4px 22px rgba(48,209,88,0.14);
-    animation: icon-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
-  }
-  @keyframes icon-pop { from { transform: scale(0.8); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
-
+  /* Orbs */
   .sp-orb {
     position: fixed; border-radius: 50%; pointer-events: none;
-    opacity: 0; transition: opacity 0.5s ease;
+    opacity: 0; transition: opacity 0.6s ease;
   }
-  .splash-verified .sp-orb, .splash-out .sp-orb { opacity: 1; }
-  .sp-orb-1 { width: 380px; height: 380px; background: radial-gradient(circle, rgba(0,122,255,0.40) 0%, transparent 70%); filter: blur(90px); top: -80px; left: -120px; animation: orb-drift-1 5s ease-in-out infinite alternate; }
-  .sp-orb-2 { width: 340px; height: 340px; background: radial-gradient(circle, rgba(48,209,88,0.35) 0%, transparent 70%); filter: blur(80px); bottom: -80px; right: -100px; animation: orb-drift-2 6s ease-in-out infinite alternate; }
-  .sp-orb-3 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(191,90,242,0.30) 0%, transparent 70%); filter: blur(85px); top: 30%; left: -80px; animation: orb-drift-3 4.5s ease-in-out infinite alternate; }
-  .sp-orb-4 { width: 260px; height: 260px; background: radial-gradient(circle, rgba(255,159,10,0.28) 0%, transparent 70%); filter: blur(80px); bottom: 20%; right: -80px; animation: orb-drift-4 5.5s ease-in-out infinite alternate; }
+  .splash-welcome .sp-orb, .splash-verified .sp-orb, .splash-out .sp-orb { opacity: 1; }
+  .sp-orb-1 { width: 420px; height: 420px; background: radial-gradient(circle, rgba(0,122,255,0.22) 0%, transparent 70%); filter: blur(80px); top: -100px; left: -130px; animation: orb-drift-1 6s ease-in-out infinite alternate; }
+  .sp-orb-2 { width: 380px; height: 380px; background: radial-gradient(circle, rgba(48,209,88,0.20) 0%, transparent 70%); filter: blur(75px); bottom: -90px; right: -110px; animation: orb-drift-2 7s ease-in-out infinite alternate; }
+  .sp-orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(191,90,242,0.15) 0%, transparent 70%); filter: blur(85px); top: 35%; left: -90px; animation: orb-drift-3 5s ease-in-out infinite alternate; }
+  .sp-orb-4 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(255,159,10,0.18) 0%, transparent 70%); filter: blur(80px); bottom: 25%; right: -80px; animation: orb-drift-4 5.5s ease-in-out infinite alternate; }
   @keyframes orb-drift-1 { from{transform:translate(0,0)} to{transform:translate(40px,30px)} }
   @keyframes orb-drift-2 { from{transform:translate(0,0)} to{transform:translate(-35px,-25px)} }
   @keyframes orb-drift-3 { from{transform:translate(0,0)} to{transform:translate(30px,20px)} }
@@ -373,20 +359,179 @@ const LOGIN_STYLES = `
   .splash-out .sp-orb { animation: orb-fade-out 0.8s ease forwards !important; }
   @keyframes orb-fade-out { from{opacity:1} to{opacity:0} }
 
-  .sp-text-area { position: relative; height: 80px; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .sp-msg { position: absolute; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 0 24px; }
-  .sp-title { font-size: clamp(24px, 7vw, 30px); font-weight: 700; letter-spacing: -0.7px; color: #1c1c1e; line-height: 1.15; white-space: nowrap; }
-  .sp-sub   { font-size: 14px; color: #6e6e73; font-weight: 400; line-height: 1.5; letter-spacing: -0.1px; }
-  .sp-msg-welcome-in  { animation: msg-in 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
-  .sp-msg-welcome-out { animation: msg-out-up 0.4s cubic-bezier(0.4,0,1,1) forwards; }
-  .sp-msg-verified-in { animation: msg-in-from-below 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
-  @keyframes msg-in            { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes msg-out-up        { from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(-20px)} }
-  @keyframes msg-in-from-below { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+  /* Sparkles */
+  .sp-sparkle {
+    position: absolute; pointer-events: none; border-radius: 50%;
+    animation: sparkle-float linear infinite;
+  }
+  @keyframes sparkle-float {
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { transform: translateY(-60px) rotate(180deg); opacity: 0; }
+  }
 
-  .sp-dots { display: flex; gap: 6px; margin-top: 40px; }
+  /* Avatar / Icon ring */
+  .sp-avatar-wrap {
+    position: relative;
+    width: 110px; height: 110px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 28px;
+  }
+  .sp-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid rgba(0,122,255,0.18);
+    animation: ring-pulse 2s ease-in-out infinite;
+  }
+  .sp-ring-2 {
+    inset: -12px;
+    border-color: rgba(0,122,255,0.10);
+    animation-delay: 0.4s;
+  }
+  .sp-ring-3 {
+    inset: -24px;
+    border-color: rgba(0,122,255,0.06);
+    animation-delay: 0.8s;
+  }
+  @keyframes ring-pulse {
+    0%,100% { transform: scale(1);    opacity: 1; }
+    50%      { transform: scale(1.06); opacity: 0.6; }
+  }
+  .sp-avatar {
+    width: 90px; height: 90px; border-radius: 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: #ffffff;
+    border: 1px solid rgba(0,122,255,0.14);
+    box-shadow: 0 8px 36px rgba(0,122,255,0.14), 0 2px 8px rgba(0,0,0,0.06);
+    animation: avatar-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    position: relative; z-index: 1;
+  }
+  @keyframes avatar-in { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+
+  /* verified icon */
+  .sp-avatar-verified {
+    background: linear-gradient(135deg, #30d158 0%, #25a244 100%);
+    border-color: rgba(48,209,88,0.30);
+    box-shadow: 0 8px 36px rgba(48,209,88,0.28), 0 2px 8px rgba(0,0,0,0.06);
+    animation: avatar-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  .sp-ring-verified { border-color: rgba(48,209,88,0.22); }
+  .sp-ring-2-verified { border-color: rgba(48,209,88,0.13); }
+  .sp-ring-3-verified { border-color: rgba(48,209,88,0.07); }
+  @keyframes avatar-pop { 0%{transform:scale(0.6);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+
+  /* Wave emoji */
+  .sp-wave { font-size: 38px; line-height: 1; animation: wave-hand 1.2s ease-in-out infinite; display: inline-block; }
+  @keyframes wave-hand {
+    0%,100% { transform: rotate(0deg);   }
+    20%      { transform: rotate(-12deg); }
+    40%      { transform: rotate(14deg);  }
+    60%      { transform: rotate(-8deg);  }
+    80%      { transform: rotate(10deg);  }
+  }
+
+  /* Pill badge */
+  .sp-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(0,122,255,0.08); border: 1px solid rgba(0,122,255,0.14);
+    border-radius: 99px; padding: 5px 14px;
+    font-size: 12px; font-weight: 600; color: #007aff;
+    letter-spacing: 0.02em;
+    animation: pill-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+  }
+  @keyframes pill-in { from{opacity:0;transform:translateY(8px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .sp-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #007aff; animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Text */
+  .sp-text-area { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; overflow: visible; }
+  .sp-msg { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 0 28px; }
+  .sp-title {
+    font-size: clamp(26px, 8vw, 34px); font-weight: 800;
+    letter-spacing: -1px; line-height: 1.1;
+    background: linear-gradient(135deg, #1c1c1e 0%, #3a3a3c 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .sp-title-success {
+    background: linear-gradient(135deg, #25a244 0%, #30d158 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .sp-sub { font-size: 14.5px; color: #6e6e73; font-weight: 400; line-height: 1.5; letter-spacing: -0.1px; }
+  .sp-name { font-weight: 700; color: #007aff; -webkit-text-fill-color: #007aff; }
+
+  .sp-msg-welcome-in  { animation: msg-in 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
+  .sp-msg-verified-in { animation: msg-in 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
+  @keyframes msg-in { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Progress dots */
+  .sp-dots { display: flex; gap: 6px; margin-top: 36px; }
   .sp-dot { height: 6px; border-radius: 99px; background: rgba(0,0,0,0.10); transition: width 0.45s cubic-bezier(0.34,1.2,0.64,1), background 0.3s ease; width: 6px; }
-  .sp-dot.act { width: 22px; background: #007aff; }
+  .sp-dot.act { width: 24px; background: #007aff; }
+  .sp-dot.act-green { width: 24px; background: #30d158; }
+
+  /* Toast Notification */
+  .toast-container {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 300;
+    display: flex;
+    justify-content: center;
+    /* ── FIX: Toast juga harus di bawah status bar ── */
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 0;
+    pointer-events: none;
+  }
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 16px;
+    background: rgba(52, 199, 89, 0.95);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.15px;
+    box-shadow: 0 8px 32px rgba(52,199,89,0.25), 0 0 0 0.5px rgba(255,255,255,0.2);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    pointer-events: auto;
+    max-width: 90vw;
+    animation: toast-in 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+  .toast.hiding {
+    animation: toast-out 0.35s cubic-bezier(0.4,0,1,1) forwards;
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes toast-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  }
+  .toast-icon {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .toast-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    margin-left: 4px;
+    transition: color 0.15s;
+  }
+  .toast-close:hover { color: #fff; }
 `;
 
 // ── Loading step labels (shown below the sign-in button while loading) ─────
@@ -409,6 +554,13 @@ function LoginPageContent() {
   const [showLangSelector, setShowLangSelector] = useState(false);
   const [useImg, setUseImg] = useState(false);
 
+  // ✅ Toast state for register success
+  const [toast, setToast] = useState<{ visible: boolean; message: string; hiding: boolean }>({
+    visible: false,
+    message: '',
+    hiding: false,
+  });
+
   const emailRef = useRef<HTMLInputElement>(null);
   const passRef  = useRef<HTMLInputElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
@@ -416,12 +568,42 @@ function LoginPageContent() {
   useEffect(() => {
     const init = async () => {
       setMounted(true);
+
+      // ✅ FIX STATUS BAR: Halaman login selalu light — set icon gelap di atas bg terang
+      if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+        try {
+          const { StatusBar, Style } = await import('@capacitor/status-bar');
+          await StatusBar.setStyle({ style: Style.Light });          // icon/teks hitam
+          await StatusBar.setBackgroundColor({ color: '#F2F2F7' });  // bg abu terang
+        } catch { /* plugin tidak tersedia — abaikan */ }
+      }
+
       const savedEmail = await storage.get('stc_remember_email');
       const savedPass  = await storage.get('stc_remember_password');
       if (savedEmail) { setEmail(savedEmail); setRemember(true); }
       if (savedPass)  { setPassword(savedPass); }
       const sessionValid = await isSessionValid();
       if (sessionValid) router.push('/dashboard');
+
+      // ✅ Check for register success toast
+      if (typeof window !== 'undefined') {
+        const registerSuccess = sessionStorage.getItem('stc_register_success');
+        const registerEmail = sessionStorage.getItem('stc_register_email');
+        if (registerSuccess === '1') {
+          const msg = registerEmail
+            ? `Registrasi berhasil! Akun ${registerEmail} telah ditambahkan ke whitelist.`
+            : 'Registrasi berhasil! Silakan login dengan akun Stockity Anda.';
+          setToast({ visible: true, message: msg, hiding: false });
+          // Clear sessionStorage
+          sessionStorage.removeItem('stc_register_success');
+          sessionStorage.removeItem('stc_register_email');
+          // Auto hide after 5 seconds
+          setTimeout(() => {
+            setToast(prev => ({ ...prev, hiding: true }));
+            setTimeout(() => setToast({ visible: false, message: '', hiding: false }), 400);
+          }, 5000);
+        }
+      }
     };
     init();
   }, [router]);
@@ -497,11 +679,8 @@ function LoginPageContent() {
     setLoginStep('auth');
 
     try {
-      // ── Step 1: Verify credentials with backend ─────────────────────────
       const res = await api.login(emailVal, passVal);
 
-      // ── Step 2: Check whitelist in Supabase ─────────────────────────────
-      //    Only runs after successful auth, so no DB query on wrong passwords.
       setLoginStep('whitelist');
       const allowed = await isWhitelisted(res.email || emailVal);
       if (!allowed) {
@@ -509,7 +688,6 @@ function LoginPageContent() {
         throw new Error(t('login.notWhitelisted'));
       }
 
-      // ── Step 3: Persist remember-me choice ─────────────────────────────
       setLoginStep('saving');
       if (remember) {
         await storage.set('stc_remember_email',    emailVal);
@@ -519,10 +697,7 @@ function LoginPageContent() {
         await storage.remove('stc_remember_password');
       }
 
-      // ── Step 4: Record last login (non-blocking — don't await) ──────────
       updateLastLogin(res.email || emailVal).catch(() => {});
-
-      // ── Step 5: Save session and show splash screen ─────────────────────
       await runSplash(res);
 
     } catch (err: unknown) {
@@ -532,7 +707,6 @@ function LoginPageContent() {
     }
   };
 
-  // Step hint label shown below button while loading
   const stepHintLabel = (): string => {
     switch (loginStep) {
       case 'auth':      return 'Memverifikasi akun…';
@@ -572,6 +746,11 @@ function LoginPageContent() {
     return <span style={{ fontSize: size }}>{lang.flag}</span>;
   };
 
+  const dismissToast = () => {
+    setToast(prev => ({ ...prev, hiding: true }));
+    setTimeout(() => setToast({ visible: false, message: '', hiding: false }), 400);
+  };
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: LOGIN_STYLES }} />
@@ -584,26 +763,61 @@ function LoginPageContent() {
           splash === 'verified' ? 'splash-verified'              : '',
           splash === 'out'      ? 'splash-out'                   : '',
         ].join(' ')}>
+          {/* Background orbs */}
           <div className="sp-orb sp-orb-1" />
           <div className="sp-orb sp-orb-2" />
           <div className="sp-orb sp-orb-3" />
           <div className="sp-orb sp-orb-4" />
-          <div className={`sp-icon-wrap ${splash === 'verified' || splash === 'out' ? 'sp-icon-verified' : 'sp-icon-welcome'}`}>
+
+          {/* Floating sparkles */}
+          {splash === 'welcome' && ([
+            { size: 8,  color: '#007aff', left: '12%', top: '22%', delay: '0s',    dur: '3.2s' },
+            { size: 6,  color: '#30d158', left: '80%', top: '18%', delay: '0.6s',  dur: '2.8s' },
+            { size: 10, color: '#ff9f0a', left: '88%', top: '55%', delay: '1.1s',  dur: '3.5s' },
+            { size: 5,  color: '#bf5af2', left: '8%',  top: '60%', delay: '0.3s',  dur: '2.6s' },
+            { size: 7,  color: '#ff375f', left: '70%', top: '80%', delay: '0.8s',  dur: '3.0s' },
+            { size: 9,  color: '#007aff', left: '22%', top: '78%', delay: '1.4s',  dur: '2.9s' },
+          ].map((s, i) => (
+            <div key={i} className="sp-sparkle" style={{
+              width: s.size, height: s.size, background: s.color,
+              left: s.left, top: s.top,
+              animationDelay: s.delay, animationDuration: s.dur,
+              opacity: 0.7,
+            }} />
+          )))}
+
+          {/* Main icon */}
+          <div className="sp-avatar-wrap">
+            <div className={`sp-ring ${splash !== 'welcome' ? 'sp-ring-verified' : ''}`} />
+            <div className={`sp-ring sp-ring-2 ${splash !== 'welcome' ? 'sp-ring-2-verified' : ''}`} />
+            <div className={`sp-ring sp-ring-3 ${splash !== 'welcome' ? 'sp-ring-3-verified' : ''}`} />
             {splash === 'welcome' ? (
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-                <polyline points="16 7 22 7 22 13"/>
-              </svg>
+              <div className="sp-avatar">
+                <span className="sp-wave">👋</span>
+              </div>
             ) : (
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6L9 17l-5-5"/>
-              </svg>
+              <div className="sp-avatar" style={{ background: '#fff', border: '1px solid rgba(48,209,88,0.22)', boxShadow: '0 4px 22px rgba(48,209,88,0.14)', animation: 'avatar-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards' }}>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+              </div>
             )}
           </div>
+
+          {/* Status pill */}
+          {splash === 'welcome' && (
+            <div className="sp-pill" style={{ marginBottom: 18 }}>
+              <div className="sp-pill-dot" />
+              Masuk ke akun Anda
+            </div>
+          )}
+
+          {/* Text */}
           <div className="sp-text-area">
             {splash === 'welcome' && (
               <div className="sp-msg sp-msg-welcome-in">
                 <span className="sp-title">{t('login.welcome')}</span>
+                <span className="sp-sub">Senang melihat Anda kembali 🎉</span>
               </div>
             )}
             {(splash === 'verified' || splash === 'out') && (
@@ -613,9 +827,30 @@ function LoginPageContent() {
               </div>
             )}
           </div>
+
+          {/* Progress dots */}
           <div className="sp-dots">
             <div className={`sp-dot ${splash === 'welcome' ? 'act' : ''}`} />
             <div className={`sp-dot ${splash === 'verified' || splash === 'out' ? 'act' : ''}`} />
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Toast Notification */}
+      {toast.visible && (
+        <div className="toast-container">
+          <div className={`toast ${toast.hiding ? 'hiding' : ''}`}>
+            <div className="toast-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+            </div>
+            <span style={{ lineHeight: 1.4 }}>{toast.message}</span>
+            <button className="toast-close" onClick={dismissToast} aria-label="Tutup notifikasi">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
         </div>
       )}
@@ -726,8 +961,7 @@ function LoginPageContent() {
                           </svg>
                         ) : (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                           </svg>
                         )}
                       </button>
@@ -746,7 +980,6 @@ function LoginPageContent() {
 
                 {error && (
                   <div className={`err${isWhitelistError ? ' err-whitelist' : ''}`}>
-                    {/* Whitelist error gets a shield/lock icon, others get a dot */}
                     {isWhitelistError ? (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
                         <rect x="3" y="11" width="18" height="11" rx="2"/>
@@ -764,7 +997,6 @@ function LoginPageContent() {
                   {loading ? t('login.signingIn') : t('login.signIn')}
                 </button>
 
-                {/* Step hint — visible only while loading */}
                 <p className="step-hint" style={{ opacity: loading ? 1 : 0 }}>
                   {stepHintLabel()}
                 </p>
@@ -785,12 +1017,24 @@ function LoginPageContent() {
               {t('login.noAccount')} <Link href="/register">{t('login.register')}</Link>
             </div>
 
-            <div className="foot">
-              © 2026 STC AutoTrade ·{' '}
-              <a className="foot-lnk" href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer">{t('login.terms')}</a>
-              {' '}·{' '}
-              <a className="foot-lnk" href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer">{t('login.privacy')}</a>
+            <div style={{ textAlign: 'center', marginTop: 10 }}>
+              <span style={{ fontSize: 13, color: '#6e6e73' }}>Kesulitan mendaftar? </span>
+              <a
+                className="foot-lnk"
+                href="https://t.me/sanx_id"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 13, fontWeight: 500, color: '#007aff' }}
+              >
+                hubungi kami
+              </a>
             </div>
+
+          </div>
+
+          <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11.5, color: 'var(--text-3)', zIndex: 10 }}>
+            © 2026 STC AutoTrade ·{' '}
+            <a href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)', fontWeight: 500, cursor: 'pointer', transition: 'opacity 0.14s' }}>{t('login.terms')}</a>
           </div>
         </div>
       )}

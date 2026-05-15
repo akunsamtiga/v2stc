@@ -2,6 +2,7 @@
 
 'use client'
 import { useState } from 'react'
+import Image from 'next/image'
 import { TrendingUp } from 'lucide-react'
 
 interface AssetIconProps {
@@ -152,11 +153,12 @@ export default function AssetIcon({
   // ── Render image ─────────────────────────────────────────────
   if (iconUrl && !imageError) {
     return (
-      <div className={`${SIZE_CLASSES[size]} rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 ${className}`}>
-        <img
+      <div className={`${SIZE_CLASSES[size]} rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 relative ${className}`}>
+        <Image
           src={iconUrl}
           alt={`${asset.name} icon`}
-          className="w-full h-full object-contain"
+          fill
+          className="object-contain"
           onError={() => setImageError(true)}
         />
       </div>
