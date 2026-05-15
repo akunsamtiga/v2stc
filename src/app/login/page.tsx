@@ -1021,7 +1021,7 @@ function LoginPageContent() {
               <span style={{ fontSize: 13, color: '#6e6e73' }}>Kesulitan mendaftar? </span>
               <a
                 className="foot-lnk"
-                href="https://t.me/sanx_id"
+                href="https://t.me/STC_01"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ fontSize: 13, fontWeight: 500, color: '#007aff' }}
