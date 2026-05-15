@@ -28,7 +28,7 @@ function isNativeApp(): boolean {
 }
 
 const DEFAULT_REGISTRATION_URL = 'https://stockity.id/id?a=37051c9cbcfe&t=0#auth';
-const DEFAULT_WHATSAPP_URL     = 'https://t.me/sanx_id';
+const DEFAULT_WHATSAPP_URL     = 'https://t.me/STC_01';
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
