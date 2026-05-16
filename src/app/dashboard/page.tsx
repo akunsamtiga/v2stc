@@ -476,10 +476,19 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
   const isPos = profit>=0;
   const col   = isPos?C.cyan:C.coral;
   const prevR = useRef(profit);
-  const [animKey,setAnimKey] = useState(0);
-  const [dir,setDir] = useState<'up'|'down'>('up');
+  // ✅ FIX flicker: ganti key={animKey} dengan ref + class toggle
+  const numRef2 = useRef<HTMLParagraphElement>(null);
   useEffect(()=>{
-    if(profit!==prevR.current){setDir(profit>prevR.current?'up':'down');setAnimKey(k=>k+1);prevR.current=profit;}
+    if(profit===prevR.current) return;
+    const dir = profit>prevR.current?'up':'down';
+    prevR.current=profit;
+    const el = numRef2.current;
+    if(!el) return;
+    el.classList.remove('profit-slide-up','profit-slide-down');
+    void el.offsetWidth;
+    el.classList.add(`profit-slide-${dir}`);
+    const t = setTimeout(()=>el.classList.remove(`profit-slide-${dir}`),450);
+    return ()=>clearTimeout(t);
   },[profit]);
   
   const displayValue = formatProfitDisplay(profit);
@@ -498,10 +507,9 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
         <div style={{width:1,alignSelf:'stretch',background:C.bdr}}/>
         <div style={{flex:1,minWidth:0}}>
           {isLoading?<Sk h={24} w="85%"/>:(
-            <p key={animKey} style={{
+            <p ref={numRef2} style={{
               fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col,
               fontSize:fontSize,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-              animation:animKey>0?`profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both`:undefined,
             }}>
               {isPos?'+':'-'}Rp {displayValue}
             </p>
@@ -539,17 +547,24 @@ const TodayProfitCard: React.FC<{
   const isPos   = profit >= 0;
   const col     = isPos ? C.cyan : C.coral;
   const prevR   = useRef(profit);
-  const [animKey, setAnimKey] = useState(0);
-  const [dir, setDir]         = useState<'up' | 'down'>('up');
-  const [hidden, setHidden]   = useState(false);
-  const [secAgo, setSecAgo]   = useState<number | null>(null);
+  // ✅ FIX flicker: ganti key={animKey} (unmount/remount) dengan ref + class toggle
+  // key prop menyebabkan React unmount+remount DOM node 1 frame → flash kosong
+  const numRef  = useRef<HTMLParagraphElement>(null);
+  const [hidden, setHidden] = useState(false);
+  const [secAgo, setSecAgo] = useState<number | null>(null);
 
   useEffect(() => {
-    if (profit !== prevR.current) {
-      setDir(profit > prevR.current ? 'up' : 'down');
-      setAnimKey(k => k + 1);
-      prevR.current = profit;
-    }
+    if (profit === prevR.current) return;
+    const dir = profit > prevR.current ? 'up' : 'down';
+    prevR.current = profit;
+    const el = numRef.current;
+    if (!el) return;
+    // Hapus class lama, paksa reflow, tambah class baru → animasi tanpa unmount
+    el.classList.remove('profit-slide-up', 'profit-slide-down');
+    void el.offsetWidth; // force reflow
+    el.classList.add(`profit-slide-${dir}`);
+    const timer = setTimeout(() => el.classList.remove(`profit-slide-${dir}`), 450);
+    return () => clearTimeout(timer);
   }, [profit]);
 
   // Update "X detik lalu" counter setiap 5 detik
@@ -607,7 +622,7 @@ const TodayProfitCard: React.FC<{
           ))}
         </div>
       ) : (
-        <p key={animKey} style={{
+        <p ref={numRef} style={{
           fontWeight: 700,
           letterSpacing: '-0.03em',
           lineHeight: 1,
@@ -617,9 +632,8 @@ const TodayProfitCard: React.FC<{
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           textAlign: 'center',
-          animation: animKey > 0 ? `profit-slide-${dir} 0.4s cubic-bezier(0.4,0,0.2,1) both` : undefined,
-          opacity: isRefreshing ? 0.6 : 1,
-          transition: 'opacity 0.2s',
+          // ✅ FIX flicker: animasi via CSS class toggle, bukan key prop (yg unmount/remount)
+          // opacity TIDAK diturunkan saat isRefreshing — itu yg bikin fade-flicker tiap poll
           textShadow: isMobile ? 'none' : `0 0 18px ${col}90, 0 0 6px ${col}55`,
         }}>
           {isPos ? '+' : '−'}Rp {displayValue}
@@ -2353,31 +2367,41 @@ const ModePickerModal: React.FC<{
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px 12px',borderBottom:`1px solid ${C.bdr}`}}>
           <div>
             <p style={{fontSize:16,fontWeight:700,color:C.text,lineHeight:1}}>Mode Trading</p>
-            <p style={{fontSize:12,color:C.muted,marginTop:3}}>Pilih mode yang ingin digunakan</p>
+            <p style={{fontSize:12,color:C.muted,marginTop:3}}>{locked ? 'Mode terkunci saat bot berjalan' : 'Pilih mode yang ingin digunakan'}</p>
           </div>
           <button onClick={onClose} style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:99,background:C.card2,border:`1px solid ${C.bdr}`,cursor:'pointer',color:C.muted}}>
             <X style={{width:14,height:14}}/>
           </button>
         </div>
+        {/* lock notice banner */}
+        {locked && (
+          <div style={{margin:'10px 12px 0',display:'flex',alignItems:'center',gap:8,padding:'9px 12px',borderRadius:12,background:`${C.amber}10`,border:`1px solid ${C.amber}30`}}>
+            <span style={{fontSize:16,lineHeight:1,flexShrink:0}}>🔒</span>
+            <div>
+              <p style={{fontSize:12,fontWeight:700,color:C.amber,lineHeight:1,marginBottom:2}}>Mode Sedang Aktif</p>
+              <p style={{fontSize:11,color:C.muted,lineHeight:1.4}}>Stop bot terlebih dahulu untuk mengganti mode</p>
+            </div>
+          </div>
+        )}
         {/* mode list */}
         <div style={{padding:'12px',display:'flex',flexDirection:'column',gap:6}}>
           {MODES.map(({ v, label, icon, accent, desc }) => {
             const isAct = mode === v;
-            const isLock = blockedModes.includes(v);
+            const isOtherRunning = locked && !isAct; // mode lain sedang berjalan
             return (
               <button
                 key={v}
                 type="button"
                 onClick={() => {
                   onModeChange(v);
-                  if (!isLock) onClose();
+                  onClose();
                 }}
                 style={{
                   display:'flex',alignItems:'center',gap:12,padding:'11px 14px',
                   borderRadius:14,cursor:'pointer',
                   background:isAct?`${accent}14`:C.card2,
-                  border:`1px solid ${isAct?`${accent}45`:isLock?C.bdr:C.bdr}`,
-                  opacity:isLock?0.6:1,
+                  border:`1px solid ${isAct?`${accent}45`:C.bdr}`,
+                  opacity:isOtherRunning?0.55:1,
                   transition:'background 0.15s,border-color 0.15s',
                 }}
               >
@@ -2391,8 +2415,12 @@ const ModePickerModal: React.FC<{
                 <div style={{flex:1,textAlign:'left'}}>
                   <div style={{display:'flex',alignItems:'center',gap:5}}>
                     <span style={{display:'block',fontSize:14,fontWeight:600,color:isAct?accent:C.sub}}>{label}</span>
-                    {isLock&&!isAct&&(
-        <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:6,color:C.coral,background:`${C.coral}12`,border:`1px solid ${C.coral}30`,letterSpacing:'0.04em',flexShrink:0}}>🔒 {T('common.active')}</span>
+                    {/* Badge hanya untuk mode yang SEDANG BERJALAN */}
+                    {isAct && locked && (
+                      <span style={{fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:6,color:accent,background:`${accent}15`,border:`1px solid ${accent}35`,letterSpacing:'0.04em',flexShrink:0,display:'flex',alignItems:'center',gap:3}}>
+                        <span style={{width:4,height:4,borderRadius:'50%',background:accent,animation:'ping 1.4s ease-in-out infinite',display:'inline-block'}}/>
+                        Berjalan
+                      </span>
                     )}
                   </div>
                   <span style={{display:'block',fontSize:11,color:C.muted,marginTop:1}}>{desc}</span>
@@ -2403,10 +2431,10 @@ const ModePickerModal: React.FC<{
               </button>
             );
           })}
-          {blockedModes.length > 0 && (
+          {locked && (
             <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:10,background:`${C.amber}08`,border:`1px solid ${C.amber}25`,marginTop:2}}>
               <Info style={{width:11,height:11,color:C.amber,flexShrink:0}}/>
-              <span style={{fontSize:11,color:C.amber}}>{T('dashboard.modePicker.stopActiveFirst')}</span>
+              <span style={{fontSize:11,color:C.amber}}>Hentikan bot dulu untuk menjalankan mode lain</span>
             </div>
           )}
         </div>
@@ -2462,6 +2490,22 @@ const ModeSessionPanel: React.FC<{
   const { isDarkMode } = useDarkMode();
   const [modePickerOpen, setModePickerOpen] = useState(false);
 
+  // Hitung mode yang BENAR-BENAR sedang berjalan dari semua status props,
+  // bukan hanya mode yang sedang dilihat user saat ini
+  const runningMode: TradingMode | '' = (()=>{
+    const isFtR  = ftStatus?.isRunning ?? false;
+    const isAIR  = aiStatus?.botState === 'RUNNING' || (!aiStatus?.botState && aiStatus?.isActive === true);
+    const isIndR = indicatorStatus?.isRunning ?? false;
+    const isMomR = momentumStatus?.isRunning ?? false;
+    if(isRunning)  return 'schedule';
+    if(isFtR)      return (ftStatus as any)?.mode === 'CTC' ? 'ctc' : 'fastrade';
+    if(isAIR)      return 'aisignal';
+    if(isIndR)     return 'indicator';
+    if(isMomR)     return 'momentum';
+    return '';
+  })();
+  const isAnyRunning = !!runningMode;
+
   const MODE_LIST = [
     { v: 'schedule'  as TradingMode, label: 'Signal Mode',           icon: <Calendar  style={{ width: 12, height: 12 }} />, accent: C.cyan,   desc: 'Manual Input Signal' },
     { v: 'fastrade'  as TradingMode, label: 'Fastrade FTT Mode',    icon: <Zap       style={{ width: 12, height: 12 }} />, accent: C.cyan,   desc: 'Fast Trade Execution' },
@@ -2483,13 +2527,13 @@ const ModeSessionPanel: React.FC<{
       background: locked ? undefined : C.card2,
       boxShadow: isDarkMode ? `0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)` : 'none',
     }}>
-      {/* Mode picker modal */}
+      {/* Mode picker modal — tampilkan mode yang BERJALAN bukan hanya yang dilihat */}
       <ModePickerModal
         open={modePickerOpen}
         onClose={() => setModePickerOpen(false)}
-        mode={mode}
+        mode={(runningMode || mode) as TradingMode}
         onModeChange={onModeChange}
-        locked={locked}
+        locked={locked || isAnyRunning}
         blockedModes={blockedModes}
       />
 
@@ -3340,6 +3384,9 @@ const ControlCard: React.FC<{
     return false;
   })();
 
+  // True jika ada mode LAIN yang berjalan saat mode ini idle — untuk disable tombol Start
+  const isAnyOtherRunning = !isActive && (isSchedRunning || isSchedPaused || isFtRunning || isAIRunning || isIndRunning || isMomRunning);
+
   // Auto-collapse when bot becomes active
   useEffect(()=>{ if(isActive) setOpen(false); },[isActive]);
 
@@ -3466,14 +3513,14 @@ const ControlCard: React.FC<{
           ) : (
             /* Idle — simple start button */
             <>
-              <button onClick={onStart} disabled={isLoading||!canStart||isBelowMin} style={{
+              <button onClick={onStart} disabled={isLoading||!canStart||isBelowMin||isAnyOtherRunning} style={{
                 width:'100%',height:50,borderRadius:14,cursor:'pointer',
                 border:`1px solid ${ac}55`,
                 background:`linear-gradient(180deg,${ac}CC,${ac}AA)`,
                 color:'#fff',fontSize:14,fontWeight:700,letterSpacing:'0.02em',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:8,
                 boxShadow: isDarkMode ? `0 1px 0 rgba(255,255,255,0.18) inset, 0 10px 28px ${ac}55, 0 3px 10px rgba(0,0,0,0.45)` : `0 2px 10px ${ac}40`,
-                opacity:(isLoading||!canStart||isBelowMin)?0.45:1,transition:'opacity 0.2s',
+                opacity:(isLoading||!canStart||isBelowMin||isAnyOtherRunning)?0.45:1,transition:'opacity 0.2s',
               }}>
                 <PlayCircle style={{width:18,height:18}}/> Start
               </button>
@@ -3592,12 +3639,72 @@ export default function DashboardPage() {
     if(flashTimer.current)clearTimeout(flashTimer.current);
     setFlash(r); flashTimer.current=setTimeout(()=>setFlash(null),2500);
   },[]);
+  // ✅ FIX delay: Deteksi order selesai dari SEMUA mode → langsung refresh profit
+  // Sebelumnya hanya ftStatus yang diwatch, dan tidak ada trigger refresh profit sama sekali.
+  // Sekarang: deteksi dari ftStatus + scheduleLogs + aiStatus + indicatorStatus + momentumStatus
+  const prevSchLogLen  = useRef(0);
+  const prevAiWins     = useRef(0);
+  const prevIndWins    = useRef(0);
+  const prevMomWins    = useRef(0);
+  const profitRefTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
+
+  // ── Silent profit refresh — dipanggil otomatis saat order selesai (no loading state) ──
+  // ✅ FIX delay: Tidak pakai profitRefreshing guard agar bisa jalan paralel dengan manual refresh
+  const silentRefreshProfit = useCallback(async () => {
+    try {
+      const result = await api.todayProfit();
+      if (isMounted.current) {
+        setTodayProfitData(result);
+        setProfitLastUpdated(Date.now());
+      }
+    } catch (e) {
+      console.warn('[Profit] silent refresh error:', e);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Helper: debounce agar tidak spam jika beberapa mode selesai bersamaan
+  const triggerProfitRefresh = useCallback((delaySec: number = 2) => {
+    if (profitRefTimer.current) clearTimeout(profitRefTimer.current);
+    profitRefTimer.current = setTimeout(() => silentRefreshProfit(), delaySec * 1000);
+  }, [silentRefreshProfit]);
+
   useEffect(()=>{
     const w=ftStatus?.totalWins??0, l=ftStatus?.totalLosses??0;
-    if(w>prevWRef.current&&(prevWRef.current+prevLRef.current)>0)flashResult('win');
-    else if(l>prevLRef.current&&(prevWRef.current+prevLRef.current)>0)flashResult('lose');
+    const prevW = prevWRef.current, prevL = prevLRef.current;
+    if(w>prevW&&(prevW+prevL)>0){ flashResult('win');  triggerProfitRefresh(1.5); }
+    else if(l>prevL&&(prevW+prevL)>0){ flashResult('lose'); triggerProfitRefresh(1.5); }
     prevWRef.current=w; prevLRef.current=l;
   },[ftStatus?.totalWins,ftStatus?.totalLosses]); // eslint-disable-line
+
+  // Schedule mode: deteksi dari panjang logs (order baru = trade selesai)
+  useEffect(()=>{
+    const len = scheduleLogs?.length ?? 0;
+    if (len > prevSchLogLen.current && prevSchLogLen.current > 0) {
+      triggerProfitRefresh(2);
+    }
+    prevSchLogLen.current = len;
+  },[scheduleLogs?.length]); // eslint-disable-line
+
+  // AI Signal mode
+  useEffect(()=>{
+    const w = aiStatus?.totalWins ?? 0;
+    if (w > prevAiWins.current && prevAiWins.current >= 0) { triggerProfitRefresh(2); }
+    prevAiWins.current = w;
+  },[aiStatus?.totalWins]); // eslint-disable-line
+
+  // Indicator & Momentum mode (totalWins jika ada, fallback ke logs count)
+  useEffect(()=>{
+    const w = (indicatorStatus as any)?.totalWins ?? 0;
+    if (w > prevIndWins.current && prevIndWins.current >= 0) { triggerProfitRefresh(2); }
+    prevIndWins.current = w;
+  },[( indicatorStatus as any)?.totalWins]); // eslint-disable-line
+
+  useEffect(()=>{
+    const w = (momentumStatus as any)?.totalWins ?? 0;
+    if (w > prevMomWins.current && prevMomWins.current >= 0) { triggerProfitRefresh(2); }
+    prevMomWins.current = w;
+  },[(momentumStatus as any)?.totalWins]); // eslint-disable-line
 
   // ── Akumulasi schedule history di parent ─────────────────────────────────
   //
@@ -3924,6 +4031,9 @@ export default function DashboardPage() {
     return false;
   })();
 
+  // True jika ADA mode apapun yang sedang berjalan (bukan hanya mode yang dilihat)
+  const isAnyModeRunning = isSchedRunning || isSchedPaused || isFtRunning || isAIRunning || isIndRunning || isMomRunning;
+
   const selectedAsset = assets.find(a=>a.ric===selectedRic)??null;
   const pendingOrders = scheduleOrders.filter(o=>!o.isExecuted&&!o.isSkipped);
   const canStart = tradingMode==='schedule' ? !!(selectedRic&&pendingOrders.length>0) : !!selectedRic;
@@ -3955,7 +4065,7 @@ export default function DashboardPage() {
   const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
 
   const handleModeChange = (m:TradingMode)=>{
-    if(blockedModes.includes(m)){showBlock(T('dashboard.modePicker.stopActiveFirst'));return;}
+    // Izinkan ganti pilihan mode kapan saja (proteksi start ada di handleStart)
     if(m!==tradingMode) setTradingMode(m);
     setError(null);
     setIsModeChosen(true);
@@ -3970,6 +4080,15 @@ export default function DashboardPage() {
   const handleStart = async()=>{
     if(!selectedRic)return;
     if(isBelowMin&&tradingMode!=='indicator'){setError(`Amount di bawah minimum Rp ${IDR_MIN_DISPLAY.toLocaleString('id-ID')}.`);return;}
+    // Cegah start jika ada mode LAIN yang sedang berjalan (hanya 1 mode boleh aktif)
+    const otherRunning = (
+      (tradingMode!=='schedule'&&(isSchedRunning||isSchedPaused))||
+      ((tradingMode!=='fastrade'&&tradingMode!=='ctc')&&isFtRunning)||
+      (tradingMode!=='aisignal'&&isAIRunning)||
+      (tradingMode!=='indicator'&&isIndRunning)||
+      (tradingMode!=='momentum'&&isMomRunning)
+    );
+    if(otherRunning){showBlock(T('dashboard.modePicker.stopActiveFirst'));return;}
     setActionLoading(true);setError(null);
     try{
       if(tradingMode==='schedule'){
@@ -4029,11 +4148,19 @@ export default function DashboardPage() {
     setStopConfirmOpen(false);
     setActionLoading(true);setError(null);
     try{
-      if(tradingMode==='schedule') await api.scheduleStop();
-      else if(tradingMode==='fastrade'||tradingMode==='ctc') await api.fastradeStop();
-      else if(tradingMode==='aisignal') await api.aiSignalStop();
-      else if(tradingMode==='indicator') await api.indicatorStop();
-      else if(tradingMode==='momentum') await api.momentumStop();
+      // Stop berdasarkan mode yang benar-benar sedang berjalan di server
+      if(tradingMode==='schedule'||(isSchedRunning||isSchedPaused)) {
+        if(isSchedRunning||isSchedPaused) await api.scheduleStop();
+        else if(tradingMode==='schedule') await api.scheduleStop();
+      }
+      if(tradingMode==='fastrade'||tradingMode==='ctc') await api.fastradeStop();
+      else if(isFtRunning) await api.fastradeStop();
+      if(tradingMode==='aisignal') await api.aiSignalStop();
+      else if(isAIRunning) await api.aiSignalStop();
+      if(tradingMode==='indicator') await api.indicatorStop();
+      else if(isIndRunning) await api.indicatorStop();
+      if(tradingMode==='momentum') await api.momentumStop();
+      else if(isMomRunning) await api.momentumStop();
       await loadAll(true);
     }catch(e:any){setError(e?.message??T('dashboard.errors.stopFailed'));}
     finally{setActionLoading(false);}
@@ -4092,7 +4219,7 @@ export default function DashboardPage() {
 
   const ModeSession = (fillH:boolean, compact?:boolean, onViewSession?:()=>void, startStopButton?:React.ReactNode) => (
     <ModeSessionPanel
-      mode={tradingMode} onModeChange={handleModeChange} locked={isActiveMode} blockedModes={blockedModes}
+      mode={tradingMode} onModeChange={handleModeChange} locked={isAnyModeRunning} blockedModes={blockedModes}
       orders={scheduleOrders} logs={scheduleLogs} onOpenModal={()=>{ setOrderModalInitialView('list'); setOrderModalOpen(true); }} isRunning={isSchedRunning}
       ftStatus={ftStatus} ftLogs={ftLogs} ftLoading={false}
       aiStatus={aiStatus} aiPending={aiPendingOrders}
@@ -4142,7 +4269,7 @@ export default function DashboardPage() {
   const mobileStartStopBtn = (
     <button
       onClick={isActiveMode ? handleStop : handleStart}
-      disabled={actionLoading || (!isActiveMode && !canStart)}
+      disabled={actionLoading || (!isActiveMode && (!canStart || isAnyModeRunning))}
       style={{
         width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,
         padding:'9px 0',borderRadius:10,
@@ -4154,8 +4281,8 @@ export default function DashboardPage() {
         border:`1px solid ${isActiveMode ? C.coral : ac}55`,
         color:'#fff',
         fontSize:12,fontWeight:800,letterSpacing:'0.05em',
-        cursor: actionLoading || (!isActiveMode && !canStart) ? 'not-allowed' : 'pointer',
-        opacity: !isActiveMode && !canStart ? 0.45 : 1,
+        cursor: actionLoading || (!isActiveMode && (!canStart || isAnyModeRunning)) ? 'not-allowed' : 'pointer',
+        opacity: !isActiveMode && (!canStart || isAnyModeRunning) ? 0.45 : 1,
         boxShadow: actionLoading ? 'none' : isActiveMode
           ? `0 3px 12px ${C.coral}40`
           : `0 3px 12px ${ac}40`,
@@ -4240,6 +4367,9 @@ export default function DashboardPage() {
         @keyframes fade-in     { from{opacity:0} to{opacity:1} }
         @keyframes profit-slide-up   { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         @keyframes profit-slide-down { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+        /* ✅ FIX flicker: CSS class version agar bisa di-toggle via ref tanpa remount */
+        .profit-slide-up   { animation: profit-slide-up   0.4s cubic-bezier(0.4,0,0.2,1) both !important; }
+        .profit-slide-down { animation: profit-slide-down 0.4s cubic-bezier(0.4,0,0.2,1) both !important; }
         @keyframes win-flash   { 0%{box-shadow:0 0 0 0 rgba(41,151,255,0)} 15%{box-shadow:0 0 0 4px rgba(41,151,255,0.35)} 100%{box-shadow:0 0 0 0 rgba(41,151,255,0)} }
         @keyframes lose-flash  { 0%{box-shadow:0 0 0 0 rgba(255,69,58,0)} 15%{box-shadow:0 0 0 4px rgba(255,69,58,0.35)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)} }
 @keyframes header-shimmer {
@@ -4798,7 +4928,10 @@ export default function DashboardPage() {
       display:'block',
       position: 'relative',
       zIndex: 1,
+      opacity: 0,
+      transition: 'opacity 0.3s ease',
     }}
+    onCanPlay={(e) => { (e.target as HTMLVideoElement).style.opacity = '1'; }}
     onError={(e) => { (e.target as HTMLVideoElement).parentElement!.style.display = 'none'; }}
   />
   {/* Shimmer overlay */}
@@ -4845,20 +4978,33 @@ export default function DashboardPage() {
               {/* RIGHT: Mode panel — flex:2, drives the row height on mode change */}
               {isActiveMode && tradingMode !== 'schedule' ? (
                 <div style={{flex:2,display:'flex',flexDirection:'column',gap:6,minWidth:0}}>
-                  {/* mode selector button (read-only style) */}
-                  <div style={{
-                    display:'flex',alignItems:'center',justifyContent:'space-between',
-                    padding:'8px 12px',borderRadius:12,
-                    background:`${modeAccent(tradingMode)}0a`,
-                    border:`1px solid ${modeAccent(tradingMode)}30`,
-                  }}>
+                  {/* Mode picker modal — tetap bisa dibuka saat aktif, tapi locked */}
+                  <ModePickerModal
+                    open={mobileModePickerOpen}
+                    onClose={() => setMobileModePickerOpen(false)}
+                    mode={tradingMode}
+                    onModeChange={handleModeChange}
+                    locked={isActiveMode}
+                    blockedModes={blockedModes}
+                  />
+                  {/* mode selector button — tetap bisa diklik saat aktif */}
+                  <button
+                    onClick={() => setMobileModePickerOpen(true)}
+                    style={{
+                      display:'flex',alignItems:'center',justifyContent:'space-between',
+                      padding:'8px 12px',borderRadius:12,cursor:'pointer',
+                      background:`${modeAccent(tradingMode)}0a`,
+                      border:`1px solid ${modeAccent(tradingMode)}30`,
+                    }}
+                  >
                     <div style={{display:'flex',alignItems:'center',gap:6}}>
                       <span style={{width:6,height:6,borderRadius:'50%',background:modeAccent(tradingMode),animation:'pulse 1.6s ease-in-out infinite',boxShadow:`0 0 5px ${modeAccent(tradingMode)}`}}/>
                       <span style={{fontSize:'clamp(8px,2.8vw,11px)',fontWeight:700,color:modeAccent(tradingMode)}}>
                         {{schedule:'Signal Mode',fastrade:'Fastrade FTT',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'}[tradingMode]}
                       </span>
                     </div>
-                  </div>
+                    <span style={{fontSize:11,color:modeAccent(tradingMode),opacity:0.7}}>🔒</span>
+                  </button>
                   {/* P&L + Mini Stats + Lihat Sesi — unified card (non-schedule modes) */}
                   <div style={{
                     padding:'10px 12px',borderRadius:12,
@@ -5001,12 +5147,13 @@ export default function DashboardPage() {
                             locked={isActiveMode}
                             blockedModes={blockedModes}
                           />
-                          {/* Card header — mode picker button, sama dengan mode lain saat aktif */}
+                          {/* Card header — mode picker button, tetap bisa diklik saat aktif */}
                           <div style={{padding:'8px 12px',borderBottom:`1px solid ${C.bdr}`,flexShrink:0}}>
-                            <div
+                            <button
+                              onClick={() => setMobileModePickerOpen(true)}
                               style={{
-                                display:'flex',alignItems:'center',justifyContent:'space-between',
-                                padding:'8px 12px',borderRadius:12,
+                                width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+                                padding:'8px 12px',borderRadius:12,cursor:'pointer',
                                 background:`${ac}0a`,
                                 border:`1px solid ${ac}30`,
                               }}
@@ -5019,7 +5166,8 @@ export default function DashboardPage() {
                                 }}/>
                                 <span style={{fontWeight:700,color:ac,fontSize:'clamp(8px,2.8vw,11px)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>Signal Mode</span>
                               </div>
-                            </div>
+                              <span style={{fontSize:11,color:ac,opacity:0.7}}>🔒</span>
+                            </button>
                           </div>
 
                           {/* Card body — 3 schedule items */}
