@@ -1,4 +1,4 @@
-package com.stockautotrade.app.plugins;
+package com.stc.autotrade.plugins;
 
 import android.app.Dialog;
 import android.graphics.Bitmap;

@@ -167,7 +167,6 @@ function SavingDialog({ message = 'Mohon tunggu sebentar...' }: { message?: stri
   );
 }
 
-// ── FIX 1: Hapus tombol "Lanjut Trading di Stockity" ─────────────────────────
 function ModernSuccessDialog({
   email,
   onLoginClick,
@@ -244,7 +243,6 @@ function ModernSuccessDialog({
             <div style={{ marginBottom: 24 }} />
           )}
 
-          {/* Hanya satu tombol — tombol "Lanjut Trading di Stockity" dihapus */}
           <div style={{ width: '100%' }}>
             <button onClick={onLoginClick} style={{
               width: '100%', height: 50, borderRadius: 14,
@@ -373,13 +371,11 @@ function WebRegisterModal({
 
       const resolvedDevice = await getOrCreateDeviceId();
 
-      // Dapatkan Stockity auth token langsung (untuk cek riwayat trading)
       const { authToken: stockityToken, deviceId: stockityDevice } =
         await loginToStockity(email, password, resolvedDevice);
 
       const resolvedStockityDevice = stockityDevice || resolvedDevice;
 
-      // Login ke STC backend (untuk session STC)
       const res = await api.login(email, password);
 
       const resolvedEmail  = res.email  || email;
@@ -406,7 +402,6 @@ function WebRegisterModal({
         return;
       }
 
-      // ── Cek riwayat trading (hanya untuk pendaftar baru) ─────────────────────
       setStep('Memeriksa riwayat trading…');
       const hasTradingHistory = await checkHistory(stockityToken, resolvedStockityDevice);
       if (hasTradingHistory) {
@@ -876,8 +871,6 @@ function RegisterLanding({
               Saya Sudah Daftar
             </button>
           </div>
-
-
         </div>
       </div>
     </>
@@ -902,7 +895,6 @@ export default function RegisterPage() {
   const capturedToken   = useRef('');
   const capturedDevice  = useRef('');
 
-  // ✅ Ref guard agar tidak double-check jika event datang dua kali berturutan
   const isCheckingRef = useRef(false);
 
   const handleTokenDetected = useCallback(async (token: string, deviceId: string, url: string) => {
@@ -914,8 +906,6 @@ export default function RegisterPage() {
     capturedToken.current = token;
     capturedDevice.current = deviceId || await getOrCreateDeviceId();
 
-    // ✅ PERUBAHAN UTAMA: Cek riwayat trading SEBELUM tampilkan popup sukses
-    // Popup sukses hanya muncul kalau akun benar-benar bersih (belum pernah trading)
     setPhase('saving');
     setSavingMessage('Memeriksa riwayat akun Stockity...');
 
@@ -923,7 +913,6 @@ export default function RegisterPage() {
       const hasTradingHistory = await checkHasTradingHistory(token, capturedDevice.current);
 
       if (hasTradingHistory) {
-        // ❌ Ada riwayat trading — tolak pendaftaran langsung, tanpa popup sukses
         isCheckingRef.current = false;
         setIsUserBlocked(false);
         setSaveError(
@@ -935,7 +924,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // ✅ Bersih — fetch profile untuk email di popup sukses
       try {
         const userProfile = await fetchUserProfile(token, capturedDevice.current);
         setCapturedEmail(userProfile.email);
@@ -944,21 +932,22 @@ export default function RegisterPage() {
       isCheckingRef.current = false;
       setPhase('token_detected');
     } catch (e) {
-      // Jika cek history gagal (network error), lanjut ke popup — jangan blokir user
       console.warn('[Register] Cek history gagal, lanjut ke popup:', e);
       isCheckingRef.current = false;
       setPhase('token_detected');
     }
   }, [phase]);
 
-  // ── FIX 2: Parameter fromLanding agar landing tidak hilang saat WebView dibuka
-  // Kalau dipanggil dari landing (user klik tombol), jangan ubah phase ke 'webview'
-  // sehingga landing tetap tampil di belakang WebView — tidak ada kedip/flash.
   const openRegistration = useCallback(async (fromLanding = false) => {
-    // Hanya sembunyikan UI (phase='webview') saat pertama kali load (bukan dari landing)
     if (!fromLanding) {
       setPhase('webview');
     }
+
+    await stcWebView.clearSession().catch(() => {});
+
+    capturedToken.current  = '';
+    capturedDevice.current = '';
+    isCheckingRef.current  = false;
 
     try {
       const result = await stcWebView.open({ url: registrationUrl.current });
@@ -970,9 +959,6 @@ export default function RegisterPage() {
       }
 
       if (capturedToken.current) {
-        // ✅ PERUBAHAN: Kalau isCheckingRef aktif, berarti handleTokenDetected sedang
-        // jalan (dipicu oleh event listener) — jangan override phase 'saving' dengan
-        // 'token_detected' langsung, atau nanti popup sukses muncul tanpa cek history.
         if (!isCheckingRef.current) {
           handleTokenDetected(capturedToken.current, capturedDevice.current, '');
         }
@@ -992,24 +978,40 @@ export default function RegisterPage() {
   }, [handleTokenDetected]);
 
   useEffect(() => {
+    // ── FIX: Cek token secara sinkron via localStorage terlebih dahulu.
+    // Ini memungkinkan setMounted + setIsWeb + setPhase dibatch dalam satu
+    // render oleh React 18 — tidak ada frame kosong di antara mereka.
+    const tokenSync = typeof window !== 'undefined'
+      ? localStorage.getItem('stc_token')
+      : null;
+
+    if (tokenSync) {
+      router.replace('/dashboard');
+      return;
+    }
+
+    // Batch semua state updates sebelum ada await
     setMounted(true);
-    const init = async () => {
+
+    if (!isNativeApp()) {
+      // Web: set landing langsung — React 18 batch setMounted + setIsWeb + setPhase
+      // menjadi satu render sehingga tidak ada flash blank → landing
+      setIsWeb(true);
+      setPhase('landing');
+      return;
+    }
+
+    // Native: async init (phase tetap 'init' sementara WebView disiapkan)
+    const initNative = async () => {
+      // Cek ulang via storage (Capacitor Preferences fallback) untuk native
       const token = await storage.get('stc_token');
       if (token) { router.replace('/dashboard'); return; }
 
-      // registrationUrl hardcoded — tidak perlu fetch dari Supabase
-      // registrationUrl.current sudah diset ke DEFAULT_REGISTRATION_URL
-
-      if (!isNativeApp()) {
-        setIsWeb(true);
-        setPhase('landing');
-        return;
-      }
-
-      // Pertama kali load (bukan dari landing) — sembunyikan UI, buka WebView langsung
+      await stcWebView.clearSession().catch(() => {});
       openRegistration(false);
     };
-    init();
+
+    initNative();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1019,10 +1021,6 @@ export default function RegisterPage() {
       const { authToken, deviceId, url } = detail;
 
       if (authToken) {
-        // ✅ PERUBAHAN: Panggil handleTokenDetected (bukan langsung setPhase)
-        // agar cek riwayat trading Stockity dilakukan sebelum popup sukses muncul.
-        // Dulu: langsung setPhase('token_detected') → popup sukses tanpa cek history.
-        // Sekarang: handleTokenDetected → cek history → jika bersih → popup sukses.
         handleTokenDetected(authToken, deviceId ?? '', url ?? '');
       }
     };
@@ -1034,7 +1032,7 @@ export default function RegisterPage() {
       window.removeEventListener('stc:register:success', handler);
       window.removeEventListener('stc:register:data', handler);
     };
-  }, [handleTokenDetected]); // ← handleTokenDetected masuk dependency
+  }, [handleTokenDetected]);
 
   useEffect(() => {
     const handler = async (e: Event) => {
@@ -1042,7 +1040,6 @@ export default function RegisterPage() {
       if (detail.daftarClicked) {
         console.log('[Register] Daftar button clicked via auto-inject');
         setTimeout(async () => {
-          // ✅ PERUBAHAN: Tetap lewat handleTokenDetected agar cek history tidak di-skip
           if (capturedToken.current && phase !== 'token_detected' && phase !== 'saving') {
             handleTokenDetected(capturedToken.current, capturedDevice.current, '');
           }
@@ -1099,18 +1096,20 @@ export default function RegisterPage() {
     }
   };
 
-  if (!mounted) return null;
-  // ── FIX 2: 'webview' sekarang tetap render landing (bukan null) ──────────────
-  // Phase 'init' tetap null (belum ada UI), tapi 'webview' tampilkan landing
-  // agar saat user klik "Mulai Registrasi" dari landing, tidak ada kedip.
-  if (phase === 'init') return null;
+  // ── FIX: Ganti return null dengan div bg solid ─────────────────────────────
+  // Sebelumnya: `return null` menyebabkan frame kosong (flash putih) sebelum
+  // landing muncul. Sekarang tampilkan warna bg yang sama dengan landing page
+  // (#f2f2f7) sehingga transisi tidak terlihat — tidak ada loncat/flash.
+  if (!mounted || phase === 'init') {
+    return <div style={{ position: 'fixed', inset: 0, background: '#f2f2f7' }} />;
+  }
 
   return (
     <>
       {/* Landing tampil juga saat phase='webview' (WebView overlay di atas) */}
       {(phase === 'landing' || phase === 'webview') && (
         <RegisterLanding
-          onOpenWebView={() => openRegistration(true)}  
+          onOpenWebView={() => openRegistration(true)}
           onAlreadyRegistered={() => router.push('/login')}
           onGoLogin={() => router.push('/login')}
           isWeb={isWeb}
@@ -1135,7 +1134,6 @@ export default function RegisterPage() {
         />
       )}
 
-      {/* Popup sukses — tombol "Lanjut Trading" sudah dihapus dari ModernSuccessDialog */}
       {(phase === 'success' || phase === 'token_detected') && (
         <ModernSuccessDialog
           email={capturedEmail}

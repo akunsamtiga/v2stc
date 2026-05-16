@@ -3182,7 +3182,7 @@ const SettingsCard: React.FC<{
             </div>
 
             {/* Risk Management — Kotlin StopLossProfitCard style */}
-            {!isNewMode&&(
+            {(mode!=='aisignal')&&(
               <div>
                 <div style={{ height:1,background:C.bdr,marginBottom:16 }}/>
                 <SL accent="rgba(255,69,58,0.55)">Risk Management</SL>
@@ -4118,8 +4118,8 @@ export default function DashboardPage() {
       } else if(tradingMode==='indicator'){
         await api.indicatorSetAsset(selectedRic, selectedAsset?.name??selectedRic);
         await api.indicatorSetAccount(isDemo);
-        await api.indicatorSetMartingale({isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED'});
-        await api.indicatorUpdateConfig({type:indicatorType,period:indicatorPeriod,sensitivity:indicatorSensitivity,rsiOverbought,rsiOversold,amount:amount*100});
+        await api.indicatorSetMartingale({isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED',stopLoss:stopLoss?stopLoss*100:0,stopProfit:stopProfit?stopProfit*100:0});
+        await api.indicatorUpdateConfig({type:indicatorType,period:indicatorPeriod,sensitivity:indicatorSensitivity,rsiOverbought,rsiOversold,amount:amount*100,stopLoss:stopLoss?stopLoss*100:undefined,stopProfit:stopProfit?stopProfit*100:undefined});
         await api.indicatorStart();
       } else if(tradingMode==='momentum'){
         await api.momentumSetAsset(selectedRic, selectedAsset?.name??selectedRic);
@@ -4130,6 +4130,7 @@ export default function DashboardPage() {
           dojiPembatalanEnabled:true,
           bbSarBreakEnabled:true,
           baseAmount:amount*100,multiplierValue:martingale.multiplier,maxSteps:martingale.maxStep,
+          stopLoss:stopLoss?stopLoss*100:0,stopProfit:stopProfit?stopProfit*100:0,
         });
         await api.momentumStart();
       }
