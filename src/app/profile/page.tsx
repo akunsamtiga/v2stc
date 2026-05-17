@@ -240,6 +240,10 @@ function ProfilePageContent() {
 
   const handleLogout = async () => {
     setShowLogout(false);
+    // Sembunyikan BottomNav sebelum splash muncul — mencegah nav tampil
+    // di atas splash akibat stacking context yang dibuat opacity/transition
+    // pada <main> di ClientLayout.
+    window.dispatchEvent(new CustomEvent('stc:hidenav'));
     setLogoutSplash(true);
     await new Promise(res => setTimeout(res, 1800));
 
@@ -730,11 +734,11 @@ function ProfilePageContent() {
             <Card>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01"/></svg>}
-                iconBg="#5ac8fa" label={t('profile.termsOfService')} onClick={() => {}}
+                iconBg="#5ac8fa" label={t('profile.termsOfService')} onClick={() => window.open('https://stockity.id/information/agreement', '_blank')}
               />
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
-                iconBg="#34c759" label={t('profile.privacyPolicy')} onClick={() => {}} last
+                iconBg="#34c759" label={t('profile.privacyPolicy')} onClick={() => window.open('https://stockity.id/information/privacy', '_blank')} last
               />
             </Card>
           </div>

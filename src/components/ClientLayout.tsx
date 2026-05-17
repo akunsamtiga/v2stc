@@ -2,23 +2,24 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { BottomNav } from '@/components/BottomNav';
+import { TabLoadingBar } from '@/components/TabLoadingBar';
 import { isSessionValid, sessionLogout } from '@/lib/storage';
 import { LanguageProvider } from '@/lib';
 import { DarkModeProvider, useDarkMode } from '@/lib/DarkModeContext';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
 
-// ✅ CONFIGURABLE: Auth check settings
-const AUTH_CHECK_RETRIES = 5;
-const AUTH_CHECK_DELAY = 400;
-const INITIAL_DELAY = 200;
+const AUTH_CHECK_RETRIES    = 5;
+const AUTH_CHECK_DELAY      = 400;
+const INITIAL_DELAY         = 200;
 const CAPACITOR_EXTRA_DELAY = 300;
-const SPLASH_MIN_DURATION = 4500; // Minimum splash screen duration untuk smooth UX
+const SPLASH_MIN_DURATION   = 4500;
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [ready, setReady] = useState(false);
+  const [ready,     setReady]     = useState(false);
+  const [navHidden, setNavHidden] = useState(false); // ← NEW: sembunyikan BottomNav saat logout splash
   const authCheckRef  = useRef(false);
   const splashStartRef = useRef(Date.now());
 
@@ -26,12 +27,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     route => pathname === route || pathname.startsWith(`${route}/`)
   );
 
+  // ── Auth check ────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Prevent double execution
     if (authCheckRef.current) return;
     authCheckRef.current = true;
 
-    // ✅ FALLBACK: Pastikan UI tidak stuck lebih dari 5 detik
     const fallback = setTimeout(() => {
       console.warn('[ClientLayout] Fallback timeout reached, forcing ready state');
       setReady(true);
@@ -39,19 +39,16 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     const checkAuth = async () => {
       try {
-        // Halaman publik: tampilkan dengan smooth transition
         if (isPublic) {
-          const elapsed    = Date.now() - splashStartRef.current;
-          const remaining  = Math.max(0, 500 - elapsed);
+          const elapsed   = Date.now() - splashStartRef.current;
+          const remaining = Math.max(0, 500 - elapsed);
           setTimeout(() => setReady(true), remaining);
           clearTimeout(fallback);
           return;
         }
 
-        // ✅ TUNGGU: Beri waktu WebView/DOM untuk inisialisasi
         await new Promise(resolve => setTimeout(resolve, INITIAL_DELAY));
 
-        // ✅ EXTRA DELAY: Untuk Capacitor native app
         const isCapacitor =
           typeof window !== 'undefined' &&
           (window as any).Capacitor?.isNativePlatform?.() === true;
@@ -60,7 +57,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           await new Promise(resolve => setTimeout(resolve, CAPACITOR_EXTRA_DELAY));
         }
 
-        // ✅ CEK SESSION: Dengan retry dan validasi lengkap
         let sessionValid = false;
         for (let i = 0; i < AUTH_CHECK_RETRIES; i++) {
           sessionValid = await isSessionValid();
@@ -88,7 +84,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           router.replace('/login');
         }
       } finally {
-        // Ensure minimum splash duration for smooth UX
         const elapsed   = Date.now() - splashStartRef.current;
         const remaining = Math.max(0, SPLASH_MIN_DURATION - elapsed);
         setTimeout(() => setReady(true), remaining);
@@ -103,35 +98,47 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     };
   }, [pathname, router, isPublic]);
 
+  // ── Unauthorized handler ──────────────────────────────────────────────────
   useEffect(() => {
-    // ✅ FIX: Debounce logout handler — hanya satu logout yang jalan
-    //    meski ada banyak 401 concurrent dari loadAll()
     let logoutPending = false;
 
     const handleUnauthorized = async () => {
       if (logoutPending) return;
       logoutPending = true;
-
       console.log('[ClientLayout] Unauthorized event received, logging out...');
-      try {
-        await sessionLogout();
-      } catch {
-        // ignore
-      }
+      try { await sessionLogout(); } catch { /* ignore */ }
       router.replace('/login');
     };
 
     window.addEventListener('stc:unauthorized', handleUnauthorized);
-    return () => {
-      window.removeEventListener('stc:unauthorized', handleUnauthorized);
-    };
+    return () => window.removeEventListener('stc:unauthorized', handleUnauthorized);
   }, [router]);
 
-  // Hide initial HTML splash screen when React is ready
+  // ── Nav hide/show — dipakai halaman profile saat logout splash ───────────
+  // Halaman profile men-dispatch 'stc:hidenav' sebelum splash tampil dan
+  // 'stc:shownav' jika user membatalkan (untuk berjaga-jaga).
+  // Ini menghindari BottomNav tampil di atas logout splash karena stacking-
+  // context yang dibuat oleh opacity/transition pada <main>.
+  useEffect(() => {
+    const hide = () => setNavHidden(true);
+    const show = () => setNavHidden(false);
+    window.addEventListener('stc:hidenav', hide);
+    window.addEventListener('stc:shownav', show);
+    return () => {
+      window.removeEventListener('stc:hidenav', hide);
+      window.removeEventListener('stc:shownav', show);
+    };
+  }, []);
+
+  // ── Reset navHidden saat berpindah halaman ─────────────────────────────
+  // Jaga-jaga jika user navigasi tanpa logout selesai
+  useEffect(() => {
+    setNavHidden(false);
+  }, [pathname]);
+
+  // ── Remove splash HTML saat React sudah siap ─────────────────────────────
   useEffect(() => {
     if (ready) {
-      /* Double rAF: tunggu browser selesai paint frame pertama konten
-         sebelum splash mulai fade → crossfade bersih tanpa flash. */
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           const htmlSplash = document.getElementById('__stc_splash');
@@ -148,6 +155,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     <DarkModeProvider>
       <LanguageProvider>
         <ThemeWrapper>
+          {/* Tab transition loading indicator */}
+          {!isPublic && <TabLoadingBar />}
+
           <main
             style={{
               display: 'block',
@@ -160,10 +170,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 : 'calc(56px + env(safe-area-inset-bottom, 0px))',
               opacity: ready ? 1 : 0,
               transition: ready ? 'opacity 0.35s ease-out' : 'none',
-            } as React.CSSProperties}>
+            } as React.CSSProperties}
+          >
             {children}
           </main>
-          {!isPublic && <BottomNav />}
+
+          {/* BottomNav disembunyikan saat logout splash aktif */}
+          {!isPublic && !navHidden && <BottomNav />}
         </ThemeWrapper>
       </LanguageProvider>
     </DarkModeProvider>
@@ -171,20 +184,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 }
 
 // ── ThemeWrapper ──────────────────────────────────────────────────────────────
-// ✅ SATU-SATUNYA tempat yang boleh memanggil sync ke native bars (StatusBar +
-//    NavigationBar). Memusatkan logika di sini menghilangkan race condition yang
-//    terjadi ketika DarkModeContext DAN ThemeWrapper keduanya memanggil
-//    StatusBar.setStyle() hampir bersamaan → status bar flickering/berubah-ubah.
 function ThemeWrapper({ children }: { children: React.ReactNode }) {
   const { isDarkMode } = useDarkMode();
   const pathname = usePathname();
 
-  // Warna harus cocok dengan --bg di globals.css
   const DARK_BG  = '#000000';
   const LIGHT_BG = '#F2F2F7';
 
-  // ✅ FIX: Pisahkan syncNativeBars sebagai fungsi yang menerima parameter,
-  //    sehingga bisa dipanggil dari beberapa useEffect tanpa closure stale.
   const syncNativeBars = async (dark: boolean) => {
     const isCapacitor =
       typeof window !== 'undefined' &&
@@ -193,31 +199,21 @@ function ThemeWrapper({ children }: { children: React.ReactNode }) {
 
     const bgColor = dark ? DARK_BG : LIGHT_BG;
 
-    // ── Status bar atas ────────────────────────────────────────────────────
     try {
       const { StatusBar, Style } = await import('@capacitor/status-bar');
       await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light });
       await StatusBar.setBackgroundColor({ color: bgColor });
-    } catch {
-      // Plugin tidak tersedia — abaikan
-    }
+    } catch { /* Plugin tidak tersedia */ }
 
-    // ── Navigation bar bawah (Android) ────────────────────────────────────
     try {
       const { NavigationBar } = await import('@capgo/capacitor-navigation-bar');
-      await NavigationBar.setNavigationBarColor({
-        color: bgColor,
-        darkButtons: !dark,
-      });
-    } catch {
-      // Fallback warna sudah diset di MainActivity.java
-    }
+      await NavigationBar.setNavigationBarColor({ color: bgColor, darkButtons: !dark });
+    } catch { /* Fallback warna dari MainActivity.java */ }
   };
 
   useEffect(() => {
     const bgColor = isDarkMode ? DARK_BG : LIGHT_BG;
 
-    // 1. Apply data-theme ke body (light/dark CSS vars)
     if (typeof document !== 'undefined') {
       if (isDarkMode) {
         document.body.removeAttribute('data-theme');
@@ -226,22 +222,13 @@ function ThemeWrapper({ children }: { children: React.ReactNode }) {
       }
       document.body.style.background = bgColor;
 
-      // ✅ FIX UTAMA: Update meta[name="theme-color"] secara dinamis.
-      //    Di Android WebView, meta theme-color adalah yang PALING DOMINAN
-      //    mengontrol warna background status bar — lebih kuat dari
-      //    StatusBar.setBackgroundColor(). Tanpa update ini, layout.tsx yang
-      //    me-render tag statis tetap akan "menang" → status bar tetap hitam
-      //    meski Capacitor StatusBar API sudah dipanggil.
       const metaTags = document.querySelectorAll('meta[name="theme-color"]');
       if (metaTags.length > 0) {
-        // Update semua tag theme-color yang ada (Next.js bisa render >1)
         metaTags.forEach(el => {
           (el as HTMLMetaElement).content = bgColor;
-          // Hapus attribute media agar tidak ter-override oleh media query
           (el as HTMLMetaElement).removeAttribute('media');
         });
       } else {
-        // Buat tag baru jika belum ada
         const meta = document.createElement('meta');
         meta.name = 'theme-color';
         meta.content = bgColor;
@@ -249,13 +236,9 @@ function ThemeWrapper({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 2. Sync native bars (Capacitor)
     syncNativeBars(isDarkMode);
   }, [isDarkMode]);
 
-  // ✅ FIX: Re-sync native bars setiap kali halaman berubah (navigasi).
-  //    Tanpa ini, navigasi ke halaman profile tidak memicu re-sync karena
-  //    isDarkMode tidak berubah → status bar tetap hitam dari MainActivity.java.
   useEffect(() => {
     syncNativeBars(isDarkMode);
     // eslint-disable-next-line react-hooks/exhaustive-deps

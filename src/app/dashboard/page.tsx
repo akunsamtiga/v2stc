@@ -46,10 +46,10 @@ function getColors(isDark: boolean) {
   return {
     // Surfaces
     bg:    isDark ? '#111111' : '#EAECEF',   // light: lebih terang agar zona waktu bg tidak terlalu gelap
-    card:  isDark ? '#1C1C1C' : '#FFFFFF',
-    card2: isDark ? '#242424' : '#F0F2F5',   // light: lebih terang dari bg tapi beda dari card
+    card:  isDark ? '#272727' : '#FFFFFF',
+    card2: isDark ? '#303030' : '#F0F2F5',   // light: lebih terang dari bg tapi beda dari card
     // Borders
-    bdr:   isDark ? 'rgba(125,211,252,0.40)' : '#9CA3AF',
+    bdr:   isDark ? 'rgba(70, 184, 104, 0.46)' : '#9CA3AF',
     bdrAct:'rgba(16,185,129,0.80)',
     // Primary accent
     cyan:  isDark ? '#22D3A0' : '#047857',   // light: lebih gelap agar kontras di bg putih
@@ -1078,7 +1078,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
         display:'flex',flexDirection:'column',
         background:C.bg,
         borderRadius:24,
-        border:`0.4px solid rgba(52,211,153,0.40)`,
+        border:`0.4px solid rgba(52,211,153,0.25)`,
         boxShadow:`0 32px 80px rgba(0,0,0,${C.bg==='#111111'?'0.70':'0.18'}), 0 8px 24px rgba(0,0,0,${C.bg==='#111111'?'0.50':'0.10'})`,
         overflow:'hidden',
         animation:'slide-up 0.28s cubic-bezier(0.32,0.72,0,1)',
@@ -3966,22 +3966,27 @@ export default function DashboardPage() {
         api.realtimeProfit(),
       ]);
       if(!isMounted.current)return;
-      const [sRes,fRes,oRes,logRes,ftlRes,aiRes,aiPendRes,indRes,momRes,tpRes] = results;
-      if(sRes.status==='fulfilled')setScheduleStatus(sRes.value);
-      if(fRes.status==='fulfilled')setFtStatus(fRes.value);
-      if(oRes.status==='fulfilled')setScheduleOrders(oRes.value);
-      if(logRes.status==='fulfilled')setScheduleLogs(logRes.value);
-      if(ftlRes.status==='fulfilled')setFtLogs(ftlRes.value);
-      if(aiRes.status==='fulfilled')setAiStatus(aiRes.value);
-      if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
-      if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
-      if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
-      if(tpRes.status==='fulfilled'){
-        setTodayProfitData(tpRes.value);
-        setProfitLastUpdated(Date.now());
-      }
+      // ✅ FIX SCROLL: startTransition menandai semua update ini sebagai "tidak mendesak".
+      //    React akan yield ke scroll/animation frame sebelum memproses update ini,
+      //    sehingga polling tidak pernah meng-interrupt smooth scrolling.
+      React.startTransition(()=>{
+        const [sRes,fRes,oRes,logRes,ftlRes,aiRes,aiPendRes,indRes,momRes,tpRes] = results;
+        if(sRes.status==='fulfilled')setScheduleStatus(sRes.value);
+        if(fRes.status==='fulfilled')setFtStatus(fRes.value);
+        if(oRes.status==='fulfilled')setScheduleOrders(oRes.value);
+        if(logRes.status==='fulfilled')setScheduleLogs(logRes.value);
+        if(ftlRes.status==='fulfilled')setFtLogs(ftlRes.value);
+        if(aiRes.status==='fulfilled')setAiStatus(aiRes.value);
+        if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
+        if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
+        if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
+        if(tpRes.status==='fulfilled'){
+          setTodayProfitData(tpRes.value);
+          setProfitLastUpdated(Date.now());
+        }
+      });
       const balRes = await api.balance().catch(()=>null);
-      if(balRes&&isMounted.current)setBalance(balRes);
+      if(balRes&&isMounted.current) React.startTransition(()=>setBalance(balRes));
     },10000);
     return()=>clearInterval(iv);
   },[]); // eslint-disable-line
@@ -4198,6 +4203,73 @@ export default function DashboardPage() {
   const g = deviceType==='desktop'?20:deviceType==='tablet'?18:16;
   const px = 16;
 
+  // ✅ FIX SCROLL: useMemo agar <style> tidak di-reinject tiap render.
+  // Sebelumnya style block berisi dynamic values (C.card, isDarkMode, dll) yang
+  // dievaluasi ulang setiap setState — CSSOM churn menyebabkan paint invalidation
+  // yang mengganggu smooth scroll di WebView/Capacitor.
+  const dashboardStyles = React.useMemo(() => `
+    @keyframes spin        { to { transform: rotate(360deg); } }
+    @keyframes pulse       { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    @keyframes ping        { 0%{transform:scale(1);opacity:1} 80%,100%{transform:scale(2);opacity:0} }
+    @keyframes slide-up    { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fade-in     { from{opacity:0} to{opacity:1} }
+    @keyframes profit-slide-up   { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes profit-slide-down { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+    .profit-slide-up   { animation: profit-slide-up   0.4s cubic-bezier(0.4,0,0.2,1) both !important; }
+    .profit-slide-down { animation: profit-slide-down 0.4s cubic-bezier(0.4,0,0.2,1) both !important; }
+    @keyframes win-flash   { 0%{box-shadow:0 0 0 0 rgba(41,151,255,0)} 15%{box-shadow:0 0 0 4px rgba(41,151,255,0.35)} 100%{box-shadow:0 0 0 0 rgba(41,151,255,0)} }
+    @keyframes lose-flash  { 0%{box-shadow:0 0 0 0 rgba(255,69,58,0)} 15%{box-shadow:0 0 0 4px rgba(255,69,58,0.35)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)} }
+    /* ✅ FIX SCROLL: shimmer pakai translateX (GPU-accelerated) bukan background-position (CPU paint) */
+    @keyframes header-shimmer {
+      0%   { transform: translateX(-100%) translateZ(0); }
+      40%  { transform: translateX(100%) translateZ(0); }
+      100% { transform: translateX(100%) translateZ(0); }
+    }
+    .ds-card {
+      background: ${isDarkMode ? C.card : '#ffffff'};
+      border: 0.3px solid ${isDarkMode ? 'rgba(52,211,153,0.25)' : '#9CA3AF'};
+      border-radius: 14px;
+      box-shadow: ${isDarkMode ? '0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)' : 'none'};
+      transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+    @media (max-width: 767px) {
+      .ds-card, .ds-card:hover {
+        border: 0.3px solid ${isDarkMode ? 'rgba(52,211,153,0.30)' : '#9CA3AF'} !important;
+        box-shadow: ${isDarkMode
+          ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.12)'
+          : '0 1px 3px rgba(0,0,0,0.06)'
+        } !important;
+        transform: none !important;
+      }
+    }
+    .ds-input {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      background: ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(16,185,129,0.04)'};
+      border: 1px solid ${isDarkMode ? 'rgba(52,211,153,0.20)' : '#9CA3AF'};
+      color: ${isDarkMode ? '#ffffff' : '#1C1C1E'};
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.15s, background 0.3s, color 0.3s;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .ds-input:focus { border-color: ${isDarkMode ? 'rgba(34,211,160,0.60)' : 'rgba(5,150,105,0.55)'}; }
+    .ds-input::placeholder { color: ${isDarkMode ? 'rgba(255,255,255,0.35)' : 'rgba(60,60,67,0.45)'}; }
+    .schedule-item { transition: background 0.15s; }
+    .schedule-item:hover { background: ${isDarkMode ? 'rgba(34,211,160,0.07)' : 'rgba(5,150,105,0.07)'} !important; }
+    /* ✅ FIX SCROLL: semua elemen animasi promoted ke GPU layer agar tidak
+       trigger repaint pada scroll layer utama */
+    [style*="animation: ping"], [style*="animation:ping"],
+    [style*="animation: pulse"], [style*="animation:pulse"],
+    [style*="animation: spin"], [style*="animation:spin"] {
+      will-change: transform, opacity;
+      transform: translateZ(0);
+    }
+  `, [isDarkMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} isLoading={isLoading} isRefreshing={profitRefreshing} lastUpdatedAt={profitLastUpdated} flash={flash} onRefresh={refreshProfit} t={t} isMobile={deviceType==='mobile'}/>;
 
   const InfoRow = (
@@ -4300,7 +4372,9 @@ export default function DashboardPage() {
   if (!settingsLoaded) return null;
 
   return (
-    <div style={{minHeight:'100%',background:colors.bg,paddingBottom:88,color:colors.text,transition:'background 0.3s, color 0.3s'}}>
+    // ✅ FIX SCROLL: touchAction:'pan-y' → browser langsung tau ini scroll vertikal,
+    //    tidak perlu tunggu JS confirm sebelum mulai scroll (passive hint ke WebView).
+    <div style={{minHeight:'100%',background:colors.bg,paddingBottom:88,color:colors.text,transition:'background 0.3s, color 0.3s',touchAction:'pan-y'}}>
       {/* Asset Picker Modal — top level */}
       <PickerModal
         open={assetPickerOpen}
@@ -4360,63 +4434,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-      <style>{`
-        @keyframes spin        { to { transform: rotate(360deg); } }
-        @keyframes pulse       { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        @keyframes ping        { 0%{transform:scale(1);opacity:1} 80%,100%{transform:scale(2);opacity:0} }
-        @keyframes slide-up    { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes fade-in     { from{opacity:0} to{opacity:1} }
-        @keyframes profit-slide-up   { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes profit-slide-down { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        /* ✅ FIX flicker: CSS class version agar bisa di-toggle via ref tanpa remount */
-        .profit-slide-up   { animation: profit-slide-up   0.4s cubic-bezier(0.4,0,0.2,1) both !important; }
-        .profit-slide-down { animation: profit-slide-down 0.4s cubic-bezier(0.4,0,0.2,1) both !important; }
-        @keyframes win-flash   { 0%{box-shadow:0 0 0 0 rgba(41,151,255,0)} 15%{box-shadow:0 0 0 4px rgba(41,151,255,0.35)} 100%{box-shadow:0 0 0 0 rgba(41,151,255,0)} }
-        @keyframes lose-flash  { 0%{box-shadow:0 0 0 0 rgba(255,69,58,0)} 15%{box-shadow:0 0 0 4px rgba(255,69,58,0.35)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)} }
-@keyframes header-shimmer {
-  0%   { background-position: 200% center; }
-  40%  { background-position: -200% center; }
-  100% { background-position: -200% center; }
-}
-          .ds-card {
-          background: ${isDarkMode ? C.card : '#ffffff'};
-          border: 0.3px solid ${isDarkMode ? 'rgba(125,211,252,0.40)' : '#9CA3AF'};
-          border-radius: 14px;
-          box-shadow: ${isDarkMode ? '0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)' : 'none'};
-          transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
-        }
-
-        @media (max-width: 767px) {
-          .ds-card, .ds-card:hover {
-            border: 0.3px solid ${isDarkMode ? 'rgba(125,211,252,0.50)' : '#9CA3AF'} !important;
-            box-shadow: ${isDarkMode
-              ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.12)'
-              : '0 1px 3px rgba(0,0,0,0.06)'
-            } !important;
-            transform: none !important;
-          }
-        }
-
-        .ds-input {
-          width: 100%;
-          padding: 9px 12px;
-          border-radius: 8px;
-          font-size: 13px;
-          background: ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(16,185,129,0.04)'};
-          border: 1px solid ${isDarkMode ? 'rgba(125,211,252,0.35)' : '#9CA3AF'};
-          color: ${isDarkMode ? '#ffffff' : '#1C1C1E'};
-          outline: none;
-          font-family: inherit;
-          transition: border-color 0.15s, background 0.3s, color 0.3s;
-          resize: vertical;
-          box-sizing: border-box;
-        }
-        .ds-input:focus { border-color: ${isDarkMode ? 'rgba(34,211,160,0.60)' : 'rgba(5,150,105,0.55)'}; }
-        .ds-input::placeholder { color: ${isDarkMode ? 'rgba(255,255,255,0.35)' : 'rgba(60,60,67,0.45)'}; }
-
-        .schedule-item { transition: background 0.15s; }
-        .schedule-item:hover { background: ${isDarkMode ? 'rgba(34,211,160,0.07)' : 'rgba(5,150,105,0.07)'} !important; }
-      `}</style>
+      <style>{dashboardStyles}</style>
 
       <OrderInputModal
         open={orderModalOpen}
@@ -4450,7 +4468,11 @@ export default function DashboardPage() {
         />
       )}
 
-      <div style={{maxWidth:1280,margin:'0 auto',padding:`0 ${px}px 0`}}>
+      <div style={{maxWidth:1280,margin:'0 auto',padding:`0 ${px}px 0`,
+        // ✅ FIX SCROLL: overscrollBehaviorY:'contain' mencegah scroll chain ke parent
+        //    saat sudah mentok atas/bawah — menghilangkan rubber-band jank di Android WebView.
+        overscrollBehaviorY:'contain',
+      }}>
         {error&&(
           <div style={{display:'flex',alignItems:'flex-start',gap:9,padding:'10px 14px',borderRadius:8,marginBottom:g,background:C.cord,border:`1px solid rgba(255,69,58,0.2)`,borderLeft:`2px solid ${C.coral}`}}>
             <AlertCircle style={{width:13,height:13,flexShrink:0,marginTop:2,color:C.coral}}/>
@@ -4482,7 +4504,7 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
                 background:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
+                border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
                 backdropFilter:'blur(8px)',
               }}>
                 <div style={{
@@ -4510,7 +4532,7 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
                 background:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
+                border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
               }}>
                 {(()=>{
                   const rawAmt = isDemo?(balance?.demo_balance??balance?.balance??0):(balance?.real_balance??balance?.balance??0);
@@ -4571,7 +4593,7 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
                 background:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
+                border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
               }}>
                 {(()=>{
                   const pnl = todayProfitData?.totalPnL ?? profitToday;
@@ -4613,7 +4635,7 @@ export default function DashboardPage() {
                 <div style={{
                   borderRadius:16,overflow:'hidden',
                   background:isDarkMode?C.card2:C.card,
-                  border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
+                  border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
                   padding:4,
                 }}>
                   {/* Clock header */}
@@ -4692,7 +4714,7 @@ export default function DashboardPage() {
                       <div key={i} style={{
                         padding:'12px 14px',borderRadius:12,
                         background:isDarkMode?C.card2:C.card,
-                        border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,
+                        border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
                       }}>
                         <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
                           <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
@@ -4726,7 +4748,7 @@ export default function DashboardPage() {
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
 
               {/* Asset */}
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`,cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
                 <div style={{width:34,height:34,borderRadius:9,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`}}>
                   {selectedAsset?.iconUrl
                     ?<img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:5}}/>
@@ -4748,7 +4770,7 @@ export default function DashboardPage() {
                 const amt=rawAmt/100;
                 const col=isDemo?C.amber:C.cyan;
                 return (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`}}>
                     <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
                       <Wallet style={{width:15,height:15,color:col}}/>
                     </div>
@@ -4792,7 +4814,7 @@ export default function DashboardPage() {
                 const col=isPos?C.cyan:C.coral;
                 const wr=todayProfitData?.winRate;
                 return (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`}}>
                     <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
                       {isPos?<TrendingUp style={{width:15,height:15,color:col}}/>:<TrendingDown style={{width:15,height:15,color:col}}/>}
                     </div>
@@ -4822,7 +4844,7 @@ export default function DashboardPage() {
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
 
                 {/* Chart card — clock header compact, tidak melebar */}
-                <div style={{borderRadius:16,overflow:'hidden',background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode ? 'rgba(125,211,252,0.40)' : '#9CA3AF'}`,padding:4}}>
+                <div style={{borderRadius:16,overflow:'hidden',background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode ? 'rgba(52,211,153,0.25)' : '#9CA3AF'}`,padding:4}}>
                   {/* Clock header — compact, left-aligned, tidak space-between */}
                   <div style={{
                     display:'flex',alignItems:'center',gap:10,
@@ -4869,7 +4891,7 @@ export default function DashboardPage() {
                         :{label:'Mode',icon:<Radio style={{width:13,height:13}}/>,value:({schedule:'Signal Mode',fastrade:'Fastrade FTT Mode',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'} as Record<string,string>)[tradingMode],col:ac},
                     ];
                     return statCards.map((s,i)=>(
-                      <div key={i} style={{padding:'11px 13px',borderRadius:12,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(125,211,252,0.40)':'#9CA3AF'}`}}>
+                      <div key={i} style={{padding:'11px 13px',borderRadius:12,background:isDarkMode?C.card2:C.card,border:`1px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`}}>
                         <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
                           <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
                           <span style={{fontSize:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</span>
@@ -4898,8 +4920,10 @@ export default function DashboardPage() {
         {/* ── MOBILE ── */}
         {deviceType==='mobile'&&(
           <div style={{display:'flex',flexDirection:'column',gap:g}}>
-            {/* Header Image - Fullwidth, no top margin */}
             {/* Header Image - Full bleed, breaks out of padding */}
+            {/* ✅ FIX SCROLL: transform:translateZ(0) + will-change memaksa elemen ini
+                   ke GPU compositing layer tersendiri, sehingga video decode + shimmer animation
+                   tidak pernah trigger repaint di scroll layer utama (jank prevention). */}
             <div 
   style={{
     marginLeft:`-${px}px`,
@@ -4908,6 +4932,9 @@ export default function DashboardPage() {
     marginBottom:8,
     position: 'relative',
     overflow: 'hidden',
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+    contain: 'layout paint',
   }}
 >
   <div style={{
@@ -4931,26 +4958,38 @@ export default function DashboardPage() {
       zIndex: 1,
       opacity: 0,
       transition: 'opacity 0.3s ease',
+      transform: 'translateZ(0)',
     }}
     onCanPlay={(e) => { (e.target as HTMLVideoElement).style.opacity = '1'; }}
     onError={(e) => { (e.target as HTMLVideoElement).parentElement!.style.display = 'none'; }}
   />
-  {/* Shimmer overlay */}
-<div style={{
-  position: 'absolute',
-  inset: 0,
-  zIndex: 2,
-  background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 55%, transparent 70%)',
-  backgroundSize: '300% 100%',
-  animation: 'header-shimmer 12s ease-in-out infinite',
-  pointerEvents: 'none',
-}}/>
+  {/* ✅ FIX SCROLL: shimmer pakai translateX (GPU-accelerated) bukan background-position (CPU paint).
+       Wrapper overflow:hidden mengikuti video container. Inner div 300% wide slide melalui viewport. */}
+  <div style={{
+    position: 'absolute',
+    inset: 0,
+    zIndex: 2,
+    overflow: 'hidden',
+    pointerEvents: 'none',
+  }}>
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      width: '300%',
+      background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.06) 42%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 58%, transparent 70%)',
+      animation: 'header-shimmer 12s ease-in-out infinite',
+      willChange: 'transform',
+      transform: 'translateX(-100%) translateZ(0)',
+    }}/>
+  </div>
 
 </div>
             {TopCards}
             <div style={{display:'flex',flexDirection:'row',gap:g,alignItems:'stretch'}}>
               {/* LEFT: chart card — stretches to match right column height */}
-              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${isDarkMode ? 'rgba(125,211,252,0.40)' : '#9CA3AF'}`,boxShadow:isDarkMode?`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`:'none'}}>
+              <Card style={{flex:3,padding:10,display:'flex',flexDirection:'column',minWidth:0,border:`1px solid ${isDarkMode ? 'rgba(52,211,153,0.25)' : '#9CA3AF'}`,boxShadow:isDarkMode?`0 2px 0 rgba(255,255,255,0.05) inset, 0 10px 32px rgba(0,0,0,0.55), 0 3px 10px rgba(0,0,0,0.40), 0 0 0 1px rgba(0,0,0,0.20)`:'none'}}>
                 {/* Clock header inside chart card */}
                 <div style={{
                   marginBottom:8,

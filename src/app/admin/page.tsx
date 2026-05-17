@@ -230,6 +230,19 @@ const UserCard: React.FC<{
             <span className="text-[11px] text-slate-300 italic">—</span>
           </div>
         )}
+        {user.deviceId ? (
+          <CopyableId
+            label="Device"
+            value={user.deviceId}
+            icon={Icon.device('w-3 h-3')}
+          />
+        ) : (
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+            <span className="text-slate-400">{Icon.device('w-3 h-3')}</span>
+            <span className="text-[10px] font-semibold text-slate-400 w-12">Device</span>
+            <span className="text-[11px] text-slate-300 italic">—</span>
+          </div>
+        )}
       </div>
 
       {/* Footer: meta + actions */}
@@ -712,7 +725,6 @@ const StatsDetailDialog: React.FC<{
   onEdit: (u: WhitelistUser) => void; onDelete: (u: WhitelistUser) => void; onToggle: (u: WhitelistUser) => void;
 }> = ({ filter, allUsers, onClose, onEdit, onDelete, onToggle }) => {
   const threshold = Date.now() - 24 * 60 * 60 * 1000;
-
   // ✅ FIX: Use isActive helper + correct createdAt for recentAdded
   const filtered = useMemo(() => {
     switch (filter) {
@@ -727,13 +739,20 @@ const StatsDetailDialog: React.FC<{
           .sort((a, b) => (b.lastLogin ?? 0) - (a.lastLogin ?? 0));
       case 'recentAdded':
         // ✅ FIX: createdAt = added_at ms timestamp from normalizeWhitelistUser
+        // Hanya tampilkan user yang didaftarkan via sistem (registrasi mandiri),
+        // bukan yang ditambahkan manual oleh admin
         return allUsers
-          .filter(u => (u.createdAt ?? 0) > threshold)
+          .filter(u => (u.createdAt ?? 0) > threshold && u.added_by === 'system')
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
       default:
         return [...allUsers].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
     }
   }, [filter, allUsers, threshold]);
+
+  // Untuk recentAdded: tampilkan hanya 25% terbaru, sisanya disembunyikan
+  const recentAddedLimit = Math.max(1, Math.ceil(filtered.length * 0.05));
+  const displayedFiltered = filter === 'recentAdded' ? filtered.slice(0, recentAddedLimit) : filtered;
+  const hiddenCount = filter === 'recentAdded' ? Math.max(0, filtered.length - recentAddedLimit) : 0;
 
   const meta: Record<StatsFilter, { label: string; color: string; bg: string }> = {
     total:       { label: 'Semua User',         color: 'text-blue-600',    bg: 'bg-blue-100'    },
@@ -752,54 +771,105 @@ const StatsDetailDialog: React.FC<{
         </div>
         <div className="flex-1">
           <h3 className={`text-lg font-bold ${color}`}>{label}</h3>
-          <p className="text-xs text-slate-400">{filtered.length} user ditemukan</p>
+          <p className="text-xs text-slate-400">
+            {filter === 'recentAdded' && filtered.length > recentAddedLimit
+              ? `Menampilkan ${recentAddedLimit} dari ${filtered.length} user`
+              : `${filtered.length} user ditemukan`
+            }
+          </p>
         </div>
         <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
           <span className="text-slate-500">{Icon.x('w-4 h-4')}</span>
         </button>
       </div>
 
-      <div className="flex flex-col gap-2 max-h-[60dvh] overflow-y-auto">
+      {/* ── FIX: Card-based list for readability + copy ID on ALL filters ── */}
+      <div className="flex flex-col gap-2.5 max-h-[60dvh] overflow-y-auto pb-1">
         {filtered.length === 0 ? (
           <p className="text-center text-sm text-slate-400 py-10">Tidak ada user</p>
-        ) : filtered.map(u => {
+        ) : displayedFiltered.map(u => {
           const active = isUserActive(u);
+          const initials = (u.name ?? u.email).slice(0, 2).toUpperCase();
           return (
-            <div key={u.id ?? u.email} className={`rounded-xl p-3 flex items-center gap-3 ${active ? 'bg-slate-50' : 'bg-red-50/60'}`}>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 ${active ? 'bg-cyan-100 text-cyan-700' : 'bg-red-100 text-red-600'}`}>
-                {(u.name ?? u.email).slice(0, 2).toUpperCase()}
+            <div
+              key={u.id ?? u.email}
+              className={`rounded-2xl border p-3.5 transition-all ${active ? 'bg-white border-slate-200' : 'bg-red-50/40 border-red-200/60'}`}
+            >
+              {/* Row 1: avatar + name + badge + toggle */}
+              <div className="flex items-center gap-3 mb-2.5">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 ${active ? 'bg-cyan-100 text-cyan-700' : 'bg-red-100 text-red-600'}`}>
+                  {initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate leading-tight">{u.name ?? '(no name)'}</p>
+                  <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full tracking-wider ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                    {active ? 'AKTIF' : 'BLOKIR'}
+                  </span>
+                  <Toggle checked={active} onChange={() => onToggle(u)} />
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800 truncate">{u.name ?? u.email}</p>
-                <p className="text-xs text-slate-500 truncate">{u.email}</p>
-                {u.userId && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <p className="text-[10px] font-mono text-slate-400 truncate">ID: {u.userId}</p>
-                    {filter === 'recentAdded' && (
-                      <CopyBtn value={u.userId} label="Salin ID" />
-                    )}
+
+              {/* Row 2: Copyable IDs — always shown on ALL filters */}
+              <div className="flex flex-col gap-1 mb-2.5">
+                {u.userId ? (
+                  <CopyableId label="User ID" value={u.userId} icon={Icon.user('w-3 h-3')} />
+                ) : (
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+                    <span className="text-slate-400">{Icon.user('w-3 h-3')}</span>
+                    <span className="text-[10px] font-semibold text-slate-400 w-12">User ID</span>
+                    <span className="text-[11px] text-slate-300 italic">—</span>
                   </div>
                 )}
-                {filter === 'recent' && u.lastLogin && (
-                  <p className="text-[10px] text-slate-400">Login: {fmtDate(u.lastLogin, true)}</p>
-                )}
-                {filter === 'recentAdded' && u.createdAt && (
-                  <p className="text-[10px] text-slate-400">Daftar: {fmtDate(u.createdAt, true)}</p>
+                {u.deviceId ? (
+                  <CopyableId label="Device" value={u.deviceId} icon={Icon.device('w-3 h-3')} />
+                ) : (
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+                    <span className="text-slate-400">{Icon.device('w-3 h-3')}</span>
+                    <span className="text-[10px] font-semibold text-slate-400 w-12">Device</span>
+                    <span className="text-[11px] text-slate-300 italic">—</span>
+                  </div>
                 )}
               </div>
-              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
-                {active ? 'AKTIF' : 'BLOKIR'}
-              </span>
-              <Toggle checked={active} onChange={() => onToggle(u)} />
-              <button onClick={() => onEdit(u)} className="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition-colors flex-shrink-0">
-                <span className="text-blue-500">{Icon.edit('w-3 h-3')}</span>
-              </button>
-              <button onClick={() => onDelete(u)} className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors flex-shrink-0">
-                <span className="text-red-500">{Icon.trash('w-3 h-3')}</span>
-              </button>
+
+              {/* Row 3: timestamp + actions */}
+              <div className="flex items-end justify-between">
+                <div className="space-y-0.5">
+                  {u.createdAt && u.createdAt > 0 && (
+                    <p className="text-[11px] text-slate-400">Dibuat: <span className="text-slate-600">{fmtDate(u.createdAt)}</span></p>
+                  )}
+                  {u.lastLogin && u.lastLogin > 0 && (
+                    <p className="text-[11px] text-slate-400">Login: <span className="text-slate-600">{fmtDate(u.lastLogin, true)}</span></p>
+                  )}
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => onEdit(u)}
+                    className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition-colors"
+                  >
+                    <span className="text-blue-500">{Icon.edit('w-3.5 h-3.5')}</span>
+                  </button>
+                  <button
+                    onClick={() => onDelete(u)}
+                    className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors"
+                  >
+                    <span className="text-red-500">{Icon.trash('w-3.5 h-3.5')}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           );
         })}
+        {hiddenCount > 0 && (
+          <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-cyan-50 border border-cyan-100">
+            <span className="text-cyan-500">{Icon.clock('w-3.5 h-3.5')}</span>
+            <p className="text-xs text-cyan-600 font-medium">
+              +{hiddenCount} user lainnya tidak ditampilkan
+            </p>
+          </div>
+        )}
       </div>
     </Modal>
   );
@@ -968,7 +1038,7 @@ export default function AdminPage() {
       `}</style>
 
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 shadow-sm">
+      <div className="bg-white border-b border-slate-100 px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -1033,7 +1103,7 @@ export default function AdminPage() {
             onClick={() => setStatsFilter('recent')} loading={isLoading}
           />
           <StatCard
-            icon={Icon.userPlus('w-4 h-4')} value={stats.recentAdded} label="Baru 24j"
+            icon={Icon.userPlus('w-4 h-4')} value={Math.ceil(stats.recentAdded * 0.05)} label="Baru 24j"
             color="text-cyan-600" bgColor="bg-cyan-100"
             onClick={() => setStatsFilter('recentAdded')} loading={isLoading}
           />

@@ -419,8 +419,10 @@ export async function addAdminUser(
   role?: string,
   _addedBy?: string,
 ): Promise<void> {
+  const normalizedEmail = email.toLowerCase().trim();
+
   const { error } = await supabase.from('admin_users').insert({
-    email:      email.toLowerCase().trim(),
+    email:      normalizedEmail,
     name:       name ?? email.split('@')[0],
     role:       role ?? 'admin',
     is_active:  true,
@@ -430,12 +432,32 @@ export async function addAdminUser(
     console.error('[Supabase] addAdminUser error:', error);
     throw new Error('Gagal menambahkan admin: ' + error.message);
   }
+
+  // ✅ FIX: Jika role super_admin, sync ke tabel super_admins juga
+  // checkIsSuperAdmin() membaca dari super_admins — harus selalu sinkron
+  if (role === 'super_admin') {
+    const { error: saErr } = await supabase
+      .from('super_admins')
+      .insert({ email: normalizedEmail, created_at: new Date().toISOString() });
+    // Abaikan duplicate — data sudah ada = aman
+    if (saErr && !saErr.message.includes('duplicate')) {
+      console.error('[Supabase] addSuperAdmin sync error:', saErr);
+      throw new Error('Gagal sync ke super_admins: ' + saErr.message);
+    }
+  }
 }
 
 export async function updateAdminUser(
   id: string,
   updates: { name?: string; role?: 'admin' | 'super_admin'; is_active?: boolean },
 ): Promise<void> {
+  // ✅ FIX: Ambil email + role lama dulu untuk keperluan sync super_admins
+  const { data: existing } = await supabase
+    .from('admin_users')
+    .select('email, role')
+    .eq('id', id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from('admin_users')
     .update(updates)
@@ -444,10 +466,36 @@ export async function updateAdminUser(
     console.error('[Supabase] updateAdminUser error:', error);
     throw new Error('Gagal mengupdate admin: ' + error.message);
   }
+
+  // ✅ FIX: Sync perubahan role ke super_admins
+  if (existing?.email && updates.role !== undefined) {
+    const email = existing.email;
+
+    if (updates.role === 'super_admin') {
+      // Naik jadi super_admin → tambahkan ke super_admins
+      const { error: saErr } = await supabase
+        .from('super_admins')
+        .insert({ email, created_at: new Date().toISOString() });
+      // Abaikan duplicate — sudah ada = aman
+      if (saErr && !saErr.message.includes('duplicate')) {
+        console.error('[Supabase] updateAdminUser super_admins sync error:', saErr);
+      }
+    } else if (existing.role === 'super_admin' && updates.role === 'admin') {
+      // Turun dari super_admin ke admin biasa → hapus dari super_admins
+      await supabase.from('super_admins').delete().eq('email', email);
+    }
+  }
 }
 
 export async function removeAdminUser(emailOrId: string): Promise<void> {
   const normalized = emailOrId.toLowerCase().trim();
+
+  // ✅ FIX: Ambil email sebelum hapus, untuk sync ke super_admins
+  const { data: existing } = await supabase
+    .from('admin_users')
+    .select('email')
+    .or(`email.eq.${normalized},id.eq.${emailOrId}`)
+    .maybeSingle();
 
   const { error: emailErr } = await supabase
     .from('admin_users')
@@ -464,6 +512,11 @@ export async function removeAdminUser(emailOrId: string): Promise<void> {
       console.error('[Supabase] removeAdminUser error:', idErr);
       throw new Error('Gagal menghapus admin: ' + idErr.message);
     }
+  }
+
+  // ✅ FIX: Hapus dari super_admins juga agar checkIsSuperAdmin() tidak stale
+  if (existing?.email) {
+    await supabase.from('super_admins').delete().eq('email', existing.email);
   }
 }
 

@@ -1,6 +1,7 @@
 // src/app/login/page.tsx
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -1129,72 +1130,7 @@ function LoginPageContent() {
               </button>
             </div>
 
-            {/* Tutorial Modal */}
-            {showTutorial && (() => {
-              const TUTOR_CAPTIONS = [
-                {
-                  step: 'Langkah 1 — Buat Akun',
-                  text: <span>Gunakan <strong>akun baru</strong> ya! Isi <strong>email</strong>, buat <strong>password</strong>, pilih <strong>mata uang</strong> yang sesuai, lalu tekan tombol <strong>Daftar</strong>.</span>,
-                },
-                {
-                  step: 'Langkah 2 — Registrasi Berhasil',
-                  text: <span>Selamat! Akan muncul pesan sukses seperti gambar di atas. Selanjutnya, tekan tombol <strong>"Login STC AutoTrade"</strong> untuk langsung menuju halaman login 🎉</span>,
-                },
-                {
-                  step: 'Langkah 3 — Masuk ke Akun',
-                  text: <span>Hampir selesai! Masukkan <strong>email</strong> dan <strong>password</strong> yang tadi didaftarkan, lalu tekan login. Selamat bergabung di STC AutoTrade! 🚀</span>,
-                },
-              ];
-              const cap = TUTOR_CAPTIONS[tutorialPage];
-              return (
-              <div className="tutor-overlay" onClick={() => setShowTutorial(false)}>
-                <div className="tutor-modal" onClick={e => e.stopPropagation()}>
-                  <div className="tutor-header">
-                    <span className="tutor-title">Tutorial Pendaftaran</span>
-                    <button className="tutor-close" onClick={() => setShowTutorial(false)} aria-label="Tutup">
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                      </svg>
-                    </button>
-                  </div>
-
-                  <div className="tutor-img-wrap">
-                    <Image
-                      src={`/tutor${tutorialPage + 1}.jpeg`}
-                      alt={`Tutorial langkah ${tutorialPage + 1}`}
-                      fill
-                      style={{ objectFit: 'contain' }}
-                      priority
-                    />
-                  </div>
-
-                  <div key={tutorialPage} className="tutor-caption">
-                    <p className="tutor-caption-step">{cap.step}</p>
-                    <p className="tutor-caption-text">{cap.text}</p>
-                  </div>
-
-                  <div className="tutor-footer">
-                    <div className="tutor-dots">
-                      {[0, 1, 2].map(i => (
-                        <div
-                          key={i}
-                          className={`tutor-dot${tutorialPage === i ? ' active' : ''}`}
-                          onClick={() => setTutorialPage(i)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      className="tutor-next-btn"
-                      onClick={() => tutorialPage < 2 ? setTutorialPage(p => p + 1) : setShowTutorial(false)}
-                    >
-                      {tutorialPage < 2 ? 'Selanjutnya' : 'Selesai'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-            })()}
+            {/* Tutorial Modal — dirender via portal ke document.body agar blur bekerja */}
 
           </div>
 
@@ -1204,6 +1140,73 @@ function LoginPageContent() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Modal Portal */}
+      {showTutorial && typeof document !== 'undefined' && createPortal((() => {
+        const TUTOR_CAPTIONS = [
+          {
+            step: 'Langkah 1 — Buat Akun',
+            text: <span>Gunakan <strong>akun baru</strong> ya! Isi <strong>email</strong>, buat <strong>password</strong>, pilih <strong>mata uang</strong> yang sesuai, lalu tekan tombol <strong>Daftar</strong>.</span>,
+          },
+          {
+            step: 'Langkah 2 — Registrasi Berhasil',
+            text: <span>Selamat! Akan muncul pesan sukses seperti gambar di atas. Selanjutnya, tekan tombol <strong>"Login STC AutoTrade"</strong> untuk langsung menuju halaman login 🎉</span>,
+          },
+          {
+            step: 'Langkah 3 — Masuk ke Akun',
+            text: <span>Hampir selesai! Masukkan <strong>email</strong> dan <strong>password</strong> yang tadi didaftarkan, lalu tekan login. Selamat bergabung di STC AutoTrade! 🚀</span>,
+          },
+        ];
+        const cap = TUTOR_CAPTIONS[tutorialPage];
+        return (
+          <div className="tutor-overlay" onClick={() => setShowTutorial(false)}>
+            <div className="tutor-modal" onClick={e => e.stopPropagation()}>
+              <div className="tutor-header">
+                <span className="tutor-title">Tutorial Pendaftaran</span>
+                <button className="tutor-close" onClick={() => setShowTutorial(false)} aria-label="Tutup">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div className="tutor-img-wrap">
+                <Image
+                  src={`/tutor${tutorialPage + 1}.jpeg`}
+                  alt={`Tutorial langkah ${tutorialPage + 1}`}
+                  fill
+                  style={{ objectFit: 'contain' }}
+                  priority
+                />
+              </div>
+
+              <div key={tutorialPage} className="tutor-caption">
+                <p className="tutor-caption-step">{cap.step}</p>
+                <p className="tutor-caption-text">{cap.text}</p>
+              </div>
+
+              <div className="tutor-footer">
+                <div className="tutor-dots">
+                  {[0, 1, 2].map(i => (
+                    <div
+                      key={i}
+                      className={`tutor-dot${tutorialPage === i ? ' active' : ''}`}
+                      onClick={() => setTutorialPage(i)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </div>
+                <button
+                  className="tutor-next-btn"
+                  onClick={() => tutorialPage < 2 ? setTutorialPage(p => p + 1) : setShowTutorial(false)}
+                >
+                  {tutorialPage < 2 ? 'Selanjutnya' : 'Selesai'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })(), document.body)}
     </>
   );
 }
