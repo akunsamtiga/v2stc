@@ -65,7 +65,7 @@ body {
   --violet-dim:  rgba(191, 90, 242, 0.13);
 
   --bdr:         rgba(255, 255, 255, 0.10);
-  --bdr-act:     rgba(10, 132, 255, 0.40);
+  --bdr-act:     rgba(16, 185, 129, 0.40);
   --faint:       rgba(10, 132, 255, 0.06);
 
   --text:        #FFFFFF;
@@ -230,7 +230,7 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
    ============================================================ */
 .ds-card {
   background: #1C1C1E;
-  border: 0.5px solid rgba(255, 255, 255, 0.10);
+  border: 1.5px solid rgba(255, 255, 255, 0.10);
   border-radius: 16px !important;
   position: relative;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.40);
@@ -238,7 +238,7 @@ textarea.ds-input { resize: vertical; min-height: 80px; }
 }
 
 .ds-card.active {
-  border-color: rgba(10, 132, 255, 0.40);
+  border-color: rgba(16, 185, 129, 0.40);
 }
 
 [data-theme="light"] .ds-card {

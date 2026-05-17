@@ -1134,7 +1134,7 @@ function LoginPageContent() {
 
           </div>
 
-          <div style={{ position: 'fixed', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11.5, color: 'var(--text-3)', zIndex: 10 }}>
+          <div style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--text-3)', padding: '16px 0' }}>
             © 2026 STC AutoTrade ·{' '}
             <a href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)', fontWeight: 500, cursor: 'pointer', transition: 'opacity 0.14s' }}>{t('login.terms')}</a>
           </div>

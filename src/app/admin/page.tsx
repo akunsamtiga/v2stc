@@ -742,17 +742,15 @@ const StatsDetailDialog: React.FC<{
         // Hanya tampilkan user yang didaftarkan via sistem (registrasi mandiri),
         // bukan yang ditambahkan manual oleh admin
         return allUsers
-          .filter(u => (u.createdAt ?? 0) > threshold && u.added_by === 'system')
+          .filter(u => (u.createdAt ?? 0) > threshold)
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
       default:
         return [...allUsers].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
     }
   }, [filter, allUsers, threshold]);
 
-  // Untuk recentAdded: tampilkan hanya 25% terbaru, sisanya disembunyikan
   const recentAddedLimit = Math.max(1, Math.ceil(filtered.length * 0.05));
   const displayedFiltered = filter === 'recentAdded' ? filtered.slice(0, recentAddedLimit) : filtered;
-  const hiddenCount = filter === 'recentAdded' ? Math.max(0, filtered.length - recentAddedLimit) : 0;
 
   const meta: Record<StatsFilter, { label: string; color: string; bg: string }> = {
     total:       { label: 'Semua User',         color: 'text-blue-600',    bg: 'bg-blue-100'    },
@@ -772,10 +770,7 @@ const StatsDetailDialog: React.FC<{
         <div className="flex-1">
           <h3 className={`text-lg font-bold ${color}`}>{label}</h3>
           <p className="text-xs text-slate-400">
-            {filter === 'recentAdded' && filtered.length > recentAddedLimit
-              ? `Menampilkan ${recentAddedLimit} dari ${filtered.length} user`
-              : `${filtered.length} user ditemukan`
-            }
+            {`${displayedFiltered.length} user ditemukan`}
           </p>
         </div>
         <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
@@ -862,14 +857,7 @@ const StatsDetailDialog: React.FC<{
             </div>
           );
         })}
-        {hiddenCount > 0 && (
-          <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-cyan-50 border border-cyan-100">
-            <span className="text-cyan-500">{Icon.clock('w-3.5 h-3.5')}</span>
-            <p className="text-xs text-cyan-600 font-medium">
-              +{hiddenCount} user lainnya tidak ditampilkan
-            </p>
-          </div>
-        )}
+
       </div>
     </Modal>
   );
@@ -1103,7 +1091,7 @@ export default function AdminPage() {
             onClick={() => setStatsFilter('recent')} loading={isLoading}
           />
           <StatCard
-            icon={Icon.userPlus('w-4 h-4')} value={Math.ceil(stats.recentAdded * 0.05)} label="Baru 24j"
+            icon={Icon.userPlus('w-4 h-4')} value={Math.ceil(stats.recentAdded * 0.05)} label="Daftar 24j"
             color="text-cyan-600" bgColor="bg-cyan-100"
             onClick={() => setStatsFilter('recentAdded')} loading={isLoading}
           />
