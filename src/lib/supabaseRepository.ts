@@ -82,10 +82,17 @@ export async function getAllWhitelistUsers(
   _superAdmin?: boolean,
   _pageSize?: number,
 ): Promise<WhitelistUser[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('whitelist_users')
     .select('*')
     .order('added_at', { ascending: false });
+
+  // Admin biasa hanya bisa lihat user yang dia sendiri tambahkan
+  if (_superAdmin === false && _email) {
+    query = query.eq('added_by', _email);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('[Supabase] getAllWhitelistUsers error:', error);
@@ -425,6 +432,20 @@ export async function addAdminUser(
   }
 }
 
+export async function updateAdminUser(
+  id: string,
+  updates: { name?: string; role?: 'admin' | 'super_admin'; is_active?: boolean },
+): Promise<void> {
+  const { error } = await supabase
+    .from('admin_users')
+    .update(updates)
+    .eq('id', id);
+  if (error) {
+    console.error('[Supabase] updateAdminUser error:', error);
+    throw new Error('Gagal mengupdate admin: ' + error.message);
+  }
+}
+
 export async function removeAdminUser(emailOrId: string): Promise<void> {
   const normalized = emailOrId.toLowerCase().trim();
 
@@ -614,6 +635,15 @@ export async function getUserStatistics(
 }> {
   const threshold24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
+  // Helper: buat base query dengan filter admin biasa jika diperlukan
+  const base = () => {
+    let q = supabase.from('whitelist_users').select('*', { count: 'exact', head: true });
+    if (_superAdmin === false && _email) {
+      q = q.eq('added_by', _email);
+    }
+    return q;
+  };
+
   // Jalankan semua count query secara paralel untuk efisiensi
   const [
     { count: total },
@@ -622,34 +652,20 @@ export async function getUserStatistics(
     { count: recent },
     { count: recentAdded },
   ] = await Promise.all([
-    // Total semua user whitelist
-    supabase
-      .from('whitelist_users')
-      .select('*', { count: 'exact', head: true }),
+    // Total semua user (dibatasi scope admin)
+    base(),
 
     // User yang aktif
-    supabase
-      .from('whitelist_users')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true),
+    base().eq('is_active', true),
 
-    // ✅ User yang tidak aktif (dulu tidak dihitung)
-    supabase
-      .from('whitelist_users')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', false),
+    // User yang tidak aktif
+    base().eq('is_active', false),
 
-    // ✅ User yang login dalam 24 jam terakhir (dulu tidak dihitung)
-    supabase
-      .from('whitelist_users')
-      .select('*', { count: 'exact', head: true })
-      .gte('last_login', threshold24h),
+    // User yang login dalam 24 jam terakhir
+    base().gte('last_login', threshold24h),
 
-    // ✅ User yang baru ditambahkan dalam 24 jam terakhir (dulu tidak dihitung)
-    supabase
-      .from('whitelist_users')
-      .select('*', { count: 'exact', head: true })
-      .gte('added_at', threshold24h),
+    // User yang baru ditambahkan dalam 24 jam terakhir
+    base().gte('added_at', threshold24h),
   ]);
 
   return {

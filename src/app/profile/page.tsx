@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type ProfileBalance } from '@/lib/api';
+import { resolveAvatarUrl } from '@/lib/userProfileApi';
 import { storage, isSessionValid, sessionLogout, getAuthToken } from '@/lib/storage';
 import { checkIsAdmin, checkIsSuperAdmin } from '@/lib/supabaseRepository';
 import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib';
@@ -338,8 +339,23 @@ function ProfilePageContent() {
 
   const AvatarBlock = () => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-      <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(145deg, #007aff, #5ac8fa)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 700, color: '#fff', boxShadow: '0 4px 20px rgba(0,122,255,0.28)', marginBottom: 12, animation: 'pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.08s both', flexShrink: 0 }}>
-        {isLoading ? '' : getInitials()}
+      <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(145deg, #007aff, #5ac8fa)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 700, color: '#fff', boxShadow: '0 4px 20px rgba(0,122,255,0.28)', marginBottom: 12, animation: 'pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.08s both', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+        {isLoading ? '' : profile?.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolveAvatarUrl(profile.avatar) ?? profile.avatar}
+            alt={getDisplayName()}
+            width={80}
+            height={80}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+            onError={(e) => {
+              // Fallback ke initials jika gambar gagal dimuat (404, CORS, dll)
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        ) : (
+          getInitials()
+        )}
       </div>
       {isLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, width: '100%' }}>

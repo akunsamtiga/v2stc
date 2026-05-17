@@ -212,8 +212,108 @@ const LOGIN_STYLES = `
   .badge-txt { font-size: 10.5px; color: var(--text-3); font-weight: 500; }
 
   .foot { text-align: center; margin-top: 14px; font-size: 11.5px; color: var(--text-3); }
-  .foot-lnk { color: var(--accent); font-weight: 500; cursor: pointer; transition: opacity 0.14s; }
+  .foot-lnk { color: var(--accent); font-weight: 500; cursor: pointer; transition: opacity 0.14s; background: none; border: none; padding: 0; font-family: var(--font); font-size: 13px; }
   .foot-lnk:hover { opacity: 0.70; }
+
+  /* ── Tutorial Modal ─────────────────────────────────────────────────── */
+  .tutor-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.40);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: tutor-in 0.22s cubic-bezier(0.22,1,0.36,1);
+  }
+  @keyframes tutor-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .tutor-modal {
+    background: rgba(255,255,255,0.97);
+    border-radius: 22px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
+    width: 100%; max-width: 360px;
+    overflow: hidden;
+    animation: tutor-rise 0.28s cubic-bezier(0.22,1,0.36,1);
+  }
+  @keyframes tutor-rise {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .tutor-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .tutor-title {
+    font-size: 15px; font-weight: 650; color: var(--text-1); letter-spacing: -0.3px;
+  }
+  .tutor-close {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(0,0,0,0.06); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-2); transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .tutor-close:hover { background: rgba(0,0,0,0.11); }
+  .tutor-img-wrap {
+    position: relative; width: 100%; background: #f7f7f9;
+    aspect-ratio: 9/16; max-height: 52vh;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .tutor-img-wrap img {
+    width: 100%; height: 100%; object-fit: contain; display: block;
+  }
+  .tutor-footer {
+    padding: 0 18px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .tutor-next-btn {
+    background: var(--accent); border: none; cursor: pointer;
+    color: #fff; font-family: var(--font);
+    font-size: 13px; font-weight: 600; letter-spacing: -0.1px;
+    padding: 7px 16px; border-radius: 99px;
+    transition: opacity 0.15s, transform 0.12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tutor-next-btn:hover { opacity: 0.86; }
+  .tutor-next-btn:active { transform: scale(0.96); }
+  .tutor-next-btn:disabled { opacity: 0.28; cursor: default; }
+  .tutor-dots {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .tutor-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(0,0,0,0.14);
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .tutor-dot.active {
+    background: var(--accent); width: 20px; border-radius: 99px;
+  }
+  .tutor-counter {
+    font-size: 12px; color: var(--text-3); font-weight: 500; letter-spacing: -0.1px;
+  }
+  .tutor-caption {
+    padding: 0 18px 12px;
+    animation: caption-fade 0.25s ease;
+  }
+  @keyframes caption-fade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tutor-caption-step {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .tutor-caption-text {
+    font-size: 13px; color: var(--text-2); line-height: 1.5; letter-spacing: -0.1px;
+  }
+  .tutor-caption-text strong {
+    color: var(--text-1); font-weight: 600;
+  }
 
   .register-link {
     text-align: center;
@@ -552,6 +652,8 @@ function LoginPageContent() {
   const [showPass, setShowPass] = useState(false);
   const [splash,   setSplash]   = useState<SplashPhase>('hidden');
   const [showLangSelector, setShowLangSelector] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialPage, setTutorialPage] = useState(0);
   const [useImg, setUseImg] = useState(false);
 
   // ✅ Toast state for register success
@@ -1019,16 +1121,80 @@ function LoginPageContent() {
 
             <div style={{ textAlign: 'center', marginTop: 10 }}>
               <span style={{ fontSize: 13, color: '#6e6e73' }}>Kesulitan mendaftar? </span>
-              <a
+              <button
                 className="foot-lnk"
-                href="https://t.me/STC_01"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: 13, fontWeight: 500, color: '#007aff' }}
+                onClick={() => { setTutorialPage(0); setShowTutorial(true); }}
               >
-                hubungi kami
-              </a>
+                lihat tutorial
+              </button>
             </div>
+
+            {/* Tutorial Modal */}
+            {showTutorial && (() => {
+              const TUTOR_CAPTIONS = [
+                {
+                  step: 'Langkah 1 — Buat Akun',
+                  text: <span>Gunakan <strong>akun baru</strong> ya! Isi <strong>email</strong>, buat <strong>password</strong>, pilih <strong>mata uang</strong> yang sesuai, lalu tekan tombol <strong>Daftar</strong>.</span>,
+                },
+                {
+                  step: 'Langkah 2 — Registrasi Berhasil',
+                  text: <span>Selamat! Akan muncul pesan sukses seperti gambar di atas. Selanjutnya, tekan tombol <strong>"Login STC AutoTrade"</strong> untuk langsung menuju halaman login 🎉</span>,
+                },
+                {
+                  step: 'Langkah 3 — Masuk ke Akun',
+                  text: <span>Hampir selesai! Masukkan <strong>email</strong> dan <strong>password</strong> yang tadi didaftarkan, lalu tekan login. Selamat bergabung di STC AutoTrade! 🚀</span>,
+                },
+              ];
+              const cap = TUTOR_CAPTIONS[tutorialPage];
+              return (
+              <div className="tutor-overlay" onClick={() => setShowTutorial(false)}>
+                <div className="tutor-modal" onClick={e => e.stopPropagation()}>
+                  <div className="tutor-header">
+                    <span className="tutor-title">Tutorial Pendaftaran</span>
+                    <button className="tutor-close" onClick={() => setShowTutorial(false)} aria-label="Tutup">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="tutor-img-wrap">
+                    <Image
+                      src={`/tutor${tutorialPage + 1}.jpeg`}
+                      alt={`Tutorial langkah ${tutorialPage + 1}`}
+                      fill
+                      style={{ objectFit: 'contain' }}
+                      priority
+                    />
+                  </div>
+
+                  <div key={tutorialPage} className="tutor-caption">
+                    <p className="tutor-caption-step">{cap.step}</p>
+                    <p className="tutor-caption-text">{cap.text}</p>
+                  </div>
+
+                  <div className="tutor-footer">
+                    <div className="tutor-dots">
+                      {[0, 1, 2].map(i => (
+                        <div
+                          key={i}
+                          className={`tutor-dot${tutorialPage === i ? ' active' : ''}`}
+                          onClick={() => setTutorialPage(i)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      className="tutor-next-btn"
+                      onClick={() => tutorialPage < 2 ? setTutorialPage(p => p + 1) : setShowTutorial(false)}
+                    >
+                      {tutorialPage < 2 ? 'Selanjutnya' : 'Selesai'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+            })()}
 
           </div>
 

@@ -6,7 +6,7 @@ import {
   checkIsAdmin, checkIsSuperAdmin, getUserStatistics, getAllWhitelistUsers,
   addWhitelistUser, updateWhitelistUser, deleteWhitelistUser,
   toggleWhitelistUserStatus, importWhitelistUsers, getAdminUsers, addAdminUser,
-  removeAdminUser, updateRegistrationConfig, getRegistrationConfig,
+  removeAdminUser, updateAdminUser, updateRegistrationConfig, getRegistrationConfig,
   exportWhitelistAsJson, exportWhitelistAsCsv,
   type WhitelistUser, type AdminUser, type RegistrationConfig,
 } from '@/lib/supabaseRepository';
@@ -230,19 +230,6 @@ const UserCard: React.FC<{
             <span className="text-[11px] text-slate-300 italic">—</span>
           </div>
         )}
-        {user.deviceId ? (
-          <CopyableId
-            label="Device"
-            value={user.deviceId}
-            icon={Icon.device('w-3 h-3')}
-          />
-        ) : (
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
-            <span className="text-slate-400">{Icon.device('w-3 h-3')}</span>
-            <span className="text-[10px] font-semibold text-slate-400 w-12">Device</span>
-            <span className="text-[11px] text-slate-300 italic">—</span>
-          </div>
-        )}
       </div>
 
       {/* Footer: meta + actions */}
@@ -254,11 +241,6 @@ const UserCard: React.FC<{
           {user.lastLogin && user.lastLogin > 0 && (
             <p className="text-[11px] text-slate-400">
               Login: <span className="text-slate-600">{fmtDate(user.lastLogin, true)}</span>
-            </p>
-          )}
-          {user.addedBy && (
-            <p className="text-[11px] text-cyan-600 font-medium">
-              by {user.addedBy.split('@')[0]}
             </p>
           )}
         </div>
@@ -503,14 +485,33 @@ const AdminMgmtDialog: React.FC<{
   admins: AdminUser[]; isSuperAdmin: boolean; currentEmail: string;
   onClose: () => void;
   onAdd: (email: string, name: string, role: string) => void;
+  onUpdate: (id: string, updates: { name?: string; role?: 'admin' | 'super_admin'; is_active?: boolean }) => void;
   onRemove: (id: string | undefined) => void;
   loadingId: string | null;
-}> = ({ admins, isSuperAdmin, currentEmail, onClose, onAdd, onRemove, loadingId }) => {
+}> = ({ admins, isSuperAdmin, currentEmail, onClose, onAdd, onUpdate, onRemove, loadingId }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('admin');
   const [search, setSearch] = useState('');
+  // Edit state: key = admin.id, value = draft fields
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState<'admin' | 'super_admin'>('admin');
+  const [editActive, setEditActive] = useState(true);
+
+  const startEdit = (admin: AdminUser) => {
+    setEditingId(admin.id ?? null);
+    setEditName(admin.name ?? '');
+    setEditRole(admin.role ?? 'admin');
+    setEditActive(admin.is_active ?? true);
+  };
+  const cancelEdit = () => setEditingId(null);
+  const saveEdit = (id: string | undefined) => {
+    if (!id) return;
+    onUpdate(id, { name: editName.trim(), role: editRole, is_active: editActive });
+    setEditingId(null);
+  };
 
   const filtered = useMemo(() =>
     search.trim() ? admins.filter(a =>
@@ -537,7 +538,7 @@ const AdminMgmtDialog: React.FC<{
 
       {isSuperAdmin && (
         <button
-          onClick={() => setShowAdd(p => !p)}
+          onClick={() => { setShowAdd(p => !p); setEditingId(null); }}
           className="w-full mb-3 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-amber-600 transition-colors"
         >
           {Icon.plus('w-4 h-4')} Tambah Admin
@@ -573,33 +574,135 @@ const AdminMgmtDialog: React.FC<{
       </div>
 
       <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
-        {filtered.map(admin => (
-          <div key={admin.id} className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-              <span className="text-amber-600">{Icon.user('w-4 h-4')}</span>
+        {filtered.map(admin => {
+          const isEditing = editingId === admin.id;
+          const isSelf    = admin.email === currentEmail;
+
+          return (
+            <div key={admin.id} className={`rounded-xl border transition-all ${isEditing ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-transparent'}`}>
+              {/* ── Normal row ── */}
+              {!isEditing && (
+                <div className="flex items-center gap-3 p-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-600">{Icon.user('w-4 h-4')}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{admin.name}</p>
+                    <p className="text-xs text-slate-500 truncate">{admin.email}</p>
+                  </div>
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${
+                    admin.role === 'super_admin' ? 'bg-amber-100 text-amber-700' : 'bg-cyan-100 text-cyan-700'
+                  }`}>
+                    {admin.role === 'super_admin' ? 'SUPER' : 'ADMIN'}
+                  </span>
+                  {/* Active badge */}
+                  {admin.is_active === false && (
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-600 flex-shrink-0">OFF</span>
+                  )}
+                  {isSuperAdmin && !isSelf && (
+                    <>
+                      {/* Edit button */}
+                      <button
+                        onClick={() => startEdit(admin)}
+                        className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition-colors flex-shrink-0"
+                      >
+                        <span className="text-blue-500">{Icon.edit('w-3.5 h-3.5')}</span>
+                      </button>
+                      {/* Delete button — super_admin tidak bisa hapus sesama super_admin */}
+                      {admin.role !== 'super_admin' && (
+                        <button
+                          onClick={() => onRemove(admin.id)}
+                          disabled={loadingId === admin.id}
+                          className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-60"
+                        >
+                          {loadingId === admin.id
+                            ? <Spinner cls="w-3.5 h-3.5 border-2 text-red-400" />
+                            : <span className="text-red-500">{Icon.trash('w-3.5 h-3.5')}</span>}
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {isSelf && (
+                    <span className="text-[9px] font-medium text-slate-400 flex-shrink-0">(kamu)</span>
+                  )}
+                </div>
+              )}
+
+              {/* ── Inline edit form ── */}
+              {isEditing && (
+                <div className="p-3 flex flex-col gap-2.5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-bold text-amber-700">Edit Admin</span>
+                    <span className="text-xs text-slate-400 truncate flex-1">{admin.email}</span>
+                  </div>
+                  <Inp label="Nama" value={editName} onChange={setEditName} placeholder="Nama Admin" />
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role</label>
+                    <select
+                      value={editRole}
+                      onChange={e => setEditRole(e.target.value as 'admin' | 'super_admin')}
+                      className="bg-white border border-slate-200 rounded-xl text-slate-800 px-3 py-2 text-sm outline-none w-full focus:border-amber-400 transition-all"
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="super_admin">Super Admin</option>
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-3 cursor-pointer bg-white border border-slate-200 rounded-xl px-3 py-2.5">
+                    <Toggle checked={editActive} onChange={() => setEditActive(p => !p)} />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Akun Aktif</p>
+                      <p className="text-xs text-slate-400">{editActive ? 'Admin bisa login' : 'Admin tidak bisa login'}</p>
+                    </div>
+                  </label>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={cancelEdit}
+                      className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-100 transition-colors"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={() => saveEdit(admin.id)}
+                      disabled={!editName.trim() || loadingId === admin.id}
+                      className="flex-1 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold disabled:opacity-50 hover:bg-amber-600 transition-colors flex items-center justify-center gap-2"
+                    >
+                      {loadingId === admin.id && <Spinner cls="w-3.5 h-3.5 border-2 text-white" />}
+                      Simpan
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">{admin.name}</p>
-              <p className="text-xs text-slate-500 truncate">{admin.email}</p>
-            </div>
-            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${admin.role === 'super_admin' ? 'bg-amber-100 text-amber-700' : 'bg-cyan-100 text-cyan-700'}`}>
-              {admin.role === 'super_admin' ? 'SUPER' : 'ADMIN'}
-            </span>
-            {isSuperAdmin && admin.email !== currentEmail && (
-              <button
-                onClick={() => onRemove(admin.id)}
-                className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors flex-shrink-0"
-              >
-                {loadingId === admin.id ? <Spinner cls="w-3.5 h-3.5 border-2 text-red-400" /> : <span className="text-red-500">{Icon.x('w-3.5 h-3.5')}</span>}
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
         {filtered.length === 0 && (
           <p className="text-center text-sm text-slate-400 py-6">Tidak ada admin ditemukan</p>
         )}
       </div>
     </Modal>
+  );
+};
+
+// ─── Inline CopyBtn ───────────────────────────────────────────────────────────
+const CopyBtn: React.FC<{ value: string; label?: string }> = ({ value, label }) => {
+  const [copied, setCopied] = useState(false);
+  const handle = async () => {
+    await copyText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+  return (
+    <button
+      onClick={handle}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold transition-all border ${
+        copied
+          ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+          : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-cyan-50 hover:border-cyan-200 hover:text-cyan-600'
+      }`}
+    >
+      {copied ? Icon.check('w-2.5 h-2.5') : Icon.copy('w-2.5 h-2.5')}
+      {label && <span>{copied ? 'Tersalin!' : label}</span>}
+    </button>
   );
 };
 
@@ -669,7 +772,14 @@ const StatsDetailDialog: React.FC<{
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">{u.name ?? u.email}</p>
                 <p className="text-xs text-slate-500 truncate">{u.email}</p>
-                {u.userId && <p className="text-[10px] font-mono text-slate-400">ID: {u.userId}</p>}
+                {u.userId && (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <p className="text-[10px] font-mono text-slate-400 truncate">ID: {u.userId}</p>
+                    {filter === 'recentAdded' && (
+                      <CopyBtn value={u.userId} label="Salin ID" />
+                    )}
+                  </div>
+                )}
                 {filter === 'recent' && u.lastLogin && (
                   <p className="text-[10px] text-slate-400">Login: {fmtDate(u.lastLogin, true)}</p>
                 )}
@@ -812,6 +922,10 @@ export default function AdminPage() {
   const handleImport = (json: string)       => act(async () => { const parsed = JSON.parse(json); const r = await importWhitelistUsers(parsed, currentEmail); setImportOpen(false); setSuccess(`Import: ${r.success} berhasil, ${r.skipped} dilewati`); }, '');
 
   const handleAddAdmin    = (email: string, name: string, role: string) => act(async () => { await addAdminUser(email, name, role, currentEmail); }, 'Admin ditambahkan ✓');
+  const handleUpdateAdmin = (id: string, updates: { name?: string; role?: 'admin' | 'super_admin'; is_active?: boolean }) => {
+    setAdminLoadId(id);
+    act(async () => { await updateAdminUser(id, updates); }, 'Admin diupdate ✓').finally(() => setAdminLoadId(null));
+  };
   const handleRemoveAdmin = (id: string | undefined) => {
     if (!id) return;
     setAdminLoadId(id);
@@ -918,13 +1032,11 @@ export default function AdminPage() {
             color="text-amber-600" bgColor="bg-amber-100"
             onClick={() => setStatsFilter('recent')} loading={isLoading}
           />
-          {isSuperAdmin && (
-            <StatCard
-              icon={Icon.userPlus('w-4 h-4')} value={stats.recentAdded} label="Baru 24j"
-              color="text-cyan-600" bgColor="bg-cyan-100"
-              onClick={() => setStatsFilter('recentAdded')} loading={isLoading}
-            />
-          )}
+          <StatCard
+            icon={Icon.userPlus('w-4 h-4')} value={stats.recentAdded} label="Baru 24j"
+            color="text-cyan-600" bgColor="bg-cyan-100"
+            onClick={() => setStatsFilter('recentAdded')} loading={isLoading}
+          />
         </div>
 
         {/* ── CONFIG CARDS (Super Admin) ────────────────────────────────── */}
@@ -1091,7 +1203,7 @@ export default function AdminPage() {
       {editUser   && <UserDialog mode="edit" user={editUser} isSuperAdmin={isSuperAdmin} onClose={() => setEditUser(null)} onSave={handleEdit} loading={isActing} />}
       {deleteUser && <DeleteDialog user={deleteUser} onClose={() => setDeleteUser(null)} onConfirm={handleDelete} loading={isActing} />}
       {importOpen && <ImportDialog onClose={() => setImportOpen(false)} onImport={handleImport} loading={isActing} />}
-      {adminMgmt  && <AdminMgmtDialog admins={admins} isSuperAdmin={isSuperAdmin} currentEmail={currentEmail} onClose={() => setAdminMgmt(false)} onAdd={handleAddAdmin} onRemove={handleRemoveAdmin} loadingId={adminLoadId} />}
+      {adminMgmt  && <AdminMgmtDialog admins={admins} isSuperAdmin={isSuperAdmin} currentEmail={currentEmail} onClose={() => setAdminMgmt(false)} onAdd={handleAddAdmin} onUpdate={handleUpdateAdmin} onRemove={handleRemoveAdmin} loadingId={adminLoadId} />}
       {statsFilter && (
         <StatsDetailDialog
           filter={statsFilter} allUsers={allUsers} onClose={() => setStatsFilter(null)}

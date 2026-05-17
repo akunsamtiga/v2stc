@@ -374,7 +374,15 @@ function HistoryPageContent() {
   };
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#f2f2f7', fontFamily: "-apple-system,'SF Pro Display',BlinkMacSystemFont,'Helvetica Neue',sans-serif", WebkitFontSmoothing: 'antialiased', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    // ✅ FIX: Hapus overflow:'hidden', display:'flex', flexDirection:'column' dari root.
+    //    Root div TIDAK boleh jadi scroll container — biarkan <main> (globals.css)
+    //    yang handle scroll. Root cukup minHeight:'100%' agar background penuh.
+    <div style={{
+      minHeight: '100%',
+      background: '#f2f2f7',
+      fontFamily: "-apple-system,'SF Pro Display',BlinkMacSystemFont,'Helvetica Neue',sans-serif",
+      WebkitFontSmoothing: 'antialiased',
+    }}>
       <style>{`
         @keyframes skel-pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
         @keyframes spin        { to{transform:rotate(360deg)} }
@@ -408,7 +416,17 @@ function HistoryPageContent() {
       `}</style>
 
       {/* ── STICKY HEADER ── */}
-      <div style={{ width: '100%', zIndex: 50, flexShrink: 0, background: 'rgba(242,242,247,0.92)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: '0.5px solid rgba(60,60,67,0.16)' }}>
+      {/* ✅ FIX: position:'sticky' + top:0 agar header nempel saat <main> discroll */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        width: '100%',
+        zIndex: 50,
+        background: 'rgba(242,242,247,0.92)',
+        backdropFilter: 'saturate(180%) blur(20px)',
+        WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+        borderBottom: '0.5px solid rgba(60,60,67,0.16)',
+      }}>
         <div style={{ maxWidth: 1120, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <h1 style={{ flex: 1, fontSize: 17, fontWeight: 600, color: '#1c1c1e', letterSpacing: -0.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('history.title')}</h1>
 
@@ -426,155 +444,161 @@ function HistoryPageContent() {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto', width: '100%', flex: 1, overflowY: 'auto', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch', padding: '20px 16px calc(56px + env(safe-area-inset-bottom, 0px) + 24px)' }}>
-          <div className="hist-layout" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* ✅ FIX: Hapus wrapper flex+overflow:hidden dan inner overflowY:auto.
+           Konten mengalir natural — scroll ditangani <main> di globals.css.
+           padding-bottom sudah include tinggi bottom nav + safe area. */}
+      <div style={{
+        maxWidth: 1120,
+        margin: '0 auto',
+        width: '100%',
+        padding: '20px 16px calc(56px + env(safe-area-inset-bottom, 0px) + 24px)',
+      }}>
+        <div className="hist-layout" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* ══ SIDEBAR (desktop) ══ */}
-            <div className="hist-sidebar" style={{ display: 'none', flexDirection: 'column', gap: 16 }}>
-              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
-                <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid rgba(60,60,67,0.07)' }}>
-                  <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{t('history.summary')}</p>
-                  {isLoading ? <Skel w={100} h={28} r={6} /> : (
-                    <p style={{ fontSize: 26, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.6, lineHeight: 1 }}>{stats.totalTrades} <span style={{ fontSize: 13, fontWeight: 400, color: '#6e6e73' }}>{t('history.trades')}</span></p>
-                  )}
-                </div>
-                {[
-                  { label: 'Profit', value: stats.wins, color: '#34c759' },
-                  { label: 'Loss', value: stats.losses, color: '#ff3b30' },
-                  { label: t('history.draw'), value: stats.draws, color: '#ff9500' },
-                ].map(({ label, value, color }, i, arr) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none' }}>
-                    <span style={{ fontSize: 14, color: '#3c3c43' }}>{label}</span>
-                    {isLoading ? <Skel w={30} h={13} r={4} /> : <span style={{ fontSize: 14, fontWeight: 600, color }}>{value}</span>}
-                  </div>
-                ))}
+          {/* ══ SIDEBAR (desktop) ══ */}
+          <div className="hist-sidebar" style={{ display: 'none', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+              <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid rgba(60,60,67,0.07)' }}>
+                <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{t('history.summary')}</p>
+                {isLoading ? <Skel w={100} h={28} r={6} /> : (
+                  <p style={{ fontSize: 26, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.6, lineHeight: 1 }}>{stats.totalTrades} <span style={{ fontSize: 13, fontWeight: 400, color: '#6e6e73' }}>{t('history.trades')}</span></p>
+                )}
               </div>
+              {[
+                { label: 'Profit', value: stats.wins, color: '#34c759' },
+                { label: 'Loss', value: stats.losses, color: '#ff3b30' },
+                { label: t('history.draw'), value: stats.draws, color: '#ff9500' },
+              ].map(({ label, value, color }, i, arr) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none' }}>
+                  <span style={{ fontSize: 14, color: '#3c3c43' }}>{label}</span>
+                  {isLoading ? <Skel w={30} h={13} r={4} /> : <span style={{ fontSize: 14, fontWeight: 600, color }}>{value}</span>}
+                </div>
+              ))}
+            </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ background: '#fff', borderRadius: 14, padding: '12px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+                <p style={{ fontSize: 10, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('history.winRate')}</p>
+                {isLoading ? <Skel w="70%" h={22} r={5} /> : <p style={{ fontSize: 20, fontWeight: 700, color: stats.winRate >= 50 ? '#34c759' : '#ff3b30', letterSpacing: -0.4 }}>{stats.winRate}%</p>}
+              </div>
+              <div style={{ background: '#fff', borderRadius: 14, padding: '12px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+                <p style={{ fontSize: 10, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('history.profitLoss')}</p>
+                {isLoading ? <Skel w="80%" h={22} r={5} /> : <p style={{ fontSize: 14, fontWeight: 700, color: pnlPos ? '#34c759' : '#ff3b30', letterSpacing: -0.3, lineHeight: 1.2 }}>{pnlPos ? '+' : '-'}Rp {fmt(stats.totalPnL)}</p>}
+              </div>
+            </div>
+
+            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+              <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 16px 8px' }}>{t('history.type')}</p>
+              {(['all', 'schedule', 'fastrade', 'ctc', 'indicator', 'momentum'] as LogType[]).map((val, i, arr) => {
+                const active = typeFilter === val;
+                const colors: Record<LogType, string> = {
+                  all: '#007aff', schedule: '#34c759', fastrade: '#007aff',
+                  ctc: '#af52de', indicator: '#ff9500', momentum: '#ff2d55'
+                };
+                return (
+                  <button key={val} onClick={() => setTypeFilter(val)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', background: active ? `${colors[val]}08` : 'transparent', border: 'none', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none', borderLeft: active ? `2px solid ${colors[val]}` : '2px solid transparent', cursor: 'pointer', textAlign: 'left', WebkitTapHighlightColor: 'transparent' }}>
+                    <span style={{ fontSize: 14, color: active ? colors[val] : '#1c1c1e', fontWeight: active ? 600 : 400 }}>{getTypeLabel(val)}</span>
+                    {active && <ChevronRight size={13} color={colors[val]} />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+              <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 16px 8px' }}>{t('history.period')}</p>
+              {(['all', 'today', 'week', 'month'] as DateFilter[]).map((val, i, arr) => {
+                const active = dateFilter === val;
+                return (
+                  <button key={val} onClick={() => setDateFilter(val)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', background: active ? 'rgba(0,122,255,0.06)' : 'transparent', border: 'none', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none', borderLeft: active ? '2px solid #007aff' : '2px solid transparent', cursor: 'pointer', textAlign: 'left', WebkitTapHighlightColor: 'transparent' }}>
+                    <span style={{ fontSize: 14, color: active ? '#007aff' : '#1c1c1e', fontWeight: active ? 600 : 400 }}>{getPeriodLabel(val)}</span>
+                    {active && <ChevronRight size={13} color="#007aff" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ══ MAIN COLUMN ══ */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+
+            <div className="hist-main-top" style={{ display: 'block' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div style={{ background: '#fff', borderRadius: 14, padding: '12px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
-                  <p style={{ fontSize: 10, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('history.winRate')}</p>
-                  {isLoading ? <Skel w="70%" h={22} r={5} /> : <p style={{ fontSize: 20, fontWeight: 700, color: stats.winRate >= 50 ? '#34c759' : '#ff3b30', letterSpacing: -0.4 }}>{stats.winRate}%</p>}
-                </div>
-                <div style={{ background: '#fff', borderRadius: 14, padding: '12px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
-                  <p style={{ fontSize: 10, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('history.profitLoss')}</p>
-                  {isLoading ? <Skel w="80%" h={22} r={5} /> : <p style={{ fontSize: 14, fontWeight: 700, color: pnlPos ? '#34c759' : '#ff3b30', letterSpacing: -0.3, lineHeight: 1.2 }}>{pnlPos ? '+' : '-'}Rp {fmt(stats.totalPnL)}</p>}
-                </div>
-              </div>
-
-              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
-                <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 16px 8px' }}>{t('history.type')}</p>
-                {(['all', 'schedule', 'fastrade', 'ctc', 'indicator', 'momentum'] as LogType[]).map((val, i, arr) => {
-                  const active = typeFilter === val;
-                  const colors: Record<LogType, string> = {
-                    all: '#007aff', schedule: '#34c759', fastrade: '#007aff', 
-                    ctc: '#af52de', indicator: '#ff9500', momentum: '#ff2d55'
-                  };
-                  return (
-                    <button key={val} onClick={() => setTypeFilter(val)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', background: active ? `${colors[val]}08` : 'transparent', border: 'none', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none', borderLeft: active ? `2px solid ${colors[val]}` : '2px solid transparent', cursor: 'pointer', textAlign: 'left', WebkitTapHighlightColor: 'transparent' }}>
-                      <span style={{ fontSize: 14, color: active ? colors[val] : '#1c1c1e', fontWeight: active ? 600 : 400 }}>{getTypeLabel(val)}</span>
-                      {active && <ChevronRight size={13} color={colors[val]} />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
-                <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 16px 8px' }}>{t('history.period')}</p>
-                {(['all', 'today', 'week', 'month'] as DateFilter[]).map((val, i, arr) => {
-                  const active = dateFilter === val;
-                  return (
-                    <button key={val} onClick={() => setDateFilter(val)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', background: active ? 'rgba(0,122,255,0.06)' : 'transparent', border: 'none', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none', borderLeft: active ? '2px solid #007aff' : '2px solid transparent', cursor: 'pointer', textAlign: 'left', WebkitTapHighlightColor: 'transparent' }}>
-                      <span style={{ fontSize: 14, color: active ? '#007aff' : '#1c1c1e', fontWeight: active ? 600 : 400 }}>{getPeriodLabel(val)}</span>
-                      {active && <ChevronRight size={13} color="#007aff" />}
-                    </button>
-                  );
-                })}
+                <StatTile
+                  label={t('history.totalTrades')}
+                  value={isLoading ? '—' : stats.totalTrades}
+                  sub={isLoading ? '' : `${stats.wins}P · ${stats.losses}L${stats.draws > 0 ? ` · ${stats.draws}${t('history.draw')[0]}` : ''}`}
+                  color="#007aff"
+                  icon={<BarChart3 size={14} />}
+                />
+                <StatTile
+                  label={t('history.winRate')}
+                  value={isLoading ? '—' : `${stats.winRate}%`}
+                  sub={isLoading ? '' : `${pnlPos ? '+' : '-'}Rp ${fmt(stats.totalPnL)}`}
+                  color={stats.winRate >= 50 ? '#34c759' : '#ff3b30'}
+                  icon={stats.winRate >= 50 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                />
               </div>
             </div>
 
-            {/* ══ MAIN COLUMN ══ */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-
-              <div className="hist-main-top" style={{ display: 'block' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <StatTile 
-                    label={t('history.totalTrades')} 
-                    value={isLoading ? '—' : stats.totalTrades} 
-                    sub={isLoading ? '' : `${stats.wins}P · ${stats.losses}L${stats.draws > 0 ? ` · ${stats.draws}${t('history.draw')[0]}` : ''}`} 
-                    color="#007aff" 
-                    icon={<BarChart3 size={14} />} 
-                  />
-                  <StatTile 
-                    label={t('history.winRate')} 
-                    value={isLoading ? '—' : `${stats.winRate}%`} 
-                    sub={isLoading ? '' : `${pnlPos ? '+' : '-'}Rp ${fmt(stats.totalPnL)}`} 
-                    color={stats.winRate >= 50 ? '#34c759' : '#ff3b30'} 
-                    icon={stats.winRate >= 50 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />} 
-                  />
-                </div>
-              </div>
-
-              {showFilters && (
-                <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)', padding: '14px 16px', animation: 'fade-up 0.22s ease both' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, minWidth: 0 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('common.filter')}</span>
-                    {hasActiveFilter && (
-                      <button onClick={() => { setTypeFilter('all'); setResultFilter('all'); setDateFilter('all'); }}
-                        style={{ fontSize: 13, color: '#ff3b30', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}>{t('history.resetFilters')}</button>
-                    )}
-                  </div>
-                  <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.filterByType')}</p>
-                  <div className="hist-chip-scroll" style={{ marginBottom: 14 }}>
-                    {(['all','schedule','fastrade','ctc','indicator','momentum'] as LogType[]).map((v) => (
-                      <Chip key={v} label={getTypeLabel(v)} active={typeFilter===v} color={TYPE_META[v]?.color || '#007aff'} onClick={() => setTypeFilter(v)} />
-                    ))}
-                  </div>
-                  <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.filterByResult')}</p>
-                  <div className="hist-chip-scroll" style={{ marginBottom: 14 }}>
-                    {(['all','win','loss','draw'] as ResultFilter[]).map((v) => (
-                      <Chip key={v} label={getResultLabel(v)} active={resultFilter===v} color={v==='win'?'#34c759':v==='loss'?'#ff3b30':v==='draw'?'#ff9500':'#007aff'} onClick={() => setResultFilter(v)} />
-                    ))}
-                  </div>
-                  <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.filterByPeriod')}</p>
-                  <div className="hist-chip-scroll">
-                    {(['all','today','week','month'] as DateFilter[]).map((v) => (
-                      <Chip key={v} label={getPeriodLabel(v)} active={dateFilter===v} onClick={() => setDateFilter(v)} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 4px' }}>
-                  <p style={{ fontSize: 11.5, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.trades')}</p>
-                  <p style={{ fontSize: 11.5, color: '#aeaeb2', whiteSpace: 'nowrap', flexShrink: 0 }}>{filteredLogs.length} {t('common.data')}</p>
-                </div>
-                <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
-                  {isLoading ? (
-                    <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(0,122,255,0.15)', borderTopColor: '#007aff', animation: 'spin 0.8s linear infinite' }} />
-                      <p style={{ fontSize: 13, color: '#6e6e73' }}>{t('history.loading')}</p>
-                    </div>
-                  ) : filteredLogs.length === 0 ? (
-                    <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-                      <History size={36} style={{ color: '#c7c7cc', margin: '0 auto 12px', display: 'block' }} />
-                      <p style={{ fontSize: 15, fontWeight: 500, color: '#3c3c43', marginBottom: 4 }}>{t('history.noTransactions')}</p>
-                      <p style={{ fontSize: 13, color: '#aeaeb2' }}>{logs.length > 0 ? t('history.noTransactionsFilter') : t('history.startTrading')}</p>
-                    </div>
-                  ) : (
-                    <div>
-                      {filteredLogs.map((log, idx) => (
-                        <div key={log.id} className="hist-row">
-                          <LogRow log={log} last={idx === filteredLogs.length - 1} />
-                        </div>
-                      ))}
-                    </div>
+            {showFilters && (
+              <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)', padding: '14px 16px', animation: 'fade-up 0.22s ease both' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, minWidth: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('common.filter')}</span>
+                  {hasActiveFilter && (
+                    <button onClick={() => { setTypeFilter('all'); setResultFilter('all'); setDateFilter('all'); }}
+                      style={{ fontSize: 13, color: '#ff3b30', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}>{t('history.resetFilters')}</button>
                   )}
                 </div>
+                <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.filterByType')}</p>
+                <div className="hist-chip-scroll" style={{ marginBottom: 14 }}>
+                  {(['all','schedule','fastrade','ctc','indicator','momentum'] as LogType[]).map((v) => (
+                    <Chip key={v} label={getTypeLabel(v)} active={typeFilter===v} color={TYPE_META[v]?.color || '#007aff'} onClick={() => setTypeFilter(v)} />
+                  ))}
+                </div>
+                <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.filterByResult')}</p>
+                <div className="hist-chip-scroll" style={{ marginBottom: 14 }}>
+                  {(['all','win','loss','draw'] as ResultFilter[]).map((v) => (
+                    <Chip key={v} label={getResultLabel(v)} active={resultFilter===v} color={v==='win'?'#34c759':v==='loss'?'#ff3b30':v==='draw'?'#ff9500':'#007aff'} onClick={() => setResultFilter(v)} />
+                  ))}
+                </div>
+                <p style={{ fontSize: 11, color: '#6e6e73', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.filterByPeriod')}</p>
+                <div className="hist-chip-scroll">
+                  {(['all','today','week','month'] as DateFilter[]).map((v) => (
+                    <Chip key={v} label={getPeriodLabel(v)} active={dateFilter===v} onClick={() => setDateFilter(v)} />
+                  ))}
+                </div>
               </div>
+            )}
 
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 4px' }}>
+                <p style={{ fontSize: 11.5, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.trades')}</p>
+                <p style={{ fontSize: 11.5, color: '#aeaeb2', whiteSpace: 'nowrap', flexShrink: 0 }}>{filteredLogs.length} {t('common.data')}</p>
+              </div>
+              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
+                {isLoading ? (
+                  <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(0,122,255,0.15)', borderTopColor: '#007aff', animation: 'spin 0.8s linear infinite' }} />
+                    <p style={{ fontSize: 13, color: '#6e6e73' }}>{t('history.loading')}</p>
+                  </div>
+                ) : filteredLogs.length === 0 ? (
+                  <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <History size={36} style={{ color: '#c7c7cc', margin: '0 auto 12px', display: 'block' }} />
+                    <p style={{ fontSize: 15, fontWeight: 500, color: '#3c3c43', marginBottom: 4 }}>{t('history.noTransactions')}</p>
+                    <p style={{ fontSize: 13, color: '#aeaeb2' }}>{logs.length > 0 ? t('history.noTransactionsFilter') : t('history.startTrading')}</p>
+                  </div>
+                ) : (
+                  <div>
+                    {filteredLogs.map((log, idx) => (
+                      <div key={log.id} className="hist-row">
+                        <LogRow log={log} last={idx === filteredLogs.length - 1} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
           </div>
         </div>
       </div>
