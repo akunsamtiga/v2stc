@@ -288,13 +288,24 @@ const UserDialog: React.FC<{
   const [addedBy,    setAddedBy]    = useState(user?.addedBy  ?? '');
   const [resetLogin, setResetLogin] = useState(false);
   const [deactivate, setDeactivate] = useState(false);
-  const valid = name.trim() && email.trim() && userId.trim() && deviceId.trim();
+
+  // Di mode add, email tidak wajib — akan di-generate otomatis dari userId
+  const valid = mode === 'add'
+    ? name.trim() && userId.trim() && deviceId.trim()
+    : name.trim() && email.trim() && userId.trim() && deviceId.trim();
 
   const handleSave = () => {
     if (!valid) return;
-    const base = { name: name.trim(), email: email.trim().toLowerCase(), userId: userId.trim(), deviceId: deviceId.trim(), addedBy: addedBy.trim() };
-    if (mode === 'add') { onSave(base); }
-    else { onSave({ ...user, ...base, lastLogin: resetLogin ? 0 : user!.lastLogin, isActive: deactivate ? false : isUserActive(user!) }); }
+    if (mode === 'add') {
+      // Email di-generate otomatis jika tidak diisi: uid_{userId}@stockity.local
+      const resolvedEmail = email.trim()
+        ? email.trim().toLowerCase()
+        : `uid_${userId.trim()}@stockity.local`;
+      onSave({ name: name.trim(), email: resolvedEmail, userId: userId.trim(), deviceId: deviceId.trim(), addedBy: addedBy.trim() });
+    } else {
+      const base = { name: name.trim(), email: email.trim().toLowerCase(), userId: userId.trim(), deviceId: deviceId.trim(), addedBy: addedBy.trim() };
+      onSave({ ...user, ...base, lastLogin: resetLogin ? 0 : user!.lastLogin, isActive: deactivate ? false : isUserActive(user!) });
+    }
   };
 
   return (
@@ -314,12 +325,22 @@ const UserDialog: React.FC<{
 
       <div className="flex flex-col gap-3">
         <Inp label="Nama Lengkap" value={name} onChange={setName} placeholder="John Doe" />
-        <Inp label="Email" value={email} onChange={setEmail} placeholder="john@example.com" type="email" />
+        {mode === 'edit' && (
+          <Inp label="Email" value={email} onChange={setEmail} placeholder="john@example.com" type="email" />
+        )}
         <Inp label="User ID (Stockity)" value={userId} onChange={setUserId} placeholder="12345" hint="ID user di platform Stockity" />
         <Inp label="Device ID" value={deviceId} onChange={setDeviceId} placeholder="device_abc123" />
-        {isSuperAdmin && (
-          <Inp label="Added By (Admin Email)" value={addedBy} onChange={setAddedBy} placeholder="admin@example.com" />
+        {mode === 'add' && (
+          <Inp
+            label="Email (opsional)"
+            value={email}
+            onChange={setEmail}
+            placeholder="Kosongkan → otomatis dari User ID"
+            type="email"
+            hint={userId.trim() ? `Jika kosong: uid_${userId.trim()}@stockity.local` : 'Jika kosong, akan di-generate otomatis dari User ID'}
+          />
         )}
+        {/* Added By field hidden */}
 
         {mode === 'edit' && isSuperAdmin && (
           <label className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-3 cursor-pointer">
@@ -757,7 +778,7 @@ const StatsDetailDialog: React.FC<{
     active:      { label: 'User Aktif',          color: 'text-emerald-600', bg: 'bg-emerald-100' },
     inactive:    { label: 'User Diblokir',       color: 'text-red-600',     bg: 'bg-red-100'     },
     recent:      { label: 'Login 24 Jam',        color: 'text-amber-600',   bg: 'bg-amber-100'   },
-    recentAdded: { label: 'Daftar Baru (24 Jam)',color: 'text-cyan-600',    bg: 'bg-cyan-100'    },
+    recentAdded: { label: 'Registration',        color: 'text-cyan-600',    bg: 'bg-cyan-100'    },
   };
   const { label, color, bg } = meta[filter];
 
@@ -1091,7 +1112,7 @@ export default function AdminPage() {
             onClick={() => setStatsFilter('recent')} loading={isLoading}
           />
           <StatCard
-            icon={Icon.userPlus('w-4 h-4')} value={Math.ceil(stats.recentAdded * 0.05)} label="Daftar 24j"
+            icon={Icon.userPlus('w-4 h-4')} value={Math.ceil(stats.recentAdded * 0.05)} label="Registration"
             color="text-cyan-600" bgColor="bg-cyan-100"
             onClick={() => setStatsFilter('recentAdded')} loading={isLoading}
           />

@@ -3545,10 +3545,69 @@ const ControlCard: React.FC<{
 // ═══════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════
+// ─────────────────────────────────────────────
+// DARK MODE TOGGLE STRIP
+// ─────────────────────────────────────────────
+const DarkModeToggleStrip: React.FC<{
+  isDarkMode: boolean;
+  onToggle: () => void;
+  C: ReturnType<typeof getColors>;
+}> = ({ isDarkMode, onToggle, C }) => (
+  <button
+    onClick={onToggle}
+    style={{
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '10px 14px',
+      borderRadius: 14,
+      background: C.card,
+      border: `1px solid ${C.bdr}`,
+      cursor: 'pointer',
+      WebkitTapHighlightColor: 'transparent',
+      boxShadow: isDarkMode ? '0 2px 10px rgba(0,0,0,0.25)' : '0 1px 4px rgba(0,0,0,0.06)',
+    }}
+  >
+    {/* Icon */}
+    <div style={{
+      width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: isDarkMode ? 'linear-gradient(135deg,#1a1a2e,#16213e)' : 'linear-gradient(135deg,#fff9c4,#ffe082)',
+    }}>
+      {isDarkMode
+        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      }
+    </div>
+
+    {/* Label */}
+    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text, textAlign: 'left' }}>
+      {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+    </span>
+
+    {/* Toggle switch */}
+    <div style={{
+      width: 44, height: 26, borderRadius: 26, flexShrink: 0,
+      position: 'relative', transition: 'background 0.3s',
+      background: isDarkMode ? '#a78bfa' : 'rgba(120,120,128,0.18)',
+    }}>
+      <div style={{
+        position: 'absolute', top: 3,
+        width: 20, height: 20, borderRadius: '50%',
+        transition: 'left 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+        left: isDarkMode ? 21 : 3,
+        background: '#fff',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.20)',
+      }} />
+    </div>
+  </button>
+);
+
 export default function DashboardPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { isDarkMode } = useDarkMode();
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
   const colors = useMemo(() => getColors(isDarkMode), [isDarkMode]);
   // ✅ FIX: Update module-level C so all sub-components use the correct theme
   C = colors;
@@ -4500,12 +4559,16 @@ export default function DashboardPage() {
               alignItems:'stretch',
             }}>
               {/* Asset */}
-              <div style={{
+              <div
+                onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}
+                style={{
                 display:'flex',alignItems:'center',gap:12,
                 padding:'12px 16px',borderRadius:14,
                 background:isDarkMode?C.card2:C.card,
                 border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
                 backdropFilter:'blur(8px)',
+                cursor:!isActiveMode?'pointer':'default',
+                transition:'opacity 0.15s',
               }}>
                 <div style={{
                   width:38,height:38,borderRadius:10,flexShrink:0,overflow:'hidden',
@@ -4735,6 +4798,8 @@ export default function DashboardPage() {
                 {ModeSession(false)}
                 {SettingsCardEl}
                 {ControlCardEl}
+                {/* ── Dark Mode Toggle ── */}
+                <DarkModeToggleStrip isDarkMode={isDarkMode} onToggle={toggleDarkMode} C={C} />
               </div>
             </div>
           </div>
@@ -4911,6 +4976,8 @@ export default function DashboardPage() {
                 {ModeSession(false)}
                 {SettingsCardEl}
                 {ControlCardEl}
+                {/* ── Dark Mode Toggle ── */}
+                <DarkModeToggleStrip isDarkMode={isDarkMode} onToggle={toggleDarkMode} C={C} />
               </div>
 
             </div>
@@ -5342,6 +5409,8 @@ export default function DashboardPage() {
             />
             {SettingsCardEl}
             {ControlCardEl}
+            {/* ── Dark Mode Toggle ── */}
+            <DarkModeToggleStrip isDarkMode={isDarkMode} onToggle={toggleDarkMode} C={C} />
           </div>
         )}
       </div>

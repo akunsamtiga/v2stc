@@ -8,6 +8,7 @@ import { checkIsAdmin, checkIsSuperAdmin } from '@/lib/supabaseRepository';
 import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib';
 import { LanguageSheet } from '@/components/LanguageSelector';
 import { useDarkMode } from '@/lib/DarkModeContext';
+import { AppUpdateCard } from '@/components/AppUpdateCard';
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -51,7 +52,6 @@ const CurrencySheet: React.FC<{
   const [q, setQ] = useState('');
   const inputRef  = useRef<HTMLInputElement>(null);
 
-  // ✅ FIX: Lock body scroll when sheet is open (mobile UX)
   useEffect(() => {
     if (open) {
       const originalOverflow = document.body.style.overflow;
@@ -118,7 +118,6 @@ const CurrencySheet: React.FC<{
 const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: () => void }> = ({ open, onCancel, onConfirm }) => {
   const { t } = useLanguage();
 
-  // ✅ FIX: Lock body scroll when alert is open (mobile UX)
   useEffect(() => {
     if (open) {
       const originalOverflow = document.body.style.overflow;
@@ -163,7 +162,7 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
 function ProfilePageContent() {
   const router = useRouter();
   const { t, language, formatNumber: fmtNum } = useLanguage();
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const { isDarkMode } = useDarkMode();
   const [isLoading, setIsLoading]             = useState(true);
   const [profile, setProfile]                 = useState<UserProfileData | null>(null);
   const [balance, setBalance]                 = useState<ProfileBalance | null>(null);
@@ -240,9 +239,6 @@ function ProfilePageContent() {
 
   const handleLogout = async () => {
     setShowLogout(false);
-    // Sembunyikan BottomNav sebelum splash muncul — mencegah nav tampil
-    // di atas splash akibat stacking context yang dibuat opacity/transition
-    // pada <main> di ClientLayout.
     window.dispatchEvent(new CustomEvent('stc:hidenav'));
     setLogoutSplash(true);
     await new Promise(res => setTimeout(res, 1800));
@@ -353,7 +349,6 @@ function ProfilePageContent() {
             height={80}
             style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
             onError={(e) => {
-              // Fallback ke initials jika gambar gagal dimuat (404, CORS, dll)
               (e.currentTarget as HTMLImageElement).style.display = 'none';
             }}
           />
@@ -471,7 +466,6 @@ function ProfilePageContent() {
         .lo-bar-wrap { margin-top:36px;width:120px;height:3px;background:rgba(0,0,0,0.07);border-radius:99px;overflow:hidden;animation:lo-msg-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.35s both; }
         .lo-bar      { height:100%;border-radius:99px;background:linear-gradient(90deg,#ff9500,#ff6b00);animation:lo-bar 1.65s cubic-bezier(0.4,0,0.2,1) 0.4s forwards; }
 
-        /* ✅ FIX: Only apply hover on devices that support it (prevents stuck hover on mobile) */
         @media (hover: hover) {
           .pf-tap-row:hover  { background: rgba(0,0,0,0.03) !important; }
         }
@@ -497,7 +491,6 @@ function ProfilePageContent() {
 
         .balance-num { animation: number-in 0.4s ease both; }
 
-        /* ✅ FIX: Mobile layout uses column direction explicitly */
         .pf-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
         .pf-mob-header { display: flex; flex-shrink: 0; }
         .pf-desk-header { display: none; }
@@ -677,26 +670,6 @@ function ProfilePageContent() {
           <div>
             <SectionLabel>{t('profile.settings')}</SectionLabel>
             <Card>
-              {/* Dark Mode Toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px 10px 14px', borderBottom: '1px solid rgba(60,60,67,0.07)', gap: 12 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 7, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                  </svg>
-                </div>
-                <span style={{ flex: 1, fontSize: 15, color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Dark Mode (Dashboard)</span>
-                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={isDarkMode}
-                    onChange={toggleDarkMode}
-                    style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
-                  />
-                  <div style={{ width: 51, height: 31, borderRadius: 31, position: 'relative', transition: 'all 0.3s', background: isDarkMode ? '#10B981' : 'rgba(120,120,128,0.16)' }}>
-                    <div style={{ position: 'absolute', top: 2, width: 27, height: 27, borderRadius: '50%', transition: 'left 0.3s', left: isDarkMode ? 22 : 2, background: '#fff', boxShadow: '0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06)' }}/>
-                  </div>
-                </label>
-              </div>
               {/* Language Selector */}
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
@@ -731,6 +704,7 @@ function ProfilePageContent() {
 
           <div>
             <SectionLabel>{t('profile.help')}</SectionLabel>
+            <AppUpdateCard />
             <Card>
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01"/></svg>}
