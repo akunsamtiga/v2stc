@@ -661,16 +661,20 @@ export const api = {
   stopBot:   (mode: string) => req<{ message: string }>('POST', '/bot/stop', { mode }),
 
   // ── Today Profit ─────────────────────────
-  /** GET /today-profit?date=YYYY-MM-DD — aggregates all modes for a day */
-  todayProfit: (date?: string) =>
-    req<{ success: boolean; data: TodayProfitSummary }>(
-      'GET', `/today-profit${date ? `?date=${date}` : ''}`
-    ).then(r => r.data),
+  /** GET /today-profit?date=YYYY-MM-DD&accountType=real|demo|both */
+  todayProfit: (date?: string, accountType: 'real' | 'demo' | 'both' = 'real') => {
+    const params = new URLSearchParams();
+    if (date) params.set('date', date);
+    params.set('accountType', accountType);
+    return req<{ success: boolean; data: TodayProfitSummary }>(
+      'GET', `/today-profit?${params.toString()}`
+    ).then(r => r.data);
+  },
 
-  /** GET /today-profit/realtime — includes active session data */
-  realtimeProfit: () =>
+  /** GET /today-profit/realtime?accountType=real|demo|both — includes active session data */
+  realtimeProfit: (accountType: 'real' | 'demo' | 'both' = 'real') =>
     req<{ success: boolean; data: TodayProfitSummary }>(
-      'GET', '/today-profit/realtime'
+      'GET', `/today-profit/realtime?accountType=${accountType}`
     ).then(r => r.data),
 
   /** GET /today-profit/history?startDate=...&endDate=... */

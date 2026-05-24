@@ -1123,6 +1123,57 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
               : `Format: 09:30 B · 14:00 S · satu per baris`}
           </p>
 
+          {/* Row 2.5: Win/Loss stats — only in list view, only if there's history */}
+          {view==='list' && (() => {
+            const completedHistory = historyOrders.filter(o => {
+              const ph = resolvePhase(o, getLog);
+              return ph === 'win' || ph === 'lose';
+            });
+            const winCount  = completedHistory.filter(o => resolvePhase(o, getLog) === 'win').length;
+            const loseCount = completedHistory.filter(o => resolvePhase(o, getLog) === 'lose').length;
+            const total = winCount + loseCount;
+            if (total === 0) return null;
+            const winPct = Math.round((winCount / total) * 100);
+            return (
+              <div style={{
+                display:'flex',alignItems:'center',gap:8,
+                padding:'8px 12px',borderRadius:12,
+                background:C.card2,border:`1px solid ${C.bdr}`,
+              }}>
+                {/* Win */}
+                <div style={{display:'flex',alignItems:'center',gap:5,flex:1}}>
+                  <span style={{
+                    width:7,height:7,borderRadius:'50%',flexShrink:0,
+                    background:C.cyan,boxShadow:`0 0 5px ${C.cyan}`,
+                  }}/>
+                  <span style={{fontSize:10,fontWeight:600,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase'}}>Win</span>
+                  <span style={{fontSize:16,fontWeight:700,color:C.cyan,fontFamily:'monospace',lineHeight:1}}>{winCount}</span>
+                </div>
+                {/* Win % badge center */}
+                <div style={{
+                  padding:'3px 10px',borderRadius:99,
+                  background: winPct >= 50 ? `${C.cyan}14` : `${C.coral}14`,
+                  border:`1px solid ${winPct >= 50 ? C.cyan : C.coral}35`,
+                  flexShrink:0,
+                }}>
+                  <span style={{
+                    fontSize:11,fontWeight:700,letterSpacing:'0.04em',fontFamily:'monospace',
+                    color: winPct >= 50 ? C.cyan : C.coral,
+                  }}>{winPct}%</span>
+                </div>
+                {/* Loss */}
+                <div style={{display:'flex',alignItems:'center',gap:5,flex:1,justifyContent:'flex-end'}}>
+                  <span style={{fontSize:16,fontWeight:700,color:C.coral,fontFamily:'monospace',lineHeight:1}}>{loseCount}</span>
+                  <span style={{fontSize:10,fontWeight:600,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase'}}>Loss</span>
+                  <span style={{
+                    width:7,height:7,borderRadius:'50%',flexShrink:0,
+                    background:C.coral,boxShadow:`0 0 5px ${C.coral}`,
+                  }}/>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Row 3: action buttons (always visible in list view) */}
           {view==='list' && (
             <div style={{display:'flex',gap:8,marginTop:2}}>
@@ -3711,7 +3762,7 @@ export default function DashboardPage() {
   // ✅ FIX delay: Tidak pakai profitRefreshing guard agar bisa jalan paralel dengan manual refresh
   const silentRefreshProfit = useCallback(async () => {
     try {
-      const result = await api.todayProfit();
+      const result = await api.todayProfit(undefined, isDemo ? 'demo' : 'real');
       if (isMounted.current) {
         setTodayProfitData(result);
         setProfitLastUpdated(Date.now());
@@ -3720,7 +3771,7 @@ export default function DashboardPage() {
       console.warn('[Profit] silent refresh error:', e);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isDemo]);
 
   // Helper: debounce agar tidak spam jika beberapa mode selesai bersamaan
   const triggerProfitRefresh = useCallback((delaySec: number = 2) => {
@@ -3934,7 +3985,7 @@ export default function DashboardPage() {
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
-        api.todayProfit(),
+        api.todayProfit(undefined, isDemo ? 'demo' : 'real'),
       ]);
       if(!isMounted.current)return;
       if(assRes.status==='fulfilled')setAssets(assRes.value);
@@ -3981,7 +4032,34 @@ export default function DashboardPage() {
     }finally{if(!silent&&isMounted.current)setIsLoading(false);}
   },[router]);
 
-  // ✅ FIX: Auth check menggunakan isSessionValid (Capacitor-safe)
+  // ── Reset & refresh profit saat user switch akun (real ↔ demo) ─────────────
+  // settingsLoaded guard mencegah false trigger saat settings baru di-hydrate dari storage
+  const prevIsDemoRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    if (prevIsDemoRef.current === null) {
+      prevIsDemoRef.current = isDemo;
+      return; // skip mount — loadAll() sudah menangani initial fetch
+    }
+    if (prevIsDemoRef.current === isDemo) return;
+    prevIsDemoRef.current = isDemo;
+
+    // Reset data lama agar tidak tampil profit akun yang salah
+    setTodayProfitData(null);
+    setProfitLastUpdated(null);
+
+    // Fetch ulang dengan accountType yang sesuai
+    api.todayProfit(undefined, isDemo ? 'demo' : 'real')
+      .then(data => {
+        if (isMounted.current) {
+          setTodayProfitData(data);
+          setProfitLastUpdated(Date.now());
+        }
+      })
+      .catch(e => console.warn('[Profit] isDemo switch refresh error:', e));
+  }, [isDemo, settingsLoaded]); // eslint-disable-line
+
+  // ── Auth check menggunakan isSessionValid (Capacitor-safe) ──────────────────
   useEffect(()=>{
     const init = async () => {
       const sessionValid = await isSessionValid();
@@ -3997,7 +4075,7 @@ export default function DashboardPage() {
     if (profitRefreshing) return;
     setProfitRefreshing(true);
     try {
-      const result = await api.todayProfit();
+      const result = await api.todayProfit(undefined, isDemo ? 'demo' : 'real');
       if (isMounted.current) {
         setTodayProfitData(result);
         setProfitLastUpdated(Date.now());
@@ -4007,7 +4085,7 @@ export default function DashboardPage() {
     } finally {
       if (isMounted.current) setProfitRefreshing(false);
     }
-  }, [profitRefreshing]);
+  }, [profitRefreshing, isDemo]);
 
   // ── Fast poll 10 detik: trading status + realtime profit (cepat, pakai Stockity cache) ──
   useEffect(()=>{
@@ -4022,7 +4100,7 @@ export default function DashboardPage() {
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
         // ✅ realtimeProfit sekarang cepat (~200ms) karena backend pakai cached Stockity data
-        api.realtimeProfit(),
+        api.realtimeProfit(isDemo ? 'demo' : 'real'),
       ]);
       if(!isMounted.current)return;
       // ✅ FIX SCROLL: startTransition menandai semua update ini sebagai "tidak mendesak".
@@ -4056,7 +4134,7 @@ export default function DashboardPage() {
     const iv = setInterval(async () => {
       if (!isMounted.current) return;
       try {
-        const result = await api.todayProfit();
+        const result = await api.todayProfit(undefined, isDemo ? 'demo' : 'real');
         if (isMounted.current) {
           setTodayProfitData(result);
           setProfitLastUpdated(Date.now());
@@ -4066,7 +4144,7 @@ export default function DashboardPage() {
       }
     }, 30_000);
     return () => clearInterval(iv);
-  },[]); // eslint-disable-line
+  },[isDemo]); // eslint-disable-line
 
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';

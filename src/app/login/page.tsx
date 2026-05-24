@@ -1082,17 +1082,32 @@ function LoginPageContent() {
                 </label>
 
                 {error && (
-                  <div className={`err${isWhitelistError ? ' err-whitelist' : ''}`}>
-                    {isWhitelistError ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
-                        <rect x="3" y="11" width="18" height="11" rx="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
-                    ) : (
-                      <div className="err-dot" />
+                  <>
+                    <div className={`err${isWhitelistError ? ' err-whitelist' : ''}`}>
+                      {isWhitelistError ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                          <rect x="3" y="11" width="18" height="11" rx="2"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                      ) : (
+                        <div className="err-dot" />
+                      )}
+                      <p className="err-txt">{error}</p>
+                    </div>
+                    {isWhitelistError && (
+                      <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-3)', marginBottom: 10, marginTop: -4 }}>
+                        Ada pertanyaan?{' '}
+                        <a
+                          href="https://t.me/STC_01"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
+                        >
+                          Hubungi kami
+                        </a>
+                      </p>
                     )}
-                    <p className="err-txt">{error}</p>
-                  </div>
+                  </>
                 )}
 
                 <button type="submit" className="btn" disabled={loading || !canSubmit}>

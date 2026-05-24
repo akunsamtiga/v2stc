@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[469],{8469:function(n,e,a){a.d(e,{NavigationBar:function(){return u}});var t,i,r=a(7185);(t=i||(i={})).WHITE="#FFFFFF",t.BLACK="#000000",t.TRANSPARENT="transparent";let u=(0,r.registerPlugin)("NavigationBar",{web:()=>a.e(789).then(a.bind(a,4789)).then(n=>new n.NavigationBarWeb)})}}]);

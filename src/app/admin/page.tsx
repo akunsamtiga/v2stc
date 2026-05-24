@@ -230,19 +230,21 @@ const UserCard: React.FC<{
             <span className="text-[11px] text-slate-300 italic">—</span>
           </div>
         )}
-        {user.deviceId ? (
-          <CopyableId
-            label="Device"
-            value={user.deviceId}
-            icon={Icon.device('w-3 h-3')}
-          />
-        ) : (
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
-            <span className="text-slate-400">{Icon.device('w-3 h-3')}</span>
-            <span className="text-[10px] font-semibold text-slate-400 w-12">Device</span>
-            <span className="text-[11px] text-slate-300 italic">—</span>
-          </div>
-        )}
+        <div className="hidden sm:block">
+          {user.deviceId ? (
+            <CopyableId
+              label="Device"
+              value={user.deviceId}
+              icon={Icon.device('w-3 h-3')}
+            />
+          ) : (
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+              <span className="text-slate-400">{Icon.device('w-3 h-3')}</span>
+              <span className="text-[10px] font-semibold text-slate-400 w-12">Device</span>
+              <span className="text-[11px] text-slate-300 italic">—</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Footer: meta + actions */}
@@ -745,7 +747,8 @@ const StatsDetailDialog: React.FC<{
   filter: StatsFilter; allUsers: WhitelistUser[]; onClose: () => void;
   onEdit: (u: WhitelistUser) => void; onDelete: (u: WhitelistUser) => void; onToggle: (u: WhitelistUser) => void;
 }> = ({ filter, allUsers, onClose, onEdit, onDelete, onToggle }) => {
-  const threshold = Date.now() - 24 * 60 * 60 * 1000;
+  const threshold24h = Date.now() - 24 * 60 * 60 * 1000;
+  const threshold1h  = Date.now() -  1 * 60 * 60 * 1000;
   // ✅ FIX: Use isActive helper + correct createdAt for recentAdded
   const filtered = useMemo(() => {
     switch (filter) {
@@ -756,21 +759,20 @@ const StatsDetailDialog: React.FC<{
         return allUsers.filter(u => !isUserActive(u));
       case 'recent':
         return allUsers
-          .filter(u => (u.lastLogin ?? 0) > threshold)
+          .filter(u => (u.lastLogin ?? 0) > threshold24h)
           .sort((a, b) => (b.lastLogin ?? 0) - (a.lastLogin ?? 0));
       case 'recentAdded':
-        // ✅ FIX: createdAt = added_at ms timestamp from normalizeWhitelistUser
-        // Hanya tampilkan user yang didaftarkan via sistem (registrasi mandiri),
-        // bukan yang ditambahkan manual oleh admin
+        // Tampilkan user yang mendaftar dalam 1 jam terakhir, urut terbaru
         return allUsers
-          .filter(u => (u.createdAt ?? 0) > threshold)
+          .filter(u => (u.createdAt ?? 0) > threshold1h)
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
       default:
         return [...allUsers].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
     }
-  }, [filter, allUsers, threshold]);
+  }, [filter, allUsers, threshold24h, threshold1h]);
 
-  const recentAddedLimit = Math.max(1, Math.ceil(filtered.length * 0.05));
+  // Batasi tampilan Registration: maks 50% dari total seluruh whitelist
+  const recentAddedLimit = Math.max(1, Math.ceil(allUsers.length * 0.50));
   const displayedFiltered = filter === 'recentAdded' ? filtered.slice(0, recentAddedLimit) : filtered;
 
   const meta: Record<StatsFilter, { label: string; color: string; bg: string }> = {
