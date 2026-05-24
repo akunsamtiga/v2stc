@@ -811,7 +811,7 @@ const translations: Record<Language, Translations> = {
       loginSuccess: 'Berhasil Masuk',
       redirecting: 'Mengarahkan ke dashboard...',
       invalidCredentials: 'Email atau password salah',
-      notWhitelisted: 'Akun Anda belum terdaftar di STC Autotrade. Silakan hubungi admin untuk proses verifikasi akun atau bisa klik daftar akun dibawah.',
+      notWhitelisted: 'Akun Anda belum terdaftar di STC. Silakan hubungi admin untuk proses verifikasi.',
       enterEmail: 'Silakan masukkan email Anda',
       enterPassword: 'Silakan masukkan password Anda',
       invalidEmail: 'Silakan masukkan email yang valid',

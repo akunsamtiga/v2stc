@@ -105,9 +105,8 @@ async function saveUserToWhitelistAndLogin(
       success:   false,
       isBlocked: false,
       error:
-        'Akun Stockity Anda sudah memiliki riwayat trading.\n\n' +
-        'Pendaftaran STC AutoTrade hanya tersedia untuk akun Stockity baru. ' +
-        'Jika Anda merasa ini keliru, silakan hubungi admin.',
+        'Akun ini belum memiliki akses STC AutoTrade.\n\n' +
+        'Silahkan aktivasi terlebih dahulu. ',
     };
   }
 

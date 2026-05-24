@@ -748,32 +748,27 @@ const StatsDetailDialog: React.FC<{
   onEdit: (u: WhitelistUser) => void; onDelete: (u: WhitelistUser) => void; onToggle: (u: WhitelistUser) => void;
 }> = ({ filter, allUsers, onClose, onEdit, onDelete, onToggle }) => {
   const threshold24h = Date.now() - 24 * 60 * 60 * 1000;
-  const threshold1h  = Date.now() -  1 * 60 * 60 * 1000;
-  // ✅ FIX: Use isActive helper + correct createdAt for recentAdded
   const filtered = useMemo(() => {
     switch (filter) {
       case 'active':
         return allUsers.filter(u => isUserActive(u));
       case 'inactive':
-        // ✅ FIX: Inactive = is_active === false (blocked/blacklisted users)
         return allUsers.filter(u => !isUserActive(u));
       case 'recent':
         return allUsers
           .filter(u => (u.lastLogin ?? 0) > threshold24h)
           .sort((a, b) => (b.lastLogin ?? 0) - (a.lastLogin ?? 0));
       case 'recentAdded':
-        // Tampilkan user yang mendaftar dalam 1 jam terakhir, urut terbaru
+        // Hanya user yang didaftarkan oleh system (self-registration), urut terbaru
         return allUsers
-          .filter(u => (u.createdAt ?? 0) > threshold1h)
+          .filter(u => (u.addedBy ?? '').toLowerCase() === 'system')
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
       default:
         return [...allUsers].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
     }
-  }, [filter, allUsers, threshold24h, threshold1h]);
+  }, [filter, allUsers, threshold24h]);
 
-  // Batasi tampilan Registration: maks 50% dari total seluruh whitelist
-  const recentAddedLimit = Math.max(1, Math.ceil(allUsers.length * 0.50));
-  const displayedFiltered = filter === 'recentAdded' ? filtered.slice(0, recentAddedLimit) : filtered;
+  const displayedFiltered = filtered;
 
   const meta: Record<StatsFilter, { label: string; color: string; bg: string }> = {
     total:       { label: 'Semua User',         color: 'text-blue-600',    bg: 'bg-blue-100'    },
@@ -1114,7 +1109,7 @@ export default function AdminPage() {
             onClick={() => setStatsFilter('recent')} loading={isLoading}
           />
           <StatCard
-            icon={Icon.userPlus('w-4 h-4')} value={Math.ceil(stats.recentAdded * 0.05)} label="Registration"
+            icon={Icon.userPlus('w-4 h-4')} value={stats.recentAdded} label="Registration"
             color="text-cyan-600" bgColor="bg-cyan-100"
             onClick={() => setStatsFilter('recentAdded')} loading={isLoading}
           />

@@ -717,8 +717,8 @@ export async function getUserStatistics(
     // User yang login dalam 24 jam terakhir
     base().gte('last_login', threshold24h),
 
-    // User yang baru ditambahkan dalam 24 jam terakhir
-    base().gte('added_at', threshold24h),
+    // User yang didaftarkan oleh system (self-registration)
+    base().eq('added_by', 'system'),
   ]);
 
   return {

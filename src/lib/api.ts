@@ -43,7 +43,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
     //    request lain juga gagal 401 → cascade total. Biarkan ClientLayout
     //    yang handle logout via event 'stc:unauthorized'.
     emitUnauthorized();
-    throw new Error('Sesi habis, silakan login kembali.');
+    throw new Error('Kata sandi salah.');
   }
 
   let data: unknown;

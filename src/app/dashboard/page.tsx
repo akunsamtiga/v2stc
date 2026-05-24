@@ -543,7 +543,12 @@ const TodayProfitCard: React.FC<{
   t: (k: string) => string;
   isMobile?: boolean;
 }> = ({ data, localProfit, isLoading, isRefreshing, lastUpdatedAt, flash, onRefresh, t, isMobile }) => {
-  const profit  = data ? data.totalPnL : localProfit;
+  // ✅ FIX splash: Simpan nilai terakhir yang valid — jika data null (sedang loading/switching mode),
+  //    tampilkan angka terakhir yang diketahui, bukan localProfit yang bisa 0.
+  //    Ini mencegah flash ke 0 selama jeda fetch (~200-500ms).
+  const lastKnownProfitRef = useRef<number>(localProfit);
+  if (data !== null) lastKnownProfitRef.current = data.totalPnL;
+  const profit  = data ? data.totalPnL : lastKnownProfitRef.current;
   const isPos   = profit >= 0;
   const col     = isPos ? C.cyan : C.coral;
   const prevR   = useRef(profit);
@@ -4044,9 +4049,8 @@ export default function DashboardPage() {
     if (prevIsDemoRef.current === isDemo) return;
     prevIsDemoRef.current = isDemo;
 
-    // Reset data lama agar tidak tampil profit akun yang salah
-    setTodayProfitData(null);
-    setProfitLastUpdated(null);
+    // ✅ FIX: Tidak di-null dulu — biarkan data lama tampil sampai data baru tiba (stale-while-revalidate)
+    // setTodayProfitData(null) menyebabkan flash ke 0 selama jeda fetch (~200-500ms)
 
     // Fetch ulang dengan accountType yang sesuai
     api.todayProfit(undefined, isDemo ? 'demo' : 'real')
