@@ -1094,19 +1094,7 @@ function LoginPageContent() {
                       )}
                       <p className="err-txt">{error}</p>
                     </div>
-                    {isWhitelistError && (
-                      <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-3)', marginBottom: 10, marginTop: -4 }}>
-                        Ada pertanyaan?{' '}
-                        <a
-                          href="https://t.me/STC_01"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
-                        >
-                          Hubungi kami
-                        </a>
-                      </p>
-                    )}
+
                   </>
                 )}
 
@@ -1136,7 +1124,7 @@ function LoginPageContent() {
             </div>
 
             <div style={{ textAlign: 'center', marginTop: 10 }}>
-              <span style={{ fontSize: 13, color: '#6e6e73' }}>Kesulitan mendaftar? </span>
+              <span style={{ fontSize: 13, color: '#6e6e73' }}>Cara daftar STC</span>
               <button
                 className="foot-lnk"
                 onClick={() => { setTutorialPage(0); setShowTutorial(true); }}
@@ -1149,9 +1137,20 @@ function LoginPageContent() {
 
           </div>
 
-          <div style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--text-3)', padding: '16px 0' }}>
+          <div style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--text-3)', padding: '16px 0 4px' }}>
             © 2026 STC AutoTrade ·{' '}
             <a href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)', fontWeight: 500, cursor: 'pointer', transition: 'opacity 0.14s' }}>{t('login.terms')}</a>
+          </div>
+          <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-3)', paddingBottom: 16 }}>
+            Ada pertanyaan?{' '}
+            <a
+              href="https://t.me/STC_01"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
+            >
+              Hubungi kami
+            </a>
           </div>
         </div>
       )}

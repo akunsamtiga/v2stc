@@ -3309,6 +3309,40 @@ const SettingsCard: React.FC<{
                   </div>
                 </div>
 
+                {/* Summary chips — tampil di bawah tombol saat panel tertutup tapi nilai sudah diset */}
+                {(slEnabled&&stopLoss>0&&!showSlInput)||(spEnabled&&stopProfit>0&&!showSpInput) ? (
+                  <div style={{ display:'flex',gap:8,marginBottom:10,flexWrap:'wrap' }}>
+                    {slEnabled&&stopLoss>0&&!showSlInput&&(
+                      <button
+                        onClick={()=>!disabled&&setShowSlInput(true)}
+                        style={{
+                          display:'flex',alignItems:'center',gap:6,
+                          background:`${C.coral}12`,border:`1px solid ${C.coral}50`,
+                          borderRadius:10,padding:'7px 12px',cursor:disabled?'not-allowed':'pointer',
+                        }}
+                      >
+                        <TrendingDown style={{ width:13,height:13,color:C.coral }}/>
+                        <span style={{ fontSize:10,fontWeight:500,color:C.sub }}>Stop Loss</span>
+                        <span style={{ fontSize:12,fontWeight:700,color:C.coral,fontFamily:'monospace' }}>Rp {stopLoss.toLocaleString('id-ID')}</span>
+                      </button>
+                    )}
+                    {spEnabled&&stopProfit>0&&!showSpInput&&(
+                      <button
+                        onClick={()=>!disabled&&setShowSpInput(true)}
+                        style={{
+                          display:'flex',alignItems:'center',gap:6,
+                          background:`${C.cyan}12`,border:`1px solid ${C.cyan}50`,
+                          borderRadius:10,padding:'7px 12px',cursor:disabled?'not-allowed':'pointer',
+                        }}
+                      >
+                        <TrendingUp style={{ width:13,height:13,color:C.cyan }}/>
+                        <span style={{ fontSize:10,fontWeight:500,color:C.sub }}>Target Profit</span>
+                        <span style={{ fontSize:12,fontWeight:700,color:C.cyan,fontFamily:'monospace' }}>Rp {stopProfit.toLocaleString('id-ID')}</span>
+                      </button>
+                    )}
+                  </div>
+                ) : null}
+
                 {/* Stop Loss Input Panel — Kotlin: AnimatedVisibility */}
                 {slEnabled&&showSlInput&&(
                   <div style={{

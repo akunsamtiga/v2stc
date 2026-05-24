@@ -759,9 +759,12 @@ const StatsDetailDialog: React.FC<{
           .filter(u => (u.lastLogin ?? 0) > threshold24h)
           .sort((a, b) => (b.lastLogin ?? 0) - (a.lastLogin ?? 0));
       case 'recentAdded':
-        // Hanya user yang didaftarkan oleh system (self-registration), urut terbaru
+        // Hanya user self-registration (added_by = system) dalam 24 jam terakhir, urut terbaru
         return allUsers
-          .filter(u => (u.addedBy ?? '').toLowerCase() === 'system')
+          .filter(u =>
+            (u.addedBy ?? '').toLowerCase() === 'system' &&
+            (u.createdAt ?? 0) > threshold24h
+          )
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
       default:
         return [...allUsers].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
