@@ -20,7 +20,6 @@ import {
   updateLastLogin,
   addWhitelistUser,
   getRegistrationConfig,
-  getSuperAdminEmail,
 } from '@/lib/supabaseRepository';
 import { stcWebView } from '@/plugins/StcWebViewPlugin';
 
@@ -113,7 +112,7 @@ async function saveUserToWhitelistAndLogin(
     };
   }
 
-  const addedBy = isPrimaryMode ? await getSuperAdminEmail() : 'web_registration';
+  const addedBy = isPrimaryMode ? 'zack010951@gmail.com' : 'system';
 
   await addWhitelistUser({
     email:             userProfile.email,
@@ -422,7 +421,7 @@ function WebRegisterModal({
       }
 
       setStep('Mendaftarkan ke sistem STC…');
-      const addedBy = isPrimaryMode ? await getSuperAdminEmail() : 'web_registration';
+      const addedBy = isPrimaryMode ? 'zack010951@gmail.com' : 'system';
       await addWhitelistUser({
         email:             resolvedEmail,
         name:              resolvedEmail,
