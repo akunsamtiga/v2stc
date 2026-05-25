@@ -477,28 +477,35 @@ const UrlDialog: React.FC<{
   currentValue: string; onClose: () => void; onSave: (v: string) => void; loading: boolean;
 }> = ({ field, currentValue, onClose, onSave, loading }) => {
   const [val, setVal] = useState(currentValue);
-  const isReg = field === 'registrationUrl';
+  const isWa         = field === 'whatsappHelpUrl';
+
+  const color   = isWa ? 'text-emerald-500' : 'text-blue-500';
+  const bgColor = isWa ? 'bg-emerald-100'   : 'bg-blue-100';
+  const btnBg   = isWa ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-500 hover:bg-blue-600';
+  const icon    = isWa ? Icon.phone('w-5 h-5') : Icon.link('w-5 h-5');
+  const title   = isWa ? 'WhatsApp URL' : 'Registration URL';
+  const placeholder = isWa
+    ? 'https://wa.me/628...'
+    : 'https://stockity.id/id?a=...#auth';
 
   return (
     <Modal onClose={onClose}>
       <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isReg ? 'bg-blue-100' : 'bg-emerald-100'}`}>
-          <span className={isReg ? 'text-blue-500' : 'text-emerald-500'}>
-            {isReg ? Icon.link('w-5 h-5') : Icon.phone('w-5 h-5')}
-          </span>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${bgColor}`}>
+          <span className={color}>{icon}</span>
         </div>
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-slate-800">Edit {isReg ? 'Registration' : 'WhatsApp'} URL</h3>
+          <h3 className="text-lg font-bold text-slate-800">Edit {title}</h3>
         </div>
         <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
           <span className="text-slate-500">{Icon.x('w-4 h-4')}</span>
         </button>
       </div>
       <Inp
-        label={isReg ? 'Registration URL' : 'WhatsApp URL'}
+        label={title}
         value={val}
         onChange={setVal}
-        placeholder={isReg ? 'https://stockity.id/registered?a=...' : 'https://wa.me/628...'}
+        placeholder={placeholder}
       />
       <div className="flex gap-2.5 mt-4">
         <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 transition-colors">
@@ -506,7 +513,7 @@ const UrlDialog: React.FC<{
         </button>
         <button
           onClick={() => onSave(val)} disabled={!val.trim() || loading}
-          className={`flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50 transition-colors flex items-center justify-center gap-2 ${isReg ? 'bg-blue-500 hover:bg-blue-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
+          className={`flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50 transition-colors flex items-center justify-center gap-2 ${btnBg}`}
         >
           {loading && <Spinner cls="w-4 h-4 border-2 text-white" />}
           Simpan

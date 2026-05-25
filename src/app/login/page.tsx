@@ -1124,7 +1124,7 @@ function LoginPageContent() {
             </div>
 
             <div style={{ textAlign: 'center', marginTop: 10 }}>
-              <span style={{ fontSize: 13, color: '#6e6e73' }}>Cara daftar STC</span>
+              <span style={{ fontSize: 13, color: '#6e6e73' }}>Cara daftar STC </span>
               <button
                 className="foot-lnk"
                 onClick={() => { setTutorialPage(0); setShowTutorial(true); }}

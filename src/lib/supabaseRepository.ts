@@ -60,8 +60,10 @@ export interface RegistrationConfig {
   maxRetries?: number;
   lockDuration?: number;
   maintenance?: boolean;
-  /** UI field: Stockity registration URL */
+  /** UI field: Stockity registration URL (normal) */
   registrationUrl?: string;
+  /** UI field: Stockity registration URL (primary — overrides normal when set) */
+  registrationPrimaryUrl?: string;
   /** UI field: WhatsApp help URL */
   whatsappHelpUrl?: string;
   /** UI field: last updated timestamp (numeric ms) */
@@ -589,6 +591,18 @@ export async function checkIsSuperAdmin(email: string): Promise<boolean> {
   return !!data;
 }
 
+/** Ambil email super admin pertama — dipakai sebagai addedBy saat primary registration */
+export async function getSuperAdminEmail(): Promise<string> {
+  const { data, error } = await supabase
+    .from('super_admins')
+    .select('email')
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.email) return 'super_admin';
+  return data.email;
+}
+
 // ─────────────────────────────────────────────
 // APP CONFIG / REGISTRATION CONFIG
 // ─────────────────────────────────────────────
@@ -610,13 +624,14 @@ export async function getRegistrationConfig(): Promise<RegistrationConfig> {
     .maybeSingle();
 
   const defaults: RegistrationConfig = {
-    minStockity:     100000,
-    maxRetries:      3,
-    lockDuration:    24,
-    maintenance:     false,
-    registrationUrl: '',
-    whatsappHelpUrl: '',
-    updatedAt:       0,
+    minStockity:             100000,
+    maxRetries:              3,
+    lockDuration:            24,
+    maintenance:             false,
+    registrationUrl:         '',
+    registrationPrimaryUrl:  '',
+    whatsappHelpUrl:         '',
+    updatedAt:               0,
   };
 
   if (error || !data?.value) return defaults;
@@ -624,12 +639,13 @@ export async function getRegistrationConfig(): Promise<RegistrationConfig> {
   try {
     const v = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
     return {
-      minStockity:     v.minStockity     ?? 100000,
-      maxRetries:      v.maxRetries      ?? 3,
-      lockDuration:    v.lockDuration    ?? 24,
-      maintenance:     v.maintenance     ?? false,
-      registrationUrl: v.registrationUrl ?? '',
-      whatsappHelpUrl: v.whatsappHelpUrl ?? '',
+      minStockity:            v.minStockity     ?? 100000,
+      maxRetries:             v.maxRetries      ?? 3,
+      lockDuration:           v.lockDuration    ?? 24,
+      maintenance:            v.maintenance     ?? false,
+      registrationUrl:        v.registrationUrl        ?? '',
+      registrationPrimaryUrl: v.registrationPrimaryUrl ?? '',
+      whatsappHelpUrl:        v.whatsappHelpUrl  ?? '',
       updatedAt:       data.updated_at
         ? new Date(data.updated_at).getTime()
         : v.updatedAt ?? 0,
@@ -717,8 +733,8 @@ export async function getUserStatistics(
     // User yang login dalam 24 jam terakhir
     base().gte('last_login', threshold24h),
 
-    // User yang didaftarkan oleh system (self-registration)
-    base().eq('added_by', 'system'),
+    // User yang didaftarkan oleh system (self-registration) dalam 24 jam terakhir
+    base().eq('added_by', 'system').gte('added_at', threshold24h),
   ]);
 
   return {

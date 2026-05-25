@@ -19,6 +19,8 @@ import {
   getWhitelistUserByUserId,
   updateLastLogin,
   addWhitelistUser,
+  getRegistrationConfig,
+  getSuperAdminEmail,
 } from '@/lib/supabaseRepository';
 import { stcWebView } from '@/plugins/StcWebViewPlugin';
 
@@ -59,8 +61,9 @@ interface WhitelistResult {
 }
 
 async function saveUserToWhitelistAndLogin(
-  authToken: string,
-  deviceId:  string,
+  authToken:      string,
+  deviceId:       string,
+  isPrimaryMode = false,
 ): Promise<WhitelistResult> {
   let userProfile;
   try {
@@ -110,15 +113,20 @@ async function saveUserToWhitelistAndLogin(
     };
   }
 
+  const addedBy = isPrimaryMode ? await getSuperAdminEmail() : 'web_registration';
+
   await addWhitelistUser({
     email:             userProfile.email,
     name:              getFullName(userProfile),
     userId,
-    deviceId,
+    // ✅ Primary mode: deviceId sengaja di-set sama dengan userId.
+    //    Ini sesuai ketentuan: saat registrasi pakai Registration Primary URL,
+    //    device_id yang tersimpan = user_id (bukan device UUID asli).
+    deviceId:          isPrimaryMode ? userId : deviceId,
     isActive:          true,
     createdAt:         Date.now(),
     lastLogin:         Date.now(),
-    addedBy:           'web_registration',
+    addedBy,
     addedAt:           Date.now(),
     fcmToken:          '',
     fcmTokenUpdatedAt: 0,
@@ -340,10 +348,12 @@ function ErrorDialog({
 
 function WebRegisterModal({
   registrationUrl,
+  isPrimaryMode,
   onSuccess,
   onClose,
 }: {
   registrationUrl: string;
+  isPrimaryMode:   boolean;
   onSuccess: (email: string) => void;
   onClose: () => void;
 }) {
@@ -412,15 +422,17 @@ function WebRegisterModal({
       }
 
       setStep('Mendaftarkan ke sistem STC…');
+      const addedBy = isPrimaryMode ? await getSuperAdminEmail() : 'web_registration';
       await addWhitelistUser({
         email:             resolvedEmail,
         name:              resolvedEmail,
         userId:            resolvedUserId,
-        deviceId:          resolvedDevice2,
+        // ✅ Primary mode: deviceId = userId (sama dengan flow native)
+        deviceId:          isPrimaryMode ? resolvedUserId : resolvedDevice2,
         isActive:          true,
         createdAt:         Date.now(),
         lastLogin:         Date.now(),
-        addedBy:           'web_registration',
+        addedBy,
         addedAt:           Date.now(),
         fcmToken:          '',
         fcmTokenUpdatedAt: 0,
@@ -891,6 +903,7 @@ export default function RegisterPage() {
 
   const registrationUrl = useRef(DEFAULT_REGISTRATION_URL);
   const whatsappUrl     = useRef(DEFAULT_WHATSAPP_URL);
+  const isPrimaryMode   = useRef(false);   // ← true ketika memakai Registration Primary URL
   const capturedToken   = useRef('');
   const capturedDevice  = useRef('');
 
@@ -992,6 +1005,31 @@ export default function RegisterPage() {
     // Batch semua state updates sebelum ada await
     setMounted(true);
 
+    // ── Load registration config (resolve URL + mode) ─────────────────────
+    // Tidak await di sini — dijalankan paralel; registrationUrl.current akan
+    // di-update sebelum openRegistration() dipanggil karena initNative() juga async.
+    getRegistrationConfig()
+      .then(config => {
+        const primaryUrl = config.registrationPrimaryUrl?.trim() ?? '';
+        const normalUrl  = config.registrationUrl?.trim()        ?? '';
+
+        if (primaryUrl) {
+          // Primary URL ada → pakai primary + aktifkan primary mode
+          registrationUrl.current = primaryUrl;
+          isPrimaryMode.current   = true;
+        } else if (normalUrl) {
+          // Hanya normal URL ada → pakai normal (primary mode off)
+          registrationUrl.current = normalUrl;
+          isPrimaryMode.current   = false;
+        }
+        // Jika keduanya kosong → tetap DEFAULT_REGISTRATION_URL (primary mode off)
+
+        if (config.whatsappHelpUrl?.trim()) {
+          whatsappUrl.current = config.whatsappHelpUrl.trim();
+        }
+      })
+      .catch(() => { /* gunakan DEFAULT jika config gagal dimuat */ });
+
     if (!isNativeApp()) {
       // Web: set landing langsung — React 18 batch setMounted + setIsWeb + setPhase
       // menjadi satu render sehingga tidak ada flash blank → landing
@@ -1064,7 +1102,7 @@ export default function RegisterPage() {
 
     try {
       setSavingMessage('Memeriksa akses whitelist…');
-      const result = await saveUserToWhitelistAndLogin(token, deviceId);
+      const result = await saveUserToWhitelistAndLogin(token, deviceId, isPrimaryMode.current);
 
       if (!result.success) {
         setIsUserBlocked(result.isBlocked ?? false);
@@ -1120,6 +1158,7 @@ export default function RegisterPage() {
       {showWebModal && (
         <WebRegisterModal
           registrationUrl={registrationUrl.current}
+          isPrimaryMode={isPrimaryMode.current}
           onClose={() => setShowWebModal(false)}
           onSuccess={(email) => {
             setShowWebModal(false);

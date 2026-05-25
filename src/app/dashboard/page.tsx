@@ -3309,39 +3309,58 @@ const SettingsCard: React.FC<{
                   </div>
                 </div>
 
-                {/* Summary chips — tampil di bawah tombol saat panel tertutup tapi nilai sudah diset */}
-                {(slEnabled&&stopLoss>0&&!showSlInput)||(spEnabled&&stopProfit>0&&!showSpInput) ? (
-                  <div style={{ display:'flex',gap:8,marginBottom:10,flexWrap:'wrap' }}>
-                    {slEnabled&&stopLoss>0&&!showSlInput&&(
+                {/* Summary info — tampil di bawah tombol saat panel tertutup, grid 2 kolom sejajar tombol */}
+                {((slEnabled&&stopLoss>0&&!showSlInput)||(spEnabled&&stopProfit>0&&!showSpInput))&&(
+                  <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10 }}>
+                    {/* Kolom kiri: Stop Loss info atau placeholder kosong */}
+                    {slEnabled&&stopLoss>0&&!showSlInput ? (
                       <button
                         onClick={()=>!disabled&&setShowSlInput(true)}
+                        disabled={disabled}
                         style={{
-                          display:'flex',alignItems:'center',gap:6,
-                          background:`${C.coral}12`,border:`1px solid ${C.coral}50`,
-                          borderRadius:10,padding:'7px 12px',cursor:disabled?'not-allowed':'pointer',
+                          display:'flex',flexDirection:'column',alignItems:'flex-start',
+                          gap:3,padding:'9px 12px',borderRadius:12,textAlign:'left',
+                          background:`${C.coral}10`,
+                          border:`1px solid ${C.coral}45`,
+                          borderLeft:`3px solid ${C.coral}`,
+                          cursor:disabled?'not-allowed':'pointer',
                         }}
                       >
-                        <TrendingDown style={{ width:13,height:13,color:C.coral }}/>
-                        <span style={{ fontSize:10,fontWeight:500,color:C.sub }}>Stop Loss</span>
-                        <span style={{ fontSize:12,fontWeight:700,color:C.coral,fontFamily:'monospace' }}>Rp {stopLoss.toLocaleString('id-ID')}</span>
+                        <div style={{ display:'flex',alignItems:'center',gap:5 }}>
+                          <TrendingDown style={{ width:11,height:11,color:C.coral,flexShrink:0 }}/>
+                          <span style={{ fontSize:9,fontWeight:600,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase' }}>Stop Loss</span>
+                        </div>
+                        <span style={{ fontSize:13,fontWeight:700,color:C.coral,fontFamily:'monospace',lineHeight:1 }}>
+                          Rp {stopLoss.toLocaleString('id-ID')}
+                        </span>
                       </button>
-                    )}
-                    {spEnabled&&stopProfit>0&&!showSpInput&&(
+                    ) : <div/>}
+
+                    {/* Kolom kanan: Target Profit info atau placeholder kosong */}
+                    {spEnabled&&stopProfit>0&&!showSpInput ? (
                       <button
                         onClick={()=>!disabled&&setShowSpInput(true)}
+                        disabled={disabled}
                         style={{
-                          display:'flex',alignItems:'center',gap:6,
-                          background:`${C.cyan}12`,border:`1px solid ${C.cyan}50`,
-                          borderRadius:10,padding:'7px 12px',cursor:disabled?'not-allowed':'pointer',
+                          display:'flex',flexDirection:'column',alignItems:'flex-start',
+                          gap:3,padding:'9px 12px',borderRadius:12,textAlign:'left',
+                          background:`${C.cyan}10`,
+                          border:`1px solid ${C.cyan}45`,
+                          borderLeft:`3px solid ${C.cyan}`,
+                          cursor:disabled?'not-allowed':'pointer',
                         }}
                       >
-                        <TrendingUp style={{ width:13,height:13,color:C.cyan }}/>
-                        <span style={{ fontSize:10,fontWeight:500,color:C.sub }}>Target Profit</span>
-                        <span style={{ fontSize:12,fontWeight:700,color:C.cyan,fontFamily:'monospace' }}>Rp {stopProfit.toLocaleString('id-ID')}</span>
+                        <div style={{ display:'flex',alignItems:'center',gap:5 }}>
+                          <TrendingUp style={{ width:11,height:11,color:C.cyan,flexShrink:0 }}/>
+                          <span style={{ fontSize:9,fontWeight:600,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase' }}>Target Profit</span>
+                        </div>
+                        <span style={{ fontSize:13,fontWeight:700,color:C.cyan,fontFamily:'monospace',lineHeight:1 }}>
+                          Rp {stopProfit.toLocaleString('id-ID')}
+                        </span>
                       </button>
-                    )}
+                    ) : <div/>}
                   </div>
-                ) : null}
+                )}
 
                 {/* Stop Loss Input Panel — Kotlin: AnimatedVisibility */}
                 {slEnabled&&showSlInput&&(
