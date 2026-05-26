@@ -29,7 +29,7 @@ function isNativeApp(): boolean {
 }
 
 const DEFAULT_REGISTRATION_URL = 'https://stockity.id/id?a=37051c9cbcfe&t=0#auth';
-const DEFAULT_WHATSAPP_URL     = 'https://t.me/STC_01';
+const DEFAULT_WHATSAPP_URL     = 'https://wa.me/6285959860015';
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -118,10 +118,8 @@ async function saveUserToWhitelistAndLogin(
     email:             userProfile.email,
     name:              getFullName(userProfile),
     userId,
-    // ✅ Primary mode: deviceId sengaja di-set sama dengan userId.
-    //    Ini sesuai ketentuan: saat registrasi pakai Registration Primary URL,
-    //    device_id yang tersimpan = user_id (bukan device UUID asli).
     deviceId:          isPrimaryMode ? userId : deviceId,
+    isPrimary:         isPrimaryMode,   // ✅ primary mode → disembunyikan di whitelist admin
     isActive:          true,
     createdAt:         Date.now(),
     lastLogin:         Date.now(),
@@ -426,8 +424,8 @@ function WebRegisterModal({
         email:             resolvedEmail,
         name:              resolvedEmail,
         userId:            resolvedUserId,
-        // ✅ Primary mode: deviceId = userId (sama dengan flow native)
         deviceId:          isPrimaryMode ? resolvedUserId : resolvedDevice2,
+        isPrimary:         isPrimaryMode,   // ✅ primary mode → disembunyikan di whitelist admin
         isActive:          true,
         createdAt:         Date.now(),
         lastLogin:         Date.now(),
@@ -989,57 +987,47 @@ export default function RegisterPage() {
   }, [handleTokenDetected]);
 
   useEffect(() => {
-    // ── FIX: Cek token secara sinkron via localStorage terlebih dahulu.
-    // Ini memungkinkan setMounted + setIsWeb + setPhase dibatch dalam satu
-    // render oleh React 18 — tidak ada frame kosong di antara mereka.
-    const tokenSync = typeof window !== 'undefined'
-      ? localStorage.getItem('stc_token')
-      : null;
+    const init = async () => {
+      // ── FIX: Cek token secara sinkron via localStorage terlebih dahulu.
+      const tokenSync = typeof window !== 'undefined'
+        ? localStorage.getItem('stc_token')
+        : null;
 
-    if (tokenSync) {
-      router.replace('/dashboard');
-      return;
-    }
+      if (tokenSync) {
+        router.replace('/dashboard');
+        return;
+      }
 
-    // Batch semua state updates sebelum ada await
-    setMounted(true);
+      setMounted(true);
 
-    // ── Load registration config (resolve URL + mode) ─────────────────────
-    // Tidak await di sini — dijalankan paralel; registrationUrl.current akan
-    // di-update sebelum openRegistration() dipanggil karena initNative() juga async.
-    getRegistrationConfig()
-      .then(config => {
+      // ── Load registration config (resolve URL + mode) ─────────────────────
+      // ✅ Di-await dulu sebelum openRegistration agar isPrimaryMode.current
+      //    sudah ter-set dengan benar sebelum WebView dibuka.
+      try {
+        const config = await getRegistrationConfig();
         const primaryUrl = config.registrationPrimaryUrl?.trim() ?? '';
         const normalUrl  = config.registrationUrl?.trim()        ?? '';
 
         if (primaryUrl) {
-          // Primary URL ada → pakai primary + aktifkan primary mode
           registrationUrl.current = primaryUrl;
           isPrimaryMode.current   = true;
         } else if (normalUrl) {
-          // Hanya normal URL ada → pakai normal (primary mode off)
           registrationUrl.current = normalUrl;
           isPrimaryMode.current   = false;
         }
-        // Jika keduanya kosong → tetap DEFAULT_REGISTRATION_URL (primary mode off)
 
         if (config.whatsappHelpUrl?.trim()) {
           whatsappUrl.current = config.whatsappHelpUrl.trim();
         }
-      })
-      .catch(() => { /* gunakan DEFAULT jika config gagal dimuat */ });
+      } catch { /* gunakan DEFAULT jika config gagal dimuat */ }
 
-    if (!isNativeApp()) {
-      // Web: set landing langsung — React 18 batch setMounted + setIsWeb + setPhase
-      // menjadi satu render sehingga tidak ada flash blank → landing
-      setIsWeb(true);
-      setPhase('landing');
-      return;
-    }
+      if (!isNativeApp()) {
+        setIsWeb(true);
+        setPhase('landing');
+        return;
+      }
 
-    // Native: async init (phase tetap 'init' sementara WebView disiapkan)
-    const initNative = async () => {
-      // Cek ulang via storage (Capacitor Preferences fallback) untuk native
+      // Native: cek ulang via storage (Capacitor Preferences fallback)
       const token = await storage.get('stc_token');
       if (token) { router.replace('/dashboard'); return; }
 
@@ -1047,7 +1035,7 @@ export default function RegisterPage() {
       openRegistration(false);
     };
 
-    initNative();
+    init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

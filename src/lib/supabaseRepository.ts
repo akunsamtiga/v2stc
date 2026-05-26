@@ -38,10 +38,14 @@ export interface WhitelistUser {
   lastLogin?: number;
   /** DB field: last login ISO timestamp */
   last_login?: string;
-  /** UI field: FCM push token */
+  /** DB field: FCM push token */
   fcmToken?: string;
-  /** UI field: FCM token update timestamp */
+  /** DB field: FCM token update timestamp */
   fcmTokenUpdatedAt?: number;
+  /** DB field: true = user registrasi via primary URL (disembunyikan di whitelist admin) */
+  is_primary?: boolean;
+  /** camelCase alias */
+  isPrimary?: boolean;
 }
 
 export interface AdminUser {
@@ -87,6 +91,7 @@ export async function getAllWhitelistUsers(
   let query = supabase
     .from('whitelist_users')
     .select('*')
+    .eq('is_primary', false)   // ✅ Sembunyikan user yang registrasi via primary URL
     .order('added_at', { ascending: false });
 
   // Admin biasa hanya bisa lihat user yang dia sendiri tambahkan
@@ -124,10 +129,11 @@ export async function addWhitelistUser(
   }
 
   const { error } = await supabase.from('whitelist_users').insert({
-    email:     normalizedEmail,
-    is_active: true,
-    added_at:  new Date().toISOString(),
-    added_by:  addedBy ?? 'system',
+    email:      normalizedEmail,
+    is_active:  true,
+    is_primary: (emailOrUser as any)?.isPrimary ?? false,
+    added_at:   new Date().toISOString(),
+    added_by:   addedBy ?? 'system',
     ...extra,
   });
 
@@ -851,6 +857,8 @@ function normalizeWhitelistUser(row: any): WhitelistUser {
     name:       row.name      ?? undefined,
     userId:     row.user_id   ?? undefined,
     deviceId:   row.device_id ?? undefined,
+    is_primary: row.is_primary ?? false,
+    isPrimary:  row.is_primary ?? false,
   };
 }
 
