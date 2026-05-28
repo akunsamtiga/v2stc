@@ -24,7 +24,10 @@ export function BottomNav() {
   if (pathname === '/webview') return null;
 
   const isDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
-  const useDarkNav  = isDashboard && isDarkMode;
+  const isProfile   = pathname === '/profile'   || pathname.startsWith('/profile/');
+  // Profile page hardcodes dark theme, so we always use dark nav there.
+  // Dashboard respects the user's dark mode preference as before.
+  const useDarkNav  = isProfile || (isDashboard && isDarkMode);
 
   const theme = useDarkNav
     ? {

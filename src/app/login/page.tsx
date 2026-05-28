@@ -34,6 +34,28 @@ const LOGIN_STYLES = `
     --font:         -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   }
 
+  /* ── Scoped override: variabel login di-hardcode langsung ke elemen ──────
+     Selector yang dideklarasikan langsung pada element menang atas nilai
+     yang diwariskan (inherited) dari body[data-theme="light"] globals.css.
+     Ini menjamin tema login tetap gelap meskipun user pakai light mode.  */
+  .lr-page, .splash, .tutor-modal, .tutor-overlay {
+    --bg:           #080e0a;
+    --surface:      rgba(6, 30, 15, 0.88);
+    --border:       rgba(76, 175, 80, 0.22);
+    --border-focus: rgba(100, 220, 100, 0.55);
+    --text-1:       #ffffff;
+    --text-2:       rgba(255,255,255,0.55);
+    --text-3:       rgba(255,255,255,0.30);
+    --accent:       #4caf50;
+    --accent-light: #66bb6a;
+    --error:        #ff453a;
+    --error-bg:     rgba(255,69,58,0.10);
+    --success:      #30d158;
+    --r-md:         14px;
+    --r-xl:         22px;
+    --font:         -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+
   /* ── Page Shell ─────────────────────────────────────────────────────── */
   .lr-page {
     font-family:     var(--font);
@@ -233,11 +255,11 @@ const LOGIN_STYLES = `
 
   .eye-btn {
     background: none; border: none; padding: 0 14px; cursor: pointer;
-    color: var(--text-3); display: flex; align-items: center;
+    color: rgba(255,255,255,0.45); display: flex; align-items: center;
     transition: color 0.15s; -webkit-tap-highlight-color: transparent;
     min-width: 44px; justify-content: center; /* better tap target */
   }
-  .eye-btn:hover { color: var(--accent-light); }
+  .eye-btn:hover { color: #66bb6a; }
 
   /* ── Remember me ────────────────────────────────────────────────────── */
   .remember-row {
