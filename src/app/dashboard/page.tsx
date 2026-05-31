@@ -17,6 +17,9 @@ import AssetIcon from '@/components/common/AssetIcon';
 import { storage, isSessionValid } from '@/lib/storage';
 import { useTradingSettings } from '@/lib/useTradingSettings';
 import { useLanguage } from '@/lib';
+import { langToIntlLocale } from '@/lib/localeUtils';
+import { CurrencyConfig, DEFAULT_CURRENCY_CONFIG, fetchPlatformCurrencies } from '@/lib/userProfileApi';
+import { applyLanguageFromCountry } from '@/lib/LanguageContext';
 import { useDarkMode } from '@/lib/DarkModeContext';
 import {
   Activity, AlertCircle, BarChart2, Calendar,
@@ -92,8 +95,13 @@ const FT_TF: {value:FastTradeTimeframe; label:string}[] = [
   {value:'15m',label:'15 Menit'},{value:'30m',label:'30 Menit'},{value:'1h',label:'1 Jam'},
 ];
 
-const IDR_MIN_DISPLAY = 14_000;
-const QUICK_AMOUNTS   = [14_000, 25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000];
+// ── Module-level currency config — diupdate oleh DashboardPage setiap render ──
+// Pola yang sama dengan C (colors) dan T (t function) di bawah.
+// Default IDR agar sub-komponen tidak error sebelum API selesai load.
+let FMT: (n: number) => string = (n) => FMT(n);
+let CURR_UNIT  = 'Rp';
+let MIN_AMOUNT = 14_000;
+let QUICK_AMOUNTS_DYN: number[] = [14_000, 70_000, 140_000, 280_000, 700_000, 1_400_000, 2_800_000];
 
 function modeAccent(mode: TradingMode): string {
   if (mode === 'ctc') return C.violet;
@@ -162,7 +170,7 @@ const AlwaysSignalBadge: React.FC<{
   accent?: string;
 }> = ({ isActive, step, maxSteps, totalLoss, accent = C.amber }) => {
   if (!isActive) return null;
-  const lossDisplay = totalLoss ? `  −${Math.round(Math.abs(totalLoss) / 100).toLocaleString('id-ID')}` : '';
+  const lossDisplay = totalLoss ? `  −${FMT(Math.abs(totalLoss) / 100)}` : '';
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6,
@@ -204,7 +212,7 @@ const CtrlBtn: React.FC<{onClick:()=>void;disabled?:boolean;loading?:boolean;acc
 const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:boolean}> = ({t:tr,lang,isBotRunning=false}) => {
   const [time,setTime] = useState<Date|null>(null);
   useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
-  const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
+  const locale = langToIntlLocale(lang);
   const fmt  = (d:Date) => {const h=String(d.getHours()).padStart(2,'0');const m=String(d.getMinutes()).padStart(2,'0');const s=String(d.getSeconds()).padStart(2,'0');return`${h}:${m}:${s}`;};
   const fmtD = (d:Date) => d.toLocaleDateString(locale,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
   const tz   = () => {if(!time)return'';const o=-time.getTimezoneOffset()/60;return`UTC${o>=0?'+':''}${o}`;};
@@ -253,7 +261,7 @@ const RealtimeClock: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:bo
 const RealtimeClockCompact: React.FC<{t:(k:string)=>string;lang:string;isBotRunning?:boolean}> = ({t:tr,lang,isBotRunning=false}) => {
   const [time,setTime] = useState<Date|null>(null);
   useEffect(()=>{setTime(new Date());const id=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(id);},[]);
-  const locale = lang==='ru'?'ru-RU':lang==='en'?'en-US':'id-ID';
+  const locale = langToIntlLocale(lang);
   const fmt     = (d:Date) => {const h=String(d.getHours()).padStart(2,'0');const m=String(d.getMinutes()).padStart(2,'0');const s=String(d.getSeconds()).padStart(2,'0');return`${h}:${m}:${s}`;};
   const fmtDay  = (d:Date) => d.toLocaleDateString(locale,{weekday:'short'});
   const fmtDate = (d:Date) => d.toLocaleDateString(locale,{day:'2-digit',month:'short',year:'numeric'});
@@ -360,7 +368,7 @@ const BalanceCard: React.FC<{balance:ProfileBalance|null;accountType:'demo'|'rea
           </div>
         ):(
           <p style={{fontSize:'clamp(16px,4vw,24px)',fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col}}>
-            {Math.round(amount).toLocaleString('id-ID',{maximumFractionDigits:0})}
+            {FMT(amount)}
           </p>
         )
       }
@@ -443,7 +451,7 @@ const BalanceCardCompact: React.FC<{balance:ProfileBalance|null;accountType:'dem
             </div>
           ):(
             <p style={{fontSize:'clamp(14px,3.5vw,18px)',fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col}}>
-              {Math.round(amount).toLocaleString('id-ID',{maximumFractionDigits:0})}
+              {FMT(amount)}
             </p>
           )
         }
@@ -459,7 +467,7 @@ const BalanceCardCompact: React.FC<{balance:ProfileBalance|null;accountType:'dem
 const formatProfitDisplay = (profit: number): string => {
   const absVal = Math.abs(profit / 100);
   // Remove trailing 00 for cleaner display (like trading settings)
-  const formatted = Math.round(absVal).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+  const formatted = FMT(absVal);
   // Remove trailing 00 patterns (e.g., 14000 -> 14k, 100000 -> 100k)
   return formatted;
 };
@@ -581,7 +589,7 @@ const TodayProfitCard: React.FC<{
     return () => clearInterval(iv);
   }, [lastUpdatedAt]);
 
-  const displayValue = Math.round(Math.abs(profit / 100)).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+  const displayValue = FMT(Math.abs(profit / 100));
   const ageLabel = secAgo === null ? null
     : secAgo < 60 ? `${secAgo}d` : `${Math.floor(secAgo/60)}m`;
 
@@ -810,7 +818,7 @@ const AssetBalanceCombinedCard: React.FC<{
             </div>
           ) : (
             <p style={{ fontSize: 'clamp(11px,3.5vw,16px)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, color: balCol, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0, textAlign: 'center' }}>
-              {Math.round(amount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+              {FMT(amount)}
             </p>
           )}
         </div>
@@ -1418,7 +1426,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                                   <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
                                     {profit != null && (
                                       <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',color:profit>=0?C.cyan:C.coral}}>
-                                        {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
+                                        {profit>=0?'+':''}{FMT(profit/100)}
                                       </span>
                                     )}
                                     <span style={{fontSize:8,fontWeight:700,padding:'1px 6px',borderRadius:99,background:`${phaseColor}15`,border:`1px solid ${phaseColor}28`,color:phaseColor}}>{phaseLabel}</span>
@@ -1477,7 +1485,7 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
                             }}>{phaseLabel}</span>
                             {profit != null ? (
                               <span style={{fontSize:10,fontWeight:700,fontFamily:'monospace',marginLeft:'auto',flexShrink:0,color:profit>=0?C.cyan:C.coral}}>
-                                {profit>=0?'+':''}{Math.round(profit/100).toLocaleString('id-ID')}
+                                {profit>=0?'+':''}{FMT(profit/100)}
                               </span>
                             ) : (
                               <span style={{marginLeft:'auto',display:'flex',gap:3,alignItems:'center'}}>
@@ -1775,7 +1783,7 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:inModal?undefined:240,flex:inModal?1:undefined,minHeight:0}}>
-          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
+          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{FMT(Math.abs(pnl)/100)}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label={T('dashboard.fastTrade.phase')} right={<span style={{color:accent,fontSize:10}}>{phaseMap[phase]??phase}</span>}/>
           {trend&&<Row label={T('dashboard.fastTrade.trend')} right={<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:trend==='call'?C.cyan:C.coral,background:trend==='call'?`${C.cyan}12`:`${C.coral}12`}}>{trend==='call'?'↑ CALL':'↓ PUT'}</span>} border={logs.length===0}/>}
@@ -1790,9 +1798,9 @@ const FastradePanel: React.FC<{status:FastradeStatus|null;logs:FastradeLog[];isL
                 return (
                   <div key={log.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderBottom:i<arr.length-1?`1px solid ${C.bdr}`:'none',minWidth:0,overflow:'hidden'}}>
                     <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:col,background:log.trend==='call'?`${C.cyan}12`:`${C.coral}12`,flexShrink:0}}>{log.trend==='call'?'CALL':'PUT'}</span>
-                    <span style={{fontSize:10,color:C.muted,flex:1,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{log.amount!=null?Math.round(log.amount/100).toLocaleString('id-ID',{maximumFractionDigits:0}):''}</span>
+                    <span style={{fontSize:10,color:C.muted,flex:1,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{log.amount!=null?FMT(log.amount/100):''}</span>
                     {log.result&&<span style={{fontSize:10,fontWeight:700,color:rc,flexShrink:0}}>{log.result}</span>}
-                    {log.profit!=null&&<span style={{fontSize:10,color:rc,fontFamily:'monospace',flexShrink:0}}>{log.profit>=0?'+':'-'}{Math.round(Math.abs(log.profit)/100).toLocaleString('id-ID',{maximumFractionDigits:0})}</span>}
+                    {log.profit!=null&&<span style={{fontSize:10,color:rc,fontFamily:'monospace',flexShrink:0}}>{log.profit>=0?'+':'-'}{FMT(Math.abs(log.profit)/100)}</span>}
                   </div>
                 );
               })}
@@ -1974,7 +1982,7 @@ const AISignalPanel: React.FC<{
             label={T('dashboard.fastTrade.sessionPnl')}
             right={
               <span style={{ color: pnlCol, fontFamily: 'monospace', fontWeight: 700 }}>
-                {pnl >= 0 ? '+' : '-'}{Math.round(Math.abs(pnl) / 100).toLocaleString('id-ID')}
+                {pnl >= 0 ? '+' : '-'}{FMT(Math.abs(pnl) / 100)}
               </span>
             }
           />
@@ -2101,7 +2109,7 @@ const AISignalPanel: React.FC<{
                         )}
                       </div>
                       <span style={{ fontSize: 9, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                        {o.assetRic} · {Math.round(o.amount / 100).toLocaleString('id-ID')}
+                        {o.assetRic} · {FMT(o.amount / 100)}
                       </span>
                     </div>
  
@@ -2200,7 +2208,7 @@ const IndicatorPanel: React.FC<{status:IndicatorStatus|null;isLoading:boolean;fi
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:inModal?undefined:240,flex:inModal?1:undefined,minHeight:0}}>
-          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
+          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{FMT(Math.abs(pnl)/100)}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.orange,fontSize:10}}>{status?.lastStatus||T('dashboard.indicator.monitoring')}</span>}/>
           <Row label={T('dashboard.indicator.signalLabel')} right={lastTrend?<span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:5,color:lastTrend==='call'?C.cyan:C.coral,background:lastTrend==='call'?`${C.cyan}12`:`${C.coral}12`}}>{lastTrend==='call'?'↑ CALL':'↓ PUT'}</span>:<span style={{color:C.muted}}>—</span>}/>
@@ -2271,7 +2279,7 @@ const MomentumPanel: React.FC<{status:MomentumStatus|null;isLoading:boolean;fill
         </div>
       ):(
         <div style={{overflowY:'auto',maxHeight:inModal?undefined:240,flex:inModal?1:undefined,minHeight:0}}>
-          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{Math.round(Math.abs(pnl)/100).toLocaleString('id-ID')}</span>}/>
+          <Row label="P&L" right={<span style={{color:pnlCol,fontFamily:'monospace'}}>{pnl>=0?'+':'-'}{FMT(Math.abs(pnl)/100)}</span>}/>
           <Row label="W / L" right={<span style={{fontFamily:'monospace'}}><span style={{color:C.cyan}}>{wins}</span><span style={{color:C.muted}}> / </span><span style={{color:C.coral}}>{losses}</span></span>}/>
           <Row label={T('dashboard.fastTrade.status')} right={<span style={{color:C.pink,fontSize:10}}>{status?.lastStatus||T('dashboard.momentum.scanning')}</span>}/>
           {status?.lastDetectedPattern?(
@@ -2882,7 +2890,7 @@ const SettingsCard: React.FC<{
   useEffect(()=>{ setOsStr(String(rsiOversold)); },[rsiOversold]);
   // SELALU formatted dengan titik ribuan — live saat mengetik, nilai internal tetap integer
   const amtDisplay = amtStr && parseInt(amtStr,10) > 0
-    ? parseInt(amtStr,10).toLocaleString('id-ID')
+    ? FMT(parseInt(amtStr,10))
     : '';
   useEffect(()=>{ if(disabled) setOpen(false); },[disabled]);
   const set = (k:keyof MartingaleConfig,v:any) => onMartingaleChange({...martingale,[k]:v});
@@ -2890,7 +2898,7 @@ const SettingsCard: React.FC<{
   const durationOpts = [{value:'60',label:'1 Menit'},{value:'120',label:'2 Menit'},{value:'300',label:'5 Menit'},{value:'600',label:'10 Menit'},{value:'900',label:'15 Menit'},{value:'1800',label:'30 Menit'}];
   const acOpts: PickerOpt[] = [{value:'demo',label:'Demo',sub:'Virtual · tidak pakai dana nyata'},{value:'real',label:'Real',sub:'Menggunakan saldo sesungguhnya'}];
   const ac = modeAccent(mode);
-  const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
+  const isBelowMin = amount > 0 && amount < MIN_AMOUNT;
   const isNewMode = mode==='aisignal'||mode==='indicator'||mode==='momentum';
   const modeLabel = mode==='aisignal'?'AI Signal Mode':mode==='indicator'?'Analysis Strategy Mode':mode==='momentum'?'Momentum Mode':mode==='ctc'?'Fastrade CTC':mode==='fastrade'?'Fastrade FTT Mode':'Signal Mode';
   const acctCol = isDemo ? C.amber : C.cyan;
@@ -2968,7 +2976,7 @@ const SettingsCard: React.FC<{
               <div>
                 <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8 }}>
                   <p style={{ fontSize:12,fontWeight:600,color:C.text,margin:0 }}>{T('dashboard.settings.tradeAmount')}</p>
-                  <span style={{ fontSize:10,color:C.muted }}>{T('dashboard.settings.minAmount')}: Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}</span>
+                  <span style={{ fontSize:10,color:C.muted }}>{T('dashboard.settings.minAmount')}: {CURR_UNIT} {FMT(MIN_AMOUNT)}</span>
                 </div>
                 <div style={{ display:'flex',gap:8 }}>
                   <div style={{ flex:1,position:'relative' }}>
@@ -2990,7 +2998,7 @@ const SettingsCard: React.FC<{
                       onBlur={()=>{ setAmtFocused(false); if(!amtStr||amtStr==='0') setAmtStr(''); }}
                       onKeyDown={e=>{ if(e.key==='Enter'||(e as any).keyCode===13) e.currentTarget.blur(); }}
                       disabled={disabled}
-                      placeholder={IDR_MIN_DISPLAY.toLocaleString('id-ID')}
+                      placeholder={FMT(MIN_AMOUNT)}
                       style={{ paddingLeft:30, paddingRight:44, borderColor:isBelowMin?C.coral:undefined, fontSize:16 }}
                     />
                     {/* Tombol Enter — tutup keyboard */}
@@ -3019,10 +3027,10 @@ const SettingsCard: React.FC<{
                       <>
                         <div style={{ position:'fixed',inset:0,zIndex:5 }} onClick={()=>setAmtDrop(false)}/>
                         <div style={{ position:'absolute',right:0,marginTop:4,zIndex:10,minWidth:170,borderRadius:12,overflow:'hidden',background:C.card,border:`1px solid ${C.bdr}`,boxShadow:'0 8px 32px rgba(0,0,0,0.3)',animation:'slide-up 0.15s ease' }}>
-                          {QUICK_AMOUNTS.map((a,idx)=>{
+                          {QUICK_AMOUNTS_DYN.map((a,idx)=>{
                             const isAct=amount===a;
                             return (
-                              <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{ width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',fontSize:13,background:isAct?`${C.cyan}12`:'transparent',borderBottom:idx<QUICK_AMOUNTS.length-1?`1px solid ${C.bdr}`:'none',borderLeft:isAct?`2px solid ${C.cyan}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?C.cyan:C.sub,fontWeight:isAct?700:400,cursor:'pointer' }}>
+                              <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{ width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',fontSize:13,background:isAct?`${C.cyan}12`:'transparent',borderBottom:idx<QUICK_AMOUNTS_DYN.length-1?`1px solid ${C.bdr}`:'none',borderLeft:isAct?`2px solid ${C.cyan}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?C.cyan:C.sub,fontWeight:isAct?700:400,cursor:'pointer' }}>
                                 <span>{a>=1000000?`Rp ${a/1000000}M`:`Rp ${(a/1000).toFixed(a%1000===0?0:1)}K`}</span>
                                 {isAct&&<span style={{ color:C.cyan }}>✓</span>}
                               </button>
@@ -3148,7 +3156,7 @@ const SettingsCard: React.FC<{
                       onBlur={()=>{ setAmtFocused(false); if(!amtStr||amtStr==='0') setAmtStr(''); }}
                       onKeyDown={e=>{ if(e.key==='Enter'||(e as any).keyCode===13) e.currentTarget.blur(); }}
                       disabled={disabled}
-                      placeholder={IDR_MIN_DISPLAY.toLocaleString('id-ID')}
+                      placeholder={FMT(MIN_AMOUNT)}
                       style={{ paddingLeft:30, paddingRight:44, fontSize:16 }}
                     />
                     {/* Tombol Enter — tutup keyboard */}
@@ -3331,7 +3339,7 @@ const SettingsCard: React.FC<{
                           <span style={{ fontSize:9,fontWeight:600,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase' }}>Stop Loss</span>
                         </div>
                         <span style={{ fontSize:13,fontWeight:700,color:C.coral,fontFamily:'monospace',lineHeight:1 }}>
-                          Rp {stopLoss.toLocaleString('id-ID')}
+                          {CURR_UNIT} {FMT(stopLoss)}
                         </span>
                       </button>
                     ) : <div/>}
@@ -3355,7 +3363,7 @@ const SettingsCard: React.FC<{
                           <span style={{ fontSize:9,fontWeight:600,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase' }}>Target Profit</span>
                         </div>
                         <span style={{ fontSize:13,fontWeight:700,color:C.cyan,fontFamily:'monospace',lineHeight:1 }}>
-                          Rp {stopProfit.toLocaleString('id-ID')}
+                          {CURR_UNIT} {FMT(stopProfit)}
                         </span>
                       </button>
                     ) : <div/>}
@@ -3399,7 +3407,7 @@ const SettingsCard: React.FC<{
                     {stopLoss>0&&(
                       <div style={{ background:C.card,borderRadius:10,padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
                         <span style={{ color:C.sub,fontSize:11,fontWeight:500 }}>Maks. Loss Saat Ini</span>
-                        <span style={{ color:C.coral,fontSize:13,fontWeight:700 }}>Rp {stopLoss.toLocaleString('id-ID')}</span>
+                        <span style={{ color:C.coral,fontSize:13,fontWeight:700 }}>{CURR_UNIT} {FMT(stopLoss)}</span>
                       </div>
                     )}
                     <span style={{ color:C.muted,fontSize:10,lineHeight:'1.4' }}>Format: angka biasa, K (ribu), M (juta), B (miliar)</span>
@@ -3443,7 +3451,7 @@ const SettingsCard: React.FC<{
                     {stopProfit>0&&(
                       <div style={{ background:C.card,borderRadius:10,padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
                         <span style={{ color:C.sub,fontSize:11,fontWeight:500 }}>Target Profit Saat Ini</span>
-                        <span style={{ color:C.cyan,fontSize:13,fontWeight:700 }}>Rp {stopProfit.toLocaleString('id-ID')}</span>
+                        <span style={{ color:C.cyan,fontSize:13,fontWeight:700 }}>{CURR_UNIT} {FMT(stopProfit)}</span>
                       </div>
                     )}
                     <span style={{ color:C.muted,fontSize:10,lineHeight:'1.4' }}>Format: angka biasa, K (ribu), M (juta), B (miliar)</span>
@@ -3640,7 +3648,7 @@ const ControlCard: React.FC<{
               )}
               {isBelowMin&&(
                 <p style={{fontSize:10,textAlign:'center',color:C.coral}}>
-                  ✗ {T('dashboard.control.amountBelowMin')} Rp {IDR_MIN_DISPLAY.toLocaleString('id-ID')}
+                  ✗ {T('dashboard.control.amountBelowMin')} {CURR_UNIT} {FMT(MIN_AMOUNT)}
                 </p>
               )}
             </>
@@ -3715,14 +3723,63 @@ const DarkModeToggleStrip: React.FC<{
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage: setLanguageHook } = useLanguage();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const colors = useMemo(() => getColors(isDarkMode), [isDarkMode]);
   // ✅ FIX: Update module-level C so all sub-components use the correct theme
   C = colors;
   T = t;
+
+  // ── Currency config dari Stockity API (amounts, unit, min, max per negara) ──
+  const [currencyConfig, setCurrencyConfig] = useState<CurrencyConfig>(DEFAULT_CURRENCY_CONFIG);
+
+  // Update module-level formatters setiap render — pola sama dengan C dan T di atas
+  const intlLocale = langToIntlLocale(language);
+  FMT         = (n: number) => Math.round(n).toLocaleString(intlLocale, { maximumFractionDigits: 0 });
+  CURR_UNIT   = currencyConfig.currencyUnit;
+  MIN_AMOUNT  = currencyConfig.minAmount;
+  QUICK_AMOUNTS_DYN = currencyConfig.quickAmounts;
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
+
+  // ── Load currency config langsung dari Stockity API ───────────────────────
+  // Dipanggil sekali saat mount — ambil authToken + deviceId dari session storage,
+  // lalu fetch /platform/private/v2/currencies untuk minAmount, quickAmounts, unit.
+  // Juga terapkan bahasa UI berdasarkan country akun jika user belum set manual.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { storage, SESSION_KEYS } = await import('@/lib/storage');
+        const { countryToStockityLocale } = await import('@/lib/localeUtils');
+        const authToken = await storage.get(SESSION_KEYS.AUTHTOKEN);
+        const deviceId  = await storage.get(SESSION_KEYS.DEVICE_ID);
+        const timezone  = await storage.get(SESSION_KEYS.USER_TIMEZONE) ?? undefined;
+        const country   = await storage.get('stc_account_country');
+
+        if (!authToken || !deviceId) return;
+        if (cancelled) return;
+
+        // Terapkan bahasa UI dari country akun (hanya jika user belum pilih manual)
+        if (country) {
+          applyLanguageFromCountry(country, setLanguageHook);
+        }
+
+        const stockityLocale = countryToStockityLocale(country ?? undefined);
+        const config = await fetchPlatformCurrencies(authToken, deviceId, stockityLocale, timezone ?? undefined);
+        if (!cancelled) {
+          setCurrencyConfig(config);
+          // Jika amount saat ini 0 (default baru), set ke minAmount hasil API
+          if (_s.amount === 0) {
+            _upd('amount', config.minAmount);
+          }
+        }
+      } catch (e) {
+        console.warn('[Dashboard] Failed to load currency config:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // State
   const [assets,setAssets] = useState<StockityAsset[]>([]);
@@ -4261,7 +4318,7 @@ export default function DashboardPage() {
     return total;
   },[todayProfitData,scheduleLogs,ftLogs,isDemo]);
 
-  const isBelowMin = amount > 0 && amount < IDR_MIN_DISPLAY;
+  const isBelowMin = amount > 0 && amount < MIN_AMOUNT;
 
   const handleModeChange = (m:TradingMode)=>{
     // Izinkan ganti pilihan mode kapan saja (proteksi start ada di handleStart)
@@ -4278,7 +4335,7 @@ export default function DashboardPage() {
 
   const handleStart = async()=>{
     if(!selectedRic)return;
-    if(isBelowMin&&tradingMode!=='indicator'){setError(`Amount di bawah minimum Rp ${IDR_MIN_DISPLAY.toLocaleString('id-ID')}.`);return;}
+    if(isBelowMin&&tradingMode!=='indicator'){setError(`Amount di bawah minimum ${CURR_UNIT} ${FMT(MIN_AMOUNT)}.`);return;}
     // Cegah start jika ada mode LAIN yang sedang berjalan (hanya 1 mode boleh aktif)
     const otherRunning = (
       (tradingMode!=='schedule'&&(isSchedRunning||isSchedPaused))||
@@ -4294,7 +4351,7 @@ export default function DashboardPage() {
         await api.updateConfig({
           asset:{ric:selectedRic,name:selectedAsset?.name??selectedRic,profitRate:selectedAsset?.profitRate,iconUrl:selectedAsset?.iconUrl},
           martingale:{isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED',isAlwaysSignal:false},
-          isDemoAccount:isDemo,currency:'IDR',currencyIso:'IDR',duration,
+          isDemoAccount:isDemo,currency:CURR_UNIT,currencyIso:CURR_UNIT,duration,
           stopLoss:stopLoss?stopLoss*100:undefined,stopProfit:stopProfit?stopProfit*100:undefined,
         });
         await api.scheduleStart();
@@ -4303,7 +4360,7 @@ export default function DashboardPage() {
           mode:tradingMode==='ctc'?'CTC':'FTT',
           asset:{ric:selectedRic,name:selectedAsset?.name??selectedRic,profitRate:selectedAsset?.profitRate,iconUrl:selectedAsset?.iconUrl},
           martingale:{isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED'},
-          isDemoAccount:isDemo,currency:'IDR',currencyIso:'IDR',
+          isDemoAccount:isDemo,currency:CURR_UNIT,currencyIso:CURR_UNIT,
           stopLoss:stopLoss?stopLoss*100:undefined,stopProfit:stopProfit?stopProfit*100:undefined,
         });
       } else if(tradingMode==='aisignal'){
@@ -4747,7 +4804,7 @@ export default function DashboardPage() {
                           <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:99,color:col,background:`${col}10`,border:`1px solid ${col}25`}}>{isDemo?'Demo':'Real'}</span>
                         </div>
                         {isLoading?<div style={{height:18,width:90,borderRadius:4,background:C.faint}}/>
-                          :<p style={{fontSize:15,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em'}}>{Math.round(amt).toLocaleString('id-ID')}</p>
+                          :<p style={{fontSize:15,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em'}}>{FMT(amt)}</p>
                         }
                         <p style={{fontSize:10,color:C.muted,marginTop:2}}>{balance?.currency??'IDR'}</p>
                       </div>
@@ -4810,7 +4867,7 @@ export default function DashboardPage() {
                         </div>
                         {isLoading?<div style={{height:18,width:90,borderRadius:4,background:C.faint}}/>
                           :<p style={{fontSize:15,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',fontFamily:'monospace'}}>
-                            {isPos?'+':'-'}{Math.round(Math.abs(pnl/100)).toLocaleString('id-ID')}
+                            {isPos?'+':'-'}{FMT(Math.abs(pnl/100))}
                           </p>
                         }
                         <p style={{fontSize:10,color:C.muted,marginTop:2}}>
@@ -4877,7 +4934,7 @@ export default function DashboardPage() {
                     const statCards = [
                       {
                         label:'Sesi P&L', icon:<TrendingUp style={{width:14,height:14}}/>,
-                        value: isLoading?null:(pnlPos?'+':'-')+'Rp '+Math.round(Math.abs(sessionPnL/100)).toLocaleString('id-ID'),
+                        value: isLoading?null:(pnlPos?'+':'-')+CURR_UNIT+' '+FMT(Math.abs(sessionPnL/100)),
                         col: pnlPos?ac:C.coral,
                       },
                       {
@@ -4980,7 +5037,7 @@ export default function DashboardPage() {
                         <span style={{fontSize:7,fontWeight:700,padding:'1px 4px',borderRadius:99,color:col,background:`${col}10`,border:`1px solid ${col}25`}}>{isDemo?'Demo':'Real'}</span>
                       </div>
                       {isLoading?<div style={{height:15,width:80,borderRadius:4,background:C.faint}}/>
-                        :<p style={{fontSize:14,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{Math.round(amt).toLocaleString('id-ID')}</p>
+                        :<p style={{fontSize:14,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{FMT(amt)}</p>
                       }
                       <p style={{fontSize:9,color:C.muted,marginTop:2}}>{balance?.currency??'IDR'}</p>
                     </div>
@@ -5025,7 +5082,7 @@ export default function DashboardPage() {
                       </div>
                       {isLoading?<div style={{height:15,width:80,borderRadius:4,background:C.faint}}/>
                         :<p style={{fontSize:14,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                          {isPos?'+':'−'}{Math.round(Math.abs(pnl/100)).toLocaleString('id-ID')}
+                          {isPos?'+':'−'}{FMT(Math.abs(pnl/100))}
                         </p>
                       }
                       <p style={{fontSize:9,color:C.muted,marginTop:2}}>
@@ -5081,7 +5138,7 @@ export default function DashboardPage() {
                     const asActive=(scheduleStatus as any)?.alwaysSignalActive||(ftStatus as any)?.alwaysSignalActive||aiStatus?.alwaysSignalStatus?.isActive||(indicatorStatus as any)?.alwaysSignalActive||(momentumStatus as any)?.alwaysSignalActive;
                     const asStep=(scheduleStatus as any)?.alwaysSignalStep??(ftStatus as any)?.alwaysSignalStep??aiStatus?.alwaysSignalStatus?.currentStep??(indicatorStatus as any)?.alwaysSignalStep??(momentumStatus as any)?.alwaysSignalStep??0;
                     const statCards=[
-                      {label:'Sesi P&L',icon:<TrendingUp style={{width:13,height:13}}/>,value:isLoading?null:(pnlPos?'+':'−')+'Rp '+Math.round(Math.abs(sessionPnL/100)).toLocaleString('id-ID'),col:pnlPos?ac:C.coral},
+                      {label:'Sesi P&L',icon:<TrendingUp style={{width:13,height:13}}/>,value:isLoading?null:(pnlPos?'+':'−')+CURR_UNIT+' '+FMT(Math.abs(sessionPnL/100)),col:pnlPos?ac:C.coral},
                       {label:'W / L',icon:<BarChart2 style={{width:13,height:13}}/>,value:isLoading?null:`${wins} / ${losses}`,col:wins>losses?ac:losses>wins?C.coral:C.muted},
                       {label:'Win Rate',icon:<Activity style={{width:13,height:13}}/>,value:isLoading?null:wr!=null?`${wr}%`:'—',col:wr!=null?(wr>=50?ac:C.coral):C.muted},
                       asActive&&asStep>0
@@ -5263,7 +5320,7 @@ export default function DashboardPage() {
                         fontSize:13,fontWeight:800,fontFamily:'monospace',letterSpacing:'-0.02em',
                         color:sessionPnL>=0?modeAccent(tradingMode):C.coral,
                       }}>
-                        {sessionPnL>=0?'+':'-'}{Math.round(Math.abs(sessionPnL/100)).toLocaleString('id-ID',{maximumFractionDigits:0})}
+                        {sessionPnL>=0?'+':'-'}{FMT(Math.abs(sessionPnL/100))}
                       </span>
                     </div>
                     <div style={{height:1,background:`${modeAccent(tradingMode)}15`}}/>

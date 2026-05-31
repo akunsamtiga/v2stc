@@ -1,10 +1,14 @@
 // lib/userProfileApi.ts
-// ✅ FIXED — Gunakan CapacitorHttp untuk bypass CORS di native Android
+// ✅ FIXED — Multi-country support: locale & timezone dinamis dari akun user
 //
-// PERUBAHAN dari versi lama:
-//   - Semua fetch() diganti httpGet()/httpPost() via CapacitorHttp
-//   - Di web/browser tetap pakai fetch() biasa (CapacitorHttp fallback otomatis)
-//   - Ini mengatasi error "failed to fetch" yang terjadi karena CORS di Capacitor WebView
+// PERUBAHAN:
+//   - buildStockityHeaders terima param timezone (bukan hardcode 'Asia/Bangkok')
+//   - fetchPlatformCurrencies return CurrencyConfig lengkap (minAmount, quickAmounts, unit)
+//   - Semua fungsi terima locale sebagai param (caller harus pass hasil countryToStockityLocale)
+//   - loginToStockity pakai timezone browser (Intl) sebagai fallback sebelum session ada
+
+import { countryToStockityLocale } from './localeUtils';
+export { countryToStockityLocale };
 
 const STOCKITY_BASE_URL =
   process.env.NEXT_PUBLIC_STOCKITY_API_URL ?? 'https://api.stockity.id/';
@@ -68,6 +72,32 @@ export interface FetchedCurrency {
   currencyIso: string;
 }
 
+/**
+ * Config currency lengkap yang dipakai di dashboard.
+ * Semua amount dalam satuan display (sudah dibagi 100 dari Stockity API).
+ */
+export interface CurrencyConfig {
+  /** ISO code mata uang, e.g. "IDR", "COP" */
+  currencyIso:  string;
+  /** Simbol/unit, e.g. "Rp", "Col$" */
+  currencyUnit: string;
+  /** Minimum amount order dalam satuan display, e.g. 14000 (IDR) atau 4000 (COP) */
+  minAmount:    number;
+  /** Maximum amount order dalam satuan display */
+  maxAmount:    number;
+  /** Preset quick-pick amounts (sudah dibagi 100), e.g. [14000,70000,...] */
+  quickAmounts: number[];
+}
+
+// Default IDR — dipakai sebelum API response tersedia
+export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
+  currencyIso:  'IDR',
+  currencyUnit: 'Rp',
+  minAmount:    14_000,
+  maxAmount:    74_000_000,
+  quickAmounts: [14_000, 70_000, 140_000, 280_000, 700_000, 1_400_000, 2_800_000],
+};
+
 /** Mirrors: userProfile.getFullName() di Kotlin */
 export function getFullName(p: UserProfile): string {
   const full = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim();
@@ -89,12 +119,15 @@ export function resolveAvatarUrl(avatar: string | null | undefined): string | nu
 function buildStockityHeaders(
   authToken: string,
   deviceId:  string,
+  timezone:  string = (typeof Intl !== 'undefined'
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : 'Asia/Bangkok'),
   extra:     Record<string, string> = {},
 ): Record<string, string> {
   return {
     'device-id':           deviceId,
     'device-type':         'web',
-    'user-timezone':       'Asia/Bangkok',
+    'user-timezone':       timezone,
     'authorization-token': authToken,
     'User-Agent':          USER_AGENT,
     'Accept':              'application/json, text/plain, */*',
@@ -186,21 +219,21 @@ async function httpPost(
 
 // ── fetchUserProfile ──────────────────────────────────────────────────────────
 // Mirrors: UserProfileApiService.getUserProfile()
+// locale: hasil countryToStockityLocale(profile.country) — caller yang menentukan
 export async function fetchUserProfile(
   authToken: string,
   deviceId:  string,
-  locale     = 'id',
+  locale     = 'en',
+  timezone?: string,
 ): Promise<UserProfile> {
   const url = `${STOCKITY_BASE_URL}passport/v1/user_profile?locale=${locale}`;
 
-  const json = await httpGet(url, buildStockityHeaders(authToken, deviceId)) as UserProfileResponse;
+  const json = await httpGet(url, buildStockityHeaders(authToken, deviceId, timezone)) as UserProfileResponse;
 
   if (!json.data) {
     throw new Error('Terjadi kesalahan saat memproses akun (data kosong)');
   }
 
-  // Normalisasi avatar: endpoint ini mengembalikan relative path ("uploads/user/...")
-  // resolveAvatarUrl akan mengubahnya menjadi full URL "https://stockity.id/uploads/user/..."
   return {
     ...json.data,
     avatar: resolveAvatarUrl(json.data.avatar) ?? undefined,
@@ -212,11 +245,12 @@ export async function fetchUserProfile(
 export async function fetchUserCurrency(
   authToken: string,
   deviceId:  string,
-  locale     = 'id',
+  locale     = 'en',
+  timezone?: string,
 ): Promise<FetchedCurrency> {
   try {
     const url  = `${STOCKITY_BASE_URL}currency/v1/user_currency?locale=${locale}`;
-    const json = await httpGet(url, buildStockityHeaders(authToken, deviceId)) as CurrencyResponse;
+    const json = await httpGet(url, buildStockityHeaders(authToken, deviceId, timezone)) as CurrencyResponse;
     const data = json.data;
 
     if (!data) return { currency: 'IDR', currencyIso: 'Rp' };
@@ -232,21 +266,75 @@ export async function fetchUserCurrency(
   }
 }
 
+// ── fetchPlatformCurrencies ───────────────────────────────────────────────────
+// Ambil currency aktif user + config amount dari /platform/private/v2/currencies
+// (endpoint utama yang dipakai Stockity web)
+//
+// Response:
+//   data.current      → ISO code, e.g. "COP" / "IDR"
+//   data.list[].unit  → simbol, e.g. "Col$" / "Rp"
+//   data.list[].summs.standard_trade → preset amounts (dalam cents, dibagi 100)
+//   data.list[].limits.standard_trade → {min, max} dalam cents
+//
+// Returns CurrencyConfig lengkap — dipakai di dashboard untuk minAmount, quickAmounts, dll.
+export async function fetchPlatformCurrencies(
+  authToken: string,
+  deviceId:  string,
+  locale     = 'en',
+  timezone?: string,
+): Promise<CurrencyConfig> {
+  try {
+    const url  = `${STOCKITY_BASE_URL}platform/private/v2/currencies?locale=${locale}`;
+    const json = await httpGet(url, buildStockityHeaders(authToken, deviceId, timezone)) as {
+      data?: {
+        current?: string;
+        list?: {
+          iso:    string;
+          unit:   string;
+          summs?: { standard_trade?: number[] };
+          limits?: { standard_trade?: { min?: number; max?: number } };
+        }[];
+      };
+    };
+
+    const data = json.data;
+    if (!data) return DEFAULT_CURRENCY_CONFIG;
+
+    const current = data.current ?? 'IDR';
+    const item    = data.list?.find(c => c.iso === current);
+    if (!item) return DEFAULT_CURRENCY_CONFIG;
+
+    const unit        = item.unit ?? 'Rp';
+    const rawSumms    = item.summs?.standard_trade ?? [];
+    const rawMin      = item.limits?.standard_trade?.min ?? 1_400_000;
+    const rawMax      = item.limits?.standard_trade?.max ?? 74_000_000_00;
+
+    // Stockity menyimpan amounts dalam cents (×100) → bagi 100 untuk display
+    const quickAmounts = rawSumms.map((v: number) => Math.round(v / 100));
+    const minAmount    = Math.round(rawMin / 100);
+    const maxAmount    = Math.round(rawMax / 100);
+
+    return {
+      currencyIso:  current,
+      currencyUnit: unit,
+      minAmount,
+      maxAmount,
+      quickAmounts: quickAmounts.length > 0 ? quickAmounts : DEFAULT_CURRENCY_CONFIG.quickAmounts,
+    };
+  } catch (e) {
+    console.warn('[Currency] fetchPlatformCurrencies error:', e);
+    return DEFAULT_CURRENCY_CONFIG;
+  }
+}
+
 // ── checkHasTradingHistory ────────────────────────────────────────────────────
-// Cek apakah user sudah pernah melakukan trading di Stockity.
-// Digunakan di halaman register untuk menolak pendaftar yang bukan akun baru.
-//
-// Endpoint: /bo-deals-history/v3/deals/trade  (sama dengan StockityHistoryService)
-// Response: { data: { standard_trade_deals: [...], batch_key: string|null } }
-//
-// Returns: true  = ada riwayat trading → tolak pendaftaran
-//          false = akun baru / tidak ada riwayat → izinkan
 export async function checkHasTradingHistory(
   authToken: string,
   deviceId:  string,
-  locale     = 'id',
+  locale     = 'en',
+  timezone?: string,
 ): Promise<boolean> {
-  const headers = buildStockityHeaders(authToken, deviceId);
+  const headers = buildStockityHeaders(authToken, deviceId, timezone);
   const buildUrl = (type: 'real' | 'demo') =>
     `${STOCKITY_BASE_URL}bo-deals-history/v3/deals/trade?type=${type}&locale=${locale}`;
 
@@ -267,20 +355,27 @@ export async function checkHasTradingHistory(
 
 // ── loginToStockity ───────────────────────────────────────────────────────────
 // Mirrors: LoginApiService.login()
+// locale: pakai 'en' sebagai default saat login (session belum ada, tidak tahu negara user).
+//         Setelah login berhasil dan profile di-fetch, caller bisa update locale di session.
 export async function loginToStockity(
   email:    string,
   password: string,
   deviceId: string,
-  locale    = 'id',
+  locale    = 'en',
 ): Promise<{ authToken: string; deviceId: string }> {
   const url = `${STOCKITY_BASE_URL}passport/v2/sign_in?locale=${locale}`;
+
+  // Timezone dari browser saat login — belum ada session untuk dibaca
+  const browserTz = typeof Intl !== 'undefined'
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : 'Asia/Bangkok';
 
   const json = await httpPost(
     url,
     {
       'device-id':     deviceId,
       'device-type':   'web',
-      'user-timezone': 'Asia/Bangkok',
+      'user-timezone': browserTz,
       'User-Agent':    USER_AGENT,
       'Accept':        'application/json',
       'Origin':        'https://stockity.id',

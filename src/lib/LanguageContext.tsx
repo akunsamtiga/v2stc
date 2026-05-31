@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Language, Translations, getTranslation } from './translations';
+import { countryToAppLang } from './localeUtils';
 export type { Language };
 
 // Storage key for language preference
@@ -136,12 +137,23 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
         const savedRegion   = localStorage.getItem(REGION_STORAGE_KEY) ?? '';
 
         if (savedLanguage && validCodes.includes(savedLanguage as Language)) {
+          // User sudah pernah pilih manual → ikut pilihan user
           setLanguageState(savedLanguage as Language);
           setSelectedRegion(savedRegion);
         } else {
-          const browserLang = navigator.language.split('-')[0];
-          if (validCodes.includes(browserLang as Language)) {
-            setLanguageState(browserLang as Language);
+          // Belum ada pilihan manual → coba deteksi dari country akun Stockity
+          // (disimpan di localStorage dengan key 'stc_account_country' oleh login flow)
+          const accountCountry = localStorage.getItem('stc_account_country');
+          if (accountCountry) {
+            const detectedLang = countryToAppLang(accountCountry);
+            setLanguageState(detectedLang);
+            setSelectedRegion(accountCountry);
+          } else {
+            // Fallback ke bahasa browser
+            const browserLang = navigator.language.split('-')[0];
+            if (validCodes.includes(browserLang as Language)) {
+              setLanguageState(browserLang as Language);
+            }
           }
         }
       } catch (error) {
@@ -239,20 +251,20 @@ export function withLanguage<T extends object>(Component: React.ComponentType<T>
 export function formatNumber(num: number, language: Language): string {
   const locales: Record<Language, string> = {
     en: 'en-US', id: 'id-ID', ru: 'ru-RU',
-    es: 'es-ES', ms: 'ms-MY', hi: 'hi-IN',
+    es: 'es-CO', ms: 'ms-MY', hi: 'hi-IN',
     th: 'th-TH', tr: 'tr-TR',
   };
-  return num.toLocaleString(locales[language]);
+  return num.toLocaleString(locales[language] ?? 'id-ID');
 }
 
 // Utility to format currency based on language
 export function formatCurrency(amount: number, currency: string, language: Language): string {
   const locales: Record<Language, string> = {
     en: 'en-US', id: 'id-ID', ru: 'ru-RU',
-    es: 'es-ES', ms: 'ms-MY', hi: 'hi-IN',
+    es: 'es-CO', ms: 'ms-MY', hi: 'hi-IN',
     th: 'th-TH', tr: 'tr-TR',
   };
-  return new Intl.NumberFormat(locales[language], {
+  return new Intl.NumberFormat(locales[language] ?? 'id-ID', {
     style: 'currency', currency,
     minimumFractionDigits: 0, maximumFractionDigits: 0,
   }).format(amount / 100);
@@ -262,10 +274,10 @@ export function formatCurrency(amount: number, currency: string, language: Langu
 export function formatDate(date: Date | number, language: Language, options?: Intl.DateTimeFormatOptions): string {
   const locales: Record<Language, string> = {
     en: 'en-US', id: 'id-ID', ru: 'ru-RU',
-    es: 'es-ES', ms: 'ms-MY', hi: 'hi-IN',
+    es: 'es-CO', ms: 'ms-MY', hi: 'hi-IN',
     th: 'th-TH', tr: 'tr-TR',
   };
-  return new Intl.DateTimeFormat(locales[language], options ?? {
+  return new Intl.DateTimeFormat(locales[language] ?? 'id-ID', options ?? {
     day: '2-digit', month: 'short', year: 'numeric',
   }).format(date);
 }
@@ -274,10 +286,38 @@ export function formatDate(date: Date | number, language: Language, options?: In
 export function formatTime(date: Date | number, language: Language, options?: Intl.DateTimeFormatOptions): string {
   const locales: Record<Language, string> = {
     en: 'en-US', id: 'id-ID', ru: 'ru-RU',
-    es: 'es-ES', ms: 'ms-MY', hi: 'hi-IN',
+    es: 'es-CO', ms: 'ms-MY', hi: 'hi-IN',
     th: 'th-TH', tr: 'tr-TR',
   };
-  return new Intl.DateTimeFormat(locales[language], options ?? {
+  return new Intl.DateTimeFormat(locales[language] ?? 'id-ID', options ?? {
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   }).format(date);
+}
+
+/**
+ * Set bahasa app berdasarkan kode negara akun (dari profile.country).
+ * Hanya set jika user belum pernah pilih bahasa manual sebelumnya.
+ * Simpan ke localStorage agar LanguageProvider bisa baca saat load.
+ *
+ * @param countryIso  Kode negara ISO-2, e.g. "CO", "ID"
+ * @param setLangFn   Fungsi setLanguage dari useLanguage()
+ */
+export function applyLanguageFromCountry(
+  countryIso: string,
+  setLangFn: (lang: Language, region?: string) => void,
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    // Simpan country untuk dipakai LanguageProvider saat reload
+    localStorage.setItem('stc_account_country', countryIso.toUpperCase());
+
+    // Hanya auto-switch jika user belum pernah pilih manual
+    const manualPick = localStorage.getItem('stc_language');
+    if (manualPick) return;
+
+    const lang = countryToAppLang(countryIso);
+    setLangFn(lang, countryIso.toUpperCase());
+  } catch {
+    // ignore localStorage errors
+  }
 }

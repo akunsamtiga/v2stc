@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { api } from '@/lib/api';
 import { storage, isSessionValid } from '@/lib/storage';
 import { isWhitelisted, updateLastLogin, getRegistrationConfig } from '@/lib/supabaseRepository';
-import { LanguageProvider, useLanguage, AVAILABLE_LANGUAGES, Language, isWindows } from '@/lib';
+import { LanguageProvider, useLanguage, AVAILABLE_LANGUAGES, COUNTRY_ENTRIES, Language, isWindows } from '@/lib';
 
 type SplashPhase = 'hidden' | 'welcome' | 'verified' | 'out';
 
@@ -706,17 +706,68 @@ function LoginPageContent() {
 
   const runSplash = async (res: { accessToken: string; userId: string; email: string; deviceId: string }) => {
     const { saveUserSession } = await import('@/lib/storage');
+
+    // ── Auto-detect currency & language dari akun Stockity ───────────────────
+    // Jalankan fetchUserProfile + fetchPlatformCurrencies secara paralel.
+    // Keduanya bisa gagal (network error / token belum siap) → gunakan fallback.
+    let detectedCurrency    = 'IDR';
+    let detectedCurrencyIso = 'Rp';
+    let detectedCountry     = 'ID';   // ISO2 negara akun, bukan geo IP
+
+    try {
+      const { fetchUserProfile, fetchPlatformCurrencies } = await import('@/lib/userProfileApi');
+      const [profileResult, currencyResult] = await Promise.allSettled([
+        fetchUserProfile(res.accessToken, res.deviceId),
+        fetchPlatformCurrencies(res.accessToken, res.deviceId),
+      ]);
+
+      // Ambil country dari profile (registration_country_iso lebih reliable dari geo IP)
+      if (profileResult.status === 'fulfilled') {
+        const p = profileResult.value;
+        // fetchUserProfile memetakan snake_case → camelCase
+        // field "country" di response Stockity → "country" di UserProfile
+        const countryRaw = (p as any).country ?? (p as any).registrationCountryIso ?? 'ID';
+        detectedCountry  = (countryRaw as string).toUpperCase();
+      }
+
+      // Ambil currency (ISO code + unit/simbol) dari /platform/private/v2/currencies
+      if (currencyResult.status === 'fulfilled') {
+        detectedCurrency    = currencyResult.value.currencyIso;  // e.g. "COP"
+        detectedCurrencyIso = currencyResult.value.currencyUnit; // e.g. "Col$"
+      }
+    } catch (err) {
+      console.warn('[runSplash] Gagal deteksi currency/language, pakai fallback IDR:', err);
+    }
+
+    // ── Map country ISO → language code via COUNTRY_ENTRIES ──────────────────
+    // COUNTRY_ENTRIES: [{ code: 'es', region: 'CO' }, { code: 'id', region: 'ID' }, ...]
+    const validCodes   = AVAILABLE_LANGUAGES.map(l => l.code);
+    const countryEntry = COUNTRY_ENTRIES.find(
+      e => e.region.toUpperCase() === detectedCountry,
+    );
+    const detectedLang = (
+      countryEntry && validCodes.includes(countryEntry.code as Language)
+        ? countryEntry.code
+        : 'en'                  // fallback ke English jika negara tidak dikenali
+    ) as Language;
+
+    // ── Simpan preferensi bahasa ke localStorage agar dashboard ikut ─────────
+    // setLanguage juga memanggil localStorage.setItem → dashboard load dengan bahasa ini
+    setLanguage(detectedLang, detectedCountry);
+
+    // ── Simpan sesi (dengan currency yang benar) ──────────────────────────────
     await saveUserSession({
-      authtoken: res.accessToken,
-      userId: res.userId,
-      deviceId: res.deviceId,
-      email: res.email,
+      authtoken:    res.accessToken,
+      userId:       res.userId,
+      deviceId:     res.deviceId,
+      email:        res.email,
       userTimezone: 'Asia/Bangkok',
-      userAgent: typeof window !== 'undefined' ? navigator.userAgent : '',
-      deviceType: 'web',
-      currency: 'IDR',
-      currencyIso: 'IDR',
+      userAgent:    typeof window !== 'undefined' ? navigator.userAgent : '',
+      deviceType:   'web',
+      currency:     detectedCurrency,    // e.g. "COP" / "IDR"
+      currencyIso:  detectedCurrencyIso, // e.g. "Col$" / "Rp"  ← SIMBOL, bukan ISO code
     });
+
     setSplash('welcome');
     setTimeout(() => setSplash('verified'), 3000);
     setTimeout(() => {

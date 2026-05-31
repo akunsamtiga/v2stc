@@ -46,12 +46,13 @@ export interface TradingSettings {
 }
 
 // ── Default values — identik dengan useState defaults di page.tsx ─────────────
+// amount: 0 → dashboard akan set ke minAmount dari API setelah currencyConfig di-load
 const DEFAULTS: TradingSettings = {
   tradingMode:          'schedule',
   selectedRic:          '',
   isDemo:               true,
   duration:             60,
-  amount:               14_000,
+  amount:               0,
   martingale:           { enabled: false, maxStep: 3, multiplier: 2.5, alwaysSignal: false },
   ftTf:                 '1m',
   stopLoss:             0,
