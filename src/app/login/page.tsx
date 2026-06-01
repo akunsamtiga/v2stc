@@ -757,15 +757,32 @@ function LoginPageContent() {
       const { countryToStockityLocale } = await import('@/lib/localeUtils');
       const stockityLocale = countryToStockityLocale(detectedCountry);
       const config = await fetchPlatformCurrencies(res.accessToken, res.deviceId, stockityLocale, browserTz);
-      detectedCurrency    = config.currencyIso;
-      detectedCurrencyIso = config.currencyUnit;
+      detectedCurrency    = config.currencyIso;   // e.g. "COP"
+      detectedCurrencyIso = config.currencyUnit;  // e.g. "Col$"
     } catch {
-      // Fallback: baca ISO currency dari balance (backend proxy, bebas CORS)
+      // ✅ FIX CURRENCY Bug #2: Fallback — baca ISO currency dari balance (backend proxy, bebas CORS)
+      // Sebelumnya: hanya baca bal.currency (ISO) tapi detectedCurrencyIso tetap 'Rp'.
+      // Sekarang: derive currencyUnit dari ISO code via map lokal agar simbol juga benar.
       try {
         const { api } = await import('@/lib/api');
         const bal = await api.balance();
-        if (bal.currency) detectedCurrency = bal.currency;
-      } catch { /* tetap IDR */ }
+        if (bal.currency && bal.currency !== 'IDR') {
+          detectedCurrency = bal.currency;
+          // ✅ FIX: Map ISO → simbol secara lokal (tidak perlu request tambahan)
+          const ISO_TO_UNIT: Record<string, string> = {
+            IDR: 'Rp', USD: '$', EUR: '€', GBP: '£', BRL: 'R$',
+            COP: 'Col$', MXN: 'MX$', ARS: 'AR$', PEN: 'S/', CLP: 'CL$',
+            NGN: '₦', KES: 'KSh', GHS: 'GH₵', ZAR: 'R',
+            INR: '₹', PKR: '₨', BDT: '৳', LKR: 'Rs',
+            PHP: '₱', VND: '₫', THB: '฿', MYR: 'RM', SGD: 'S$',
+            TRY: '₺', UAH: '₴', KZT: '₸', UZS: "so'm",
+            RUB: '₽', AMD: '֏', AZN: '₼', GEL: '₾',
+            EGP: 'E£', MAD: 'MAD', TND: 'DT', DZD: 'DA',
+            SAR: '﷼', AED: 'AED', KWD: 'KD', QAR: 'QR', OMR: 'OMR',
+          };
+          detectedCurrencyIso = ISO_TO_UNIT[detectedCurrency] ?? detectedCurrency;
+        }
+      } catch { /* tetap IDR / Rp */ }
     }
 
     // ── Step 5: Map country ISO → language ───────────────────────────────────

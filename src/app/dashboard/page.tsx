@@ -519,7 +519,7 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
               fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col,
               fontSize:fontSize,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
             }}>
-              {isPos?'+':'-'}Rp {displayValue}
+              {isPos?'+':'-'}{CURR_UNIT} {displayValue}
             </p>
           )}
         </div>
@@ -649,7 +649,7 @@ const TodayProfitCard: React.FC<{
           // opacity TIDAK diturunkan saat isRefreshing — itu yg bikin fade-flicker tiap poll
           textShadow: isMobile ? 'none' : `0 0 18px ${col}90, 0 0 6px ${col}55`,
         }}>
-          {isPos ? '+' : '−'}Rp {displayValue}
+          {isPos ? '+' : '−'}{CURR_UNIT} {displayValue}
         </p>
       )}
     </Card>
@@ -3031,7 +3031,7 @@ const SettingsCard: React.FC<{
                             const isAct=amount===a;
                             return (
                               <button key={a} type="button" onClick={()=>{onAmountChange(a);setAmtDrop(false);}} style={{ width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',fontSize:13,background:isAct?`${C.cyan}12`:'transparent',borderBottom:idx<QUICK_AMOUNTS_DYN.length-1?`1px solid ${C.bdr}`:'none',borderLeft:isAct?`2px solid ${C.cyan}`:'2px solid transparent',borderTop:'none',borderRight:'none',color:isAct?C.cyan:C.sub,fontWeight:isAct?700:400,cursor:'pointer' }}>
-                                <span>{a>=1000000?`Rp ${a/1000000}M`:`Rp ${(a/1000).toFixed(a%1000===0?0:1)}K`}</span>
+                                <span>{a>=1000000?`${CURR_UNIT} ${a/1000000}M`:`${CURR_UNIT} ${(a/1000).toFixed(a%1000===0?0:1)}K`}</span>
                                 {isAct&&<span style={{ color:C.cyan }}>✓</span>}
                               </button>
                             );
@@ -3779,20 +3779,40 @@ export default function DashboardPage() {
             if (_s.amount === 0) _upd('amount', config.minAmount);
           }
         } catch (fetchErr) {
-          // PERBAIKAN Bug #3: fetchPlatformCurrencies gagal (CORS di browser / token salah)
+          // ✅ FIX CURRENCY Bug #3: fetchPlatformCurrencies gagal (CORS di browser / token salah)
           // Fallback ke currency yang sudah dideteksi saat login dan disimpan di session
           console.warn('[Dashboard] fetchPlatformCurrencies gagal, pakai session fallback:', fetchErr);
           if (!cancelled) {
             const sessionCurrencyIso  = await storage.get(SESSION_KEYS.CURRENCY);     // "COP"
             const sessionCurrencyUnit = await storage.get(SESSION_KEYS.CURRENCY_ISO); // "Col$"
-            if (sessionCurrencyIso && sessionCurrencyUnit && sessionCurrencyIso !== 'IDR') {
-              // Pakai ISO + unit dari session, minAmount/quickAmounts pakai default per currency
+
+            // ✅ FIX: Kondisi sebelumnya: `sessionCurrencyIso !== 'IDR'`
+            //    Bug: jika ISO benar (e.g. "COP") tapi unit masih "Rp" karena Bug #2,
+            //    currency config tetap salah. Sekarang: selalu apply jika ada ISO apapun,
+            //    dan derive unit dari ISO map jika unit masih default IDR.
+            if (sessionCurrencyIso) {
+              const ISO_TO_UNIT: Record<string, string> = {
+                IDR: 'Rp', USD: '$', EUR: '€', GBP: '£', BRL: 'R$',
+                COP: 'Col$', MXN: 'MX$', ARS: 'AR$', PEN: 'S/', CLP: 'CL$',
+                NGN: '₦', KES: 'KSh', GHS: 'GH₵', ZAR: 'R',
+                INR: '₹', PKR: '₨', BDT: '৳', LKR: 'Rs',
+                PHP: '₱', VND: '₫', THB: '฿', MYR: 'RM', SGD: 'S$',
+                TRY: '₺', UAH: '₴', KZT: '₸', UZS: "so'm",
+                RUB: '₽', AMD: '֏', AZN: '₼', GEL: '₾',
+                EGP: 'E£', MAD: 'MAD', TND: 'DT', DZD: 'DA',
+                SAR: '﷼', AED: 'AED', KWD: 'KD', QAR: 'QR', OMR: 'OMR',
+              };
+              // Jika unit dari storage masih 'Rp' tapi ISO bukan IDR → derive dari map
+              const resolvedUnit =
+                sessionCurrencyUnit && sessionCurrencyUnit !== 'Rp'
+                  ? sessionCurrencyUnit
+                  : (ISO_TO_UNIT[sessionCurrencyIso] ?? sessionCurrencyIso);
+
               setCurrencyConfig({
                 ...DEFAULT_CURRENCY_CONFIG,
                 currencyIso:  sessionCurrencyIso,
-                currencyUnit: sessionCurrencyUnit,
+                currencyUnit: resolvedUnit,
               });
-              // amount tetap 0 → akan di-set ke DEFAULT_CURRENCY_CONFIG.minAmount saat bot start
             }
           }
         }
@@ -3836,6 +3856,10 @@ export default function DashboardPage() {
   const tradingMode          = _s.tradingMode;
   const selectedRic          = _s.selectedRic;
   const isDemo               = _s.isDemo;
+  // ✅ FIX stale closure: useEffect dengan [] tidak bisa baca isDemo terbaru.
+  // isDemoRef selalu up-to-date sehingga aman dipakai di polling intervals.
+  const isDemoRef = useRef(isDemo);
+  useEffect(() => { isDemoRef.current = isDemo; }, [isDemo]);
   const duration             = _s.duration;
   const amount               = _s.amount;
   const martingale           = _s.martingale;
@@ -3899,7 +3923,12 @@ export default function DashboardPage() {
   // ✅ FIX delay: Tidak pakai profitRefreshing guard agar bisa jalan paralel dengan manual refresh
   const silentRefreshProfit = useCallback(async () => {
     try {
-      const result = await api.todayProfit(undefined, isDemo ? 'demo' : 'real');
+      // ✅ FIX: gunakan realtimeProfit bukan todayProfit.
+      //    todayProfit hanya berisi data yang sudah committed ke DB — selama sesi aktif,
+      //    trade yang baru selesai BELUM ada di sini, sehingga nilainya 0 / stale.
+      //    realtimeProfit menyertakan in-session PnL, konsisten dengan 10s polling.
+      //    isDemoRef.current agar tidak perlu isDemo di deps (hindari stale closure).
+      const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
       if (isMounted.current) {
         setTodayProfitData(result);
         setProfitLastUpdated(Date.now());
@@ -3908,7 +3937,7 @@ export default function DashboardPage() {
       console.warn('[Profit] silent refresh error:', e);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemo]);
+  }, []);
 
   // Helper: debounce agar tidak spam jika beberapa mode selesai bersamaan
   const triggerProfitRefresh = useCallback((delaySec: number = 2) => {
@@ -4122,7 +4151,9 @@ export default function DashboardPage() {
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
-        api.todayProfit(undefined, isDemo ? 'demo' : 'real'),
+        // ✅ FIX: gunakan isDemoRef.current bukan isDemo (stale closure — isDemo belum
+        // hydrate dari storage saat loadAll pertama dipanggil, nilainya masih default=true)
+        api.todayProfit(undefined, isDemoRef.current ? 'demo' : 'real'),
       ]);
       if(!isMounted.current)return;
       if(assRes.status==='fulfilled')setAssets(assRes.value);
@@ -4176,7 +4207,19 @@ export default function DashboardPage() {
     if (!settingsLoaded) return;
     if (prevIsDemoRef.current === null) {
       prevIsDemoRef.current = isDemo;
-      return; // skip mount — loadAll() sudah menangani initial fetch
+      // ✅ FIX: Tidak skip — loadAll() dijalankan SEBELUM settings hydrate dari storage,
+      // sehingga menggunakan isDemo default (true) yang mungkin salah.
+      // Re-fetch profit dengan isDemo yang benar segera setelah settings berhasil di-load.
+      // ✅ FIX: realtimeProfit agar mencakup PnL sesi aktif (bukan hanya data DB)
+      api.realtimeProfit(isDemo ? 'demo' : 'real')
+        .then(data => {
+          if (isMounted.current) {
+            setTodayProfitData(data);
+            setProfitLastUpdated(Date.now());
+          }
+        })
+        .catch(e => console.warn('[Profit] settings hydration re-fetch error:', e));
+      return;
     }
     if (prevIsDemoRef.current === isDemo) return;
     prevIsDemoRef.current = isDemo;
@@ -4185,7 +4228,8 @@ export default function DashboardPage() {
     // setTodayProfitData(null) menyebabkan flash ke 0 selama jeda fetch (~200-500ms)
 
     // Fetch ulang dengan accountType yang sesuai
-    api.todayProfit(undefined, isDemo ? 'demo' : 'real')
+    // ✅ FIX: realtimeProfit agar PnL sesi aktif ikut tercermin
+    api.realtimeProfit(isDemo ? 'demo' : 'real')
       .then(data => {
         if (isMounted.current) {
           setTodayProfitData(data);
@@ -4211,7 +4255,8 @@ export default function DashboardPage() {
     if (profitRefreshing) return;
     setProfitRefreshing(true);
     try {
-      const result = await api.todayProfit(undefined, isDemo ? 'demo' : 'real');
+      // ✅ FIX: realtimeProfit menyertakan sesi aktif — konsisten dengan polling
+      const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
       if (isMounted.current) {
         setTodayProfitData(result);
         setProfitLastUpdated(Date.now());
@@ -4221,7 +4266,7 @@ export default function DashboardPage() {
     } finally {
       if (isMounted.current) setProfitRefreshing(false);
     }
-  }, [profitRefreshing, isDemo]);
+  }, [profitRefreshing]); // eslint-disable-line
 
   // ── Fast poll 10 detik: trading status + realtime profit (cepat, pakai Stockity cache) ──
   useEffect(()=>{
@@ -4235,8 +4280,10 @@ export default function DashboardPage() {
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
-        // ✅ realtimeProfit sekarang cepat (~200ms) karena backend pakai cached Stockity data
-        api.realtimeProfit(isDemo ? 'demo' : 'real'),
+        // ✅ FIX: gunakan isDemoRef.current — effect ini punya dep [] sehingga
+        // isDemo di closure selalu nilai awal (default true), bukan nilai terkini.
+        // isDemoRef.current selalu up-to-date karena diupdate oleh useEffect([isDemo]).
+        api.realtimeProfit(isDemoRef.current ? 'demo' : 'real'),
       ]);
       if(!isMounted.current)return;
       // ✅ FIX SCROLL: startTransition menandai semua update ini sebagai "tidak mendesak".
@@ -4270,7 +4317,12 @@ export default function DashboardPage() {
     const iv = setInterval(async () => {
       if (!isMounted.current) return;
       try {
-        const result = await api.todayProfit(undefined, isDemo ? 'demo' : 'real');
+        // ✅ FIX: gunakan realtimeProfit (bukan todayProfit) agar data sesi aktif
+        //    ikut tercermin — sama seperti 10s polling. todayProfit hanya berisi
+        //    data yang sudah committed ke DB, sehingga selama sesi aktif nilainya
+        //    bisa 0 / stale dan menyebabkan flash ke 0 setiap 30 detik.
+        //    isDemoRef.current agar interval tidak perlu di-recreate saat isDemo berubah.
+        const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
         if (isMounted.current) {
           setTodayProfitData(result);
           setProfitLastUpdated(Date.now());
@@ -4280,7 +4332,7 @@ export default function DashboardPage() {
       }
     }, 30_000);
     return () => clearInterval(iv);
-  },[isDemo]); // eslint-disable-line
+  },[]); // eslint-disable-line
 
   const botState = scheduleStatus?.botState??'IDLE';
   const isSchedRunning = botState==='RUNNING', isSchedPaused = botState==='PAUSED';
