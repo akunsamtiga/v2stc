@@ -3742,12 +3742,15 @@ export default function DashboardPage() {
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
 
-  // ── Load currency config ─────────────────────────────────────────────────
+  // ── Load currency config + auto-detect language dari akun ────────────────
   // Urutan prioritas:
   //   1. fetchPlatformCurrencies (Stockity langsung) — full config, works on native
   //   2. Fallback ke session storage (stc_currency + stc_currency_iso) — dari login flow
   //      Ini penting untuk browser/web di mana direct Stockity call kena CORS
-  // Bahasa UI: dibaca dari stc_language (sudah di-set benar oleh runSplash di login).
+  // Bahasa UI:
+  //   1. Coba dari stc_account_country (di-set saat login oleh runSplash)
+  //   2. Fallback: fetch profile API → derive country dari profile.country
+  //   3. Kalau user sudah pilih manual (stc_language_manual=true), tidak di-override
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -3757,15 +3760,30 @@ export default function DashboardPage() {
         const authToken = await storage.get(SESSION_KEYS.AUTHTOKEN);
         const deviceId  = await storage.get(SESSION_KEYS.DEVICE_ID);
         const timezone  = await storage.get(SESSION_KEYS.USER_TIMEZONE) ?? undefined;
-        const country   = await storage.get('stc_account_country');
+        let   country   = await storage.get('stc_account_country');
 
         if (!authToken || !deviceId) return;
         if (cancelled) return;
 
+        // ── Auto-detect bahasa dari country akun ────────────────────────────
+        // FIX: Kalau stc_account_country tidak ada (e.g. session lama, refresh page,
+        // atau direct access), fetch profile API untuk dapat country akun.
+        if (!country) {
+          try {
+            const profile = await api.getProfile();
+            country = (profile.country ?? profile.registrationCountryIso ?? '').toUpperCase();
+            // Simpan ke localStorage agar tidak perlu fetch lagi di visit berikutnya
+            if (country) {
+              await storage.set('stc_account_country', country);
+            }
+          } catch (profileErr) {
+            console.warn('[Dashboard] Failed to fetch profile for language detection:', profileErr);
+          }
+        }
+
         // Terapkan bahasa UI dari country akun.
-        // CATATAN: applyLanguageFromCountry punya guard 'stc_language' — jika sudah di-set
-        // dari login (runSplash), fungsi ini jadi no-op. Itu OK karena stc_language sudah benar.
-        // Ini hanya safety net untuk kasus edge (misal login dari device lain).
+        // CATATAN: applyLanguageFromCountry punya guard 'stc_language_manual' — jika user
+        // sudah pilih bahasa manual via UI, fungsi ini jadi no-op. Itu OK.
         if (country) {
           applyLanguageFromCountry(country, setLanguageHook);
         }

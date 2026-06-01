@@ -7,6 +7,7 @@ import { resolveAvatarUrl } from '@/lib/userProfileApi';
 import { storage, isSessionValid, sessionLogout, getAuthToken } from '@/lib/storage';
 import { checkIsAdmin, checkIsSuperAdmin } from '@/lib/supabaseRepository';
 import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib';
+import { applyLanguageFromCountry } from '@/lib/LanguageContext';
 import { LanguageSheet } from '@/components/LanguageSelector';
 import { AppUpdateCard } from '@/components/AppUpdateCard';
 
@@ -404,7 +405,7 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
 // ─────────────────────────────────────────────
 function ProfilePageContent() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const [isLoading, setIsLoading]             = useState(true);
   const [profile, setProfile]                 = useState<UserProfileData | null>(null);
   const [balance, setBalance]                 = useState<ProfileBalance | null>(null);
@@ -436,6 +437,23 @@ function ProfilePageContent() {
     };
     init();
   }, []); // eslint-disable-line
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Auto-detect & apply bahasa dari country akun yang sedang login
+  // FIX: Profile page tidak pernah apply language dari akun → selalu Indonesia
+  // ═══════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!profile) return;
+    const country = profile.country ?? profile.registrationCountryIso;
+    if (!country) return;
+
+    // Simpan ke localStorage agar sync dengan dashboard & LanguageContext
+    storage.set('stc_account_country', country.toUpperCase());
+
+    // Apply language dari country (hanya kalau user belum pilih manual)
+    applyLanguageFromCountry(country.toUpperCase(), setLanguage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
 
   const loadProfile = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true); else setRefreshing(true);

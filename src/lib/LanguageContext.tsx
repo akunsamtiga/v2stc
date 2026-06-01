@@ -172,6 +172,83 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
     loadLanguage();
   }, [isClient]);
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SYNC: Listen to localStorage changes from other tabs / login flow
+  // ═══════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!isClient) return;
+
+    const validCodes = AVAILABLE_LANGUAGES.map(l => l.code);
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LANGUAGE_STORAGE_KEY && e.newValue) {
+        if (validCodes.includes(e.newValue as Language) && e.newValue !== language) {
+          setLanguageState(e.newValue as Language);
+        }
+      }
+      if (e.key === REGION_STORAGE_KEY && e.newValue !== null) {
+        setSelectedRegion(e.newValue ?? '');
+      }
+      if (e.key === 'stc_account_country' && e.newValue) {
+        // Auto-detect language dari country yang baru di-set (kalau belum manual)
+        const isManuallySet = localStorage.getItem(MANUAL_LANGUAGE_KEY) === 'true';
+        if (!isManuallySet) {
+          const detectedLang = countryToAppLang(e.newValue);
+          if (validCodes.includes(detectedLang) && detectedLang !== language) {
+            setLanguageState(detectedLang);
+            setSelectedRegion(e.newValue);
+            try {
+              localStorage.setItem(LANGUAGE_STORAGE_KEY, detectedLang);
+              localStorage.setItem(REGION_STORAGE_KEY, e.newValue);
+              document.documentElement.lang = detectedLang;
+            } catch { /* ignore */ }
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [isClient, language]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SYNC: Re-read localStorage on window focus (handles login in another tab)
+  // ═══════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!isClient) return;
+
+    const validCodes = AVAILABLE_LANGUAGES.map(l => l.code);
+
+    const handleFocus = () => {
+      try {
+        const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+        const savedRegion   = localStorage.getItem(REGION_STORAGE_KEY) ?? '';
+        if (savedLanguage && validCodes.includes(savedLanguage as Language)) {
+          if (savedLanguage !== language) {
+            setLanguageState(savedLanguage as Language);
+            setSelectedRegion(savedRegion);
+          }
+        } else {
+          // Tidak ada saved language → coba dari account country
+          const accountCountry = localStorage.getItem('stc_account_country');
+          if (accountCountry) {
+            const isManuallySet = localStorage.getItem(MANUAL_LANGUAGE_KEY) === 'true';
+            if (!isManuallySet) {
+              const detectedLang = countryToAppLang(accountCountry);
+              if (detectedLang !== language) {
+                setLanguageState(detectedLang);
+                setSelectedRegion(accountCountry);
+              }
+            }
+          }
+        }
+      } catch { /* ignore */ }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isClient, language]);
+
   // Set language (+ optional region) and save to storage
   // isManual=true → dipanggil dari UI (user pilih sendiri) → set stc_language_manual flag
   // isManual=false (default) → auto-detect dari login, TIDAK set manual flag
