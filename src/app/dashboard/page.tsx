@@ -98,7 +98,7 @@ const FT_TF: {value:FastTradeTimeframe; label:string}[] = [
 // ── Module-level currency config — diupdate oleh DashboardPage setiap render ──
 // Pola yang sama dengan C (colors) dan T (t function) di bawah.
 // Default IDR agar sub-komponen tidak error sebelum API selesai load.
-let FMT: (n: number) => string = (n) => FMT(n);
+let FMT: (n: number) => string = (n) => Math.round(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
 let CURR_UNIT  = 'Rp';
 let MIN_AMOUNT = 14_000;
 let QUICK_AMOUNTS_DYN: number[] = [14_000, 70_000, 140_000, 280_000, 700_000, 1_400_000, 2_800_000];
@@ -551,12 +551,24 @@ const TodayProfitCard: React.FC<{
   t: (k: string) => string;
   isMobile?: boolean;
 }> = ({ data, localProfit, isLoading, isRefreshing, lastUpdatedAt, flash, onRefresh, t, isMobile }) => {
-  // ✅ FIX splash: Simpan nilai terakhir yang valid — jika data null (sedang loading/switching mode),
-  //    tampilkan angka terakhir yang diketahui, bukan localProfit yang bisa 0.
-  //    Ini mencegah flash ke 0 selama jeda fetch (~200-500ms).
+  // ✅ FIX FLICKER: Simpan nilai terakhir yang "bermakna" — hanya update jika data punya trades
+  //    ATAU data memang benar-benar 0 (totalTrades > 0 tapi PnL = 0, artinya break-even).
+  //    Jika data return { totalTrades: 0, totalPnL: 0 } sementara ref sudah non-zero,
+  //    itu adalah race condition backend (sedang aggregating) → JANGAN update ref.
   const lastKnownProfitRef = useRef<number>(localProfit);
-  if (data !== null) lastKnownProfitRef.current = data.totalPnL;
-  const profit  = data ? data.totalPnL : lastKnownProfitRef.current;
+  if (data !== null) {
+    const isDefinitiveZero = data.totalTrades > 0; // genuinely break-even
+    const isNonZero        = data.totalPnL !== 0;
+    const isFirstData      = lastKnownProfitRef.current === 0;
+    if (isNonZero || isDefinitiveZero || isFirstData) {
+      lastKnownProfitRef.current = data.totalPnL;
+    }
+    // Jika data.totalTrades === 0 && data.totalPnL === 0 && ref sudah non-zero:
+    // SKIP — ini transient 0 dari backend race condition, jangan ubah ref.
+  }
+  // Gunakan ref sebagai sumber utama display — bukan data.totalPnL langsung.
+  // Ini memastikan transient 0 dari backend tidak pernah terlihat user.
+  const profit  = lastKnownProfitRef.current;
   const isPos   = profit >= 0;
   const col     = isPos ? C.cyan : C.coral;
   const prevR   = useRef(profit);
@@ -2964,7 +2976,7 @@ const SettingsCard: React.FC<{
                 </div>
                 {/* Mata Uang */}
                 <div style={{ flex:1,height:44,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'0 10px',background:C.card2,border:`0.8px solid ${C.bdr}`,minWidth:0 }}>
-                  <span style={{ fontSize:14,lineHeight:1,flexShrink:0 }}>🇮🇩</span>
+                  <span style={{ fontSize:11,fontWeight:600,color:C.sub,flexShrink:0 }}>{CURR_UNIT}</span>
                   <span style={{ fontSize:8,fontWeight:700,color:C.sub,background:`${C.cyan}10`,borderRadius:4,padding:'1px 5px',border:`1px solid ${C.cyan}25`,flexShrink:0,whiteSpace:'nowrap' }}>AUTO</span>
                 </div>
               </div>
@@ -2980,7 +2992,7 @@ const SettingsCard: React.FC<{
                 </div>
                 <div style={{ display:'flex',gap:8 }}>
                   <div style={{ flex:1,position:'relative' }}>
-                    <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                    <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>{CURR_UNIT}</span>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -3138,7 +3150,7 @@ const SettingsCard: React.FC<{
                 )}
                 <div><FL>{T('dashboard.indicator.amountPerOrder')}</FL>
                   <div style={{ position:'relative' }}>
-                    <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                    <span style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>{CURR_UNIT}</span>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -3385,7 +3397,7 @@ const SettingsCard: React.FC<{
                       </button>
                     </div>
                     <div style={{ position:'relative' }}>
-                      <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                      <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>{CURR_UNIT}</span>
                       <input
                         className="ds-input"
                         value={slInputValue}
@@ -3400,7 +3412,7 @@ const SettingsCard: React.FC<{
                           const v=parseFlexibleInput(slInputValue);
                           if(v&&v>0){ onSlChange(v); }
                         }}
-                        placeholder="Contoh: 100K, 1M, 500000"
+                        placeholder="100K, 1M, 500000"
                         style={{ paddingLeft:30,borderColor:`${C.coral}aa` }}
                       />
                     </div>
@@ -3429,7 +3441,7 @@ const SettingsCard: React.FC<{
                       </button>
                     </div>
                     <div style={{ position:'relative' }}>
-                      <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>Rp</span>
+                      <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:11,color:C.muted,zIndex:1,pointerEvents:'none' }}>{CURR_UNIT}</span>
                       <input
                         className="ds-input"
                         value={spInputValue}
@@ -3444,7 +3456,7 @@ const SettingsCard: React.FC<{
                           const v=parseFlexibleInput(spInputValue);
                           if(v&&v>0){ onSpChange(v); }
                         }}
-                        placeholder="Contoh: 100K, 1M, 500000"
+                        placeholder="100K, 1M, 500000"
                         style={{ paddingLeft:30,borderColor:`${C.cyan}aa` }}
                       />
                     </div>
@@ -3742,15 +3754,13 @@ export default function DashboardPage() {
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
 
-  // ── Load currency config + auto-detect language dari akun ────────────────
+  // ── Load currency config & sync language dari profil akun ───────────────
   // Urutan prioritas:
   //   1. fetchPlatformCurrencies (Stockity langsung) — full config, works on native
   //   2. Fallback ke session storage (stc_currency + stc_currency_iso) — dari login flow
   //      Ini penting untuk browser/web di mana direct Stockity call kena CORS
-  // Bahasa UI:
-  //   1. Coba dari stc_account_country (di-set saat login oleh runSplash)
-  //   2. Fallback: fetch profile API → derive country dari profile.country
-  //   3. Kalau user sudah pilih manual (stc_language_manual=true), tidak di-override
+  //   3. Bahasa UI: dibaca dari stc_language + stc_account_country (di-set oleh runSplash di login).
+  //      Juga di-sync dari profile API response sebagai safety net.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -3760,33 +3770,32 @@ export default function DashboardPage() {
         const authToken = await storage.get(SESSION_KEYS.AUTHTOKEN);
         const deviceId  = await storage.get(SESSION_KEYS.DEVICE_ID);
         const timezone  = await storage.get(SESSION_KEYS.USER_TIMEZONE) ?? undefined;
-        let   country   = await storage.get('stc_account_country');
+        const country   = await storage.get('stc_account_country');
 
         if (!authToken || !deviceId) return;
         if (cancelled) return;
 
-        // ── Auto-detect bahasa dari country akun ────────────────────────────
-        // FIX: Kalau stc_account_country tidak ada (e.g. session lama, refresh page,
-        // atau direct access), fetch profile API untuk dapat country akun.
-        if (!country) {
-          try {
-            const profile = await api.getProfile();
-            country = (profile.country ?? profile.registrationCountryIso ?? '').toUpperCase();
-            // Simpan ke localStorage agar tidak perlu fetch lagi di visit berikutnya
-            if (country) {
-              await storage.set('stc_account_country', country);
-            }
-          } catch (profileErr) {
-            console.warn('[Dashboard] Failed to fetch profile for language detection:', profileErr);
-          }
-        }
-
-        // Terapkan bahasa UI dari country akun.
-        // CATATAN: applyLanguageFromCountry punya guard 'stc_language_manual' — jika user
-        // sudah pilih bahasa manual via UI, fungsi ini jadi no-op. Itu OK.
+        // Terapkan bahasa UI dari country akun (session storage).
+        // Safety net: jika runSplash di login belum sempat set, ini menangkapnya.
         if (country) {
           applyLanguageFromCountry(country, setLanguageHook);
         }
+
+        // ── SYNC LANGUAGE DARI PROFILE API ──────────────────────────────────
+        // Fallback jika session storage tidak punya country data.
+        // Profile API mengembalikan country/registrasi country yang akurat.
+        try {
+          const prof = await api.getProfile();
+          if (!cancelled && prof) {
+            const profileCountry = prof.country || prof.registrationCountryIso;
+            if (profileCountry && !country) {
+              applyLanguageFromCountry(profileCountry, setLanguageHook);
+            }
+          }
+        } catch {
+          // Profile fetch gagal (misal 401) — biarkan session-based language yang berlaku
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         // Coba fetch full config dari Stockity (works on native Capacitor)
         try {
@@ -3948,7 +3957,12 @@ export default function DashboardPage() {
       //    isDemoRef.current agar tidak perlu isDemo di deps (hindari stale closure).
       const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
       if (isMounted.current) {
-        setTodayProfitData(result);
+        // ✅ FIX FLICKER: stale-protection — jangan overwrite data valid dengan 0 transient
+        setTodayProfitData(prev =>
+          prev && prev.totalTrades > 0 && result.totalTrades === 0 && result.totalPnL === 0
+            ? prev
+            : result
+        );
         setProfitLastUpdated(Date.now());
       }
     } catch (e) {
@@ -4169,9 +4183,11 @@ export default function DashboardPage() {
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
-        // ✅ FIX: gunakan isDemoRef.current bukan isDemo (stale closure — isDemo belum
-        // hydrate dari storage saat loadAll pertama dipanggil, nilainya masih default=true)
-        api.todayProfit(undefined, isDemoRef.current ? 'demo' : 'real'),
+        // ✅ FIX FLICKER: gunakan realtimeProfit (bukan todayProfit) agar sesi aktif
+        // langsung tercermin sejak load pertama. todayProfit hanya berisi data committed
+        // ke DB — selama sesi berjalan nilainya 0/stale → menyebabkan flash ke 0.
+        // isDemoRef.current agar tidak stale closure saat loadAll pertama dipanggil.
+        api.realtimeProfit(isDemoRef.current ? 'demo' : 'real'),
       ]);
       if(!isMounted.current)return;
       if(assRes.status==='fulfilled')setAssets(assRes.value);
@@ -4185,7 +4201,18 @@ export default function DashboardPage() {
       if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
       if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
       if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
-      if(tpRes.status==='fulfilled'){setTodayProfitData(tpRes.value);setProfitLastUpdated(Date.now());}
+      if(tpRes.status==='fulfilled'){
+        const newTp = tpRes.value;
+        // ✅ FIX FLICKER: stale-protection — jika response baru punya 0 trades tapi
+        // data sebelumnya sudah punya trades, itu race condition backend (belum aggregated),
+        // bukan kondisi nyata "tidak ada trade hari ini". Pertahankan data lama.
+        setTodayProfitData(prev =>
+          prev && prev.totalTrades > 0 && newTp.totalTrades === 0 && newTp.totalPnL === 0
+            ? prev
+            : newTp
+        );
+        setProfitLastUpdated(Date.now());
+      }
 
       // ✅ FIX: Auto-detect mode aktif hanya saat load pertama (bukan silent)
       if (!silent) {
@@ -4232,7 +4259,10 @@ export default function DashboardPage() {
       api.realtimeProfit(isDemo ? 'demo' : 'real')
         .then(data => {
           if (isMounted.current) {
-            setTodayProfitData(data);
+            setTodayProfitData(prev =>
+              prev && prev.totalTrades > 0 && data.totalTrades === 0 && data.totalPnL === 0
+                ? prev : data
+            );
             setProfitLastUpdated(Date.now());
           }
         })
@@ -4250,6 +4280,7 @@ export default function DashboardPage() {
     api.realtimeProfit(isDemo ? 'demo' : 'real')
       .then(data => {
         if (isMounted.current) {
+          // Saat switch akun (real↔demo), selalu trust data baru (beda akun = reset wajar)
           setTodayProfitData(data);
           setProfitLastUpdated(Date.now());
         }
@@ -4276,6 +4307,7 @@ export default function DashboardPage() {
       // ✅ FIX: realtimeProfit menyertakan sesi aktif — konsisten dengan polling
       const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
       if (isMounted.current) {
+        // Manual refresh: selalu trust hasil (user sengaja minta refresh)
         setTodayProfitData(result);
         setProfitLastUpdated(Date.now());
       }
@@ -4319,7 +4351,14 @@ export default function DashboardPage() {
         if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
         if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
         if(tpRes.status==='fulfilled'){
-          setTodayProfitData(tpRes.value);
+          const newTp = tpRes.value;
+          // ✅ FIX FLICKER: stale-protection — skip update jika backend race condition
+          // return 0 trades padahal sebelumnya sudah ada trades (transient 0).
+          setTodayProfitData(prev =>
+            prev && prev.totalTrades > 0 && newTp.totalTrades === 0 && newTp.totalPnL === 0
+              ? prev
+              : newTp
+          );
           setProfitLastUpdated(Date.now());
         }
       });
@@ -4342,7 +4381,13 @@ export default function DashboardPage() {
         //    isDemoRef.current agar interval tidak perlu di-recreate saat isDemo berubah.
         const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
         if (isMounted.current) {
-          setTodayProfitData(result);
+          // ✅ FIX FLICKER: stale-protection — skip jika backend return 0 trades
+          // sementara data sebelumnya sudah punya trades (race condition backend).
+          setTodayProfitData(prev =>
+            prev && prev.totalTrades > 0 && result.totalTrades === 0 && result.totalPnL === 0
+              ? prev
+              : result
+          );
           setProfitLastUpdated(Date.now());
         }
       } catch (e) {

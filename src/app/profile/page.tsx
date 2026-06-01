@@ -8,6 +8,7 @@ import { storage, isSessionValid, sessionLogout, getAuthToken } from '@/lib/stor
 import { checkIsAdmin, checkIsSuperAdmin } from '@/lib/supabaseRepository';
 import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib';
 import { applyLanguageFromCountry } from '@/lib/LanguageContext';
+import { SESSION_KEYS } from '@/lib/storage';
 import { LanguageSheet } from '@/components/LanguageSelector';
 import { AppUpdateCard } from '@/components/AppUpdateCard';
 
@@ -419,6 +420,7 @@ function ProfilePageContent() {
   const [isAdminUser, setIsAdminUser]         = useState(false);
   const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
   const [error, setError]                     = useState<string | null>(null);
+  const [profileCurrencyUnit, setProfileCurrencyUnit] = useState<string>('');
   const [refreshing, setRefreshing]           = useState(false);
 
   useEffect(() => {
@@ -438,23 +440,6 @@ function ProfilePageContent() {
     init();
   }, []); // eslint-disable-line
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Auto-detect & apply bahasa dari country akun yang sedang login
-  // FIX: Profile page tidak pernah apply language dari akun → selalu Indonesia
-  // ═══════════════════════════════════════════════════════════════════════════
-  useEffect(() => {
-    if (!profile) return;
-    const country = profile.country ?? profile.registrationCountryIso;
-    if (!country) return;
-
-    // Simpan ke localStorage agar sync dengan dashboard & LanguageContext
-    storage.set('stc_account_country', country.toUpperCase());
-
-    // Apply language dari country (hanya kalau user belum pilih manual)
-    applyLanguageFromCountry(country.toUpperCase(), setLanguage);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile]);
-
   const loadProfile = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true); else setRefreshing(true);
     setError(null);
@@ -463,6 +448,18 @@ function ProfilePageContent() {
       if (!token) { router.push('/login'); return; }
       const [prof, bal] = await Promise.all([api.getProfile(), api.balance().catch(() => null)]);
       setProfile(prof); setBalance(bal);
+      // ── Sync bahasa & currency dari data akun ──────────────────────────────
+      // Pastikan bahasa UI mengikuti country akun (override default/manual jika perlu)
+      const accountCountry = prof.country || prof.registrationCountryIso;
+      if (accountCountry) {
+        applyLanguageFromCountry(accountCountry, setLanguage);
+      }
+      // Sync currency unit dari session storage (dari login flow)
+      try {
+        const sessionCurrencyUnit = await storage.get(SESSION_KEYS.CURRENCY_ISO);
+        if (sessionCurrencyUnit) { setProfileCurrencyUnit(sessionCurrencyUnit); }
+      } catch { /* ignore */ }
+      // ─────────────────────────────────────────────────────────────────────────
       fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/profile/currencies`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()).then(data => {
@@ -532,7 +529,7 @@ function ProfilePageContent() {
     if (n == null) return '0';
     const val = n / 100;
     const localeMap: Record<string, string> = { en: 'en-US', id: 'id-ID', ru: 'ru-RU', es: 'es-ES', ms: 'ms-MY', hi: 'hi-IN', th: 'th-TH', tr: 'tr-TR' };
-    return val.toLocaleString(localeMap[language] ?? 'id-ID', { maximumFractionDigits: 0 });
+    return val.toLocaleString(localeMap[language] ?? 'en-US', { maximumFractionDigits: 0 });
   };
 
   const getInitials = () => {
@@ -549,6 +546,7 @@ function ProfilePageContent() {
   };
 
   const currency = balance?.currency || 'IDR';
+  const currencyUnit = profileCurrencyUnit || (currency === 'IDR' ? 'Rp' : currency);
 
   // ── Sub-components ─────────────────────────────────────
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -638,7 +636,7 @@ function ProfilePageContent() {
     <div style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
       {[
         {
-          label: t('profile.balanceReal'), color: '#30d158', bgColor: 'rgba(48,209,88,0.12)', val: balance?.real_balance, sub: currency,
+          label: t('profile.balanceReal'), color: '#30d158', bgColor: 'rgba(48,209,88,0.12)', val: balance?.real_balance, sub: currencyUnit,
           icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>,
         },
         {
@@ -827,7 +825,7 @@ function ProfilePageContent() {
               />
               <TappableRow
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                iconBg="#10B981" label={t('common.currency')} value={currencyLoading ? '…' : currency}
+                iconBg="#10B981" label={t('common.currency')} value={currencyLoading ? '…' : `${currency} (${currencyUnit})`}
                 onClick={() => currencies.length > 0 && setSheetOpen(true)} chevron={currencies.length > 0} last
               />
             </Card>
