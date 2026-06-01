@@ -707,40 +707,68 @@ function LoginPageContent() {
   const runSplash = async (res: { accessToken: string; userId: string; email: string; deviceId: string }) => {
     const { saveUserSession } = await import('@/lib/storage');
 
-    // ── Auto-detect currency & language dari akun Stockity ───────────────────
-    // Jalankan fetchUserProfile + fetchPlatformCurrencies secara paralel.
-    // Keduanya bisa gagal (network error / token belum siap) → gunakan fallback.
+    // ── Timezone dari browser (bukan hardcode Asia/Bangkok) ──────────────────
+    const browserTz = typeof Intl !== 'undefined'
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : 'Asia/Bangkok';
+
+    // ── Step 1: Simpan sesi awal dulu agar api.* bisa baca token dari storage ─
+    // currency masih default IDR, akan di-update di Step 4 setelah deteksi selesai
+    await saveUserSession({
+      authtoken:    res.accessToken,
+      userId:       res.userId,
+      deviceId:     res.deviceId,
+      email:        res.email,
+      userTimezone: browserTz,
+      userAgent:    typeof window !== 'undefined' ? navigator.userAgent : '',
+      deviceType:   'web',
+      currency:     'IDR',
+      currencyIso:  'Rp',
+    });
+
     let detectedCurrency    = 'IDR';
     let detectedCurrencyIso = 'Rp';
-    let detectedCountry     = 'ID';   // ISO2 negara akun, bukan geo IP
+    let detectedCountry     = 'ID';
 
+    // ── Step 2: Deteksi country via backend proxy (bebas CORS) ───────────────
+    // api.getProfile() → backend /profile → Stockity, token sudah ada di storage (Step 1)
+    // PERBAIKAN: tidak lagi fetchUserProfile langsung ke Stockity (kena CORS di browser)
     try {
-      const { fetchUserProfile, fetchPlatformCurrencies } = await import('@/lib/userProfileApi');
-      const [profileResult, currencyResult] = await Promise.allSettled([
-        fetchUserProfile(res.accessToken, res.deviceId),
-        fetchPlatformCurrencies(res.accessToken, res.deviceId),
-      ]);
-
-      // Ambil country dari profile (registration_country_iso lebih reliable dari geo IP)
-      if (profileResult.status === 'fulfilled') {
-        const p = profileResult.value;
-        // fetchUserProfile memetakan snake_case → camelCase
-        // field "country" di response Stockity → "country" di UserProfile
-        const countryRaw = (p as any).country ?? (p as any).registrationCountryIso ?? 'ID';
-        detectedCountry  = (countryRaw as string).toUpperCase();
-      }
-
-      // Ambil currency (ISO code + unit/simbol) dari /platform/private/v2/currencies
-      if (currencyResult.status === 'fulfilled') {
-        detectedCurrency    = currencyResult.value.currencyIso;  // e.g. "COP"
-        detectedCurrencyIso = currencyResult.value.currencyUnit; // e.g. "Col$"
-      }
+      const { api } = await import('@/lib/api');
+      const profile = await api.getProfile();
+      const countryRaw = profile.country ?? profile.registrationCountryIso ?? 'ID';
+      detectedCountry  = (countryRaw as string).toUpperCase();
     } catch (err) {
-      console.warn('[runSplash] Gagal deteksi currency/language, pakai fallback IDR:', err);
+      console.warn('[runSplash] getProfile gagal, pakai fallback ID:', err);
     }
 
-    // ── Map country ISO → language code via COUNTRY_ENTRIES ──────────────────
-    // COUNTRY_ENTRIES: [{ code: 'es', region: 'CO' }, { code: 'id', region: 'ID' }, ...]
+    // ── Step 3: Simpan stc_account_country ──────────────────────────────────
+    // PERBAIKAN: key ini tidak pernah disimpan sebelumnya → dashboard selalu null
+    // Dashboard (page.tsx) butuh ini untuk locale Stockity & applyLanguageFromCountry
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stc_account_country', detectedCountry);
+    }
+
+    // ── Step 4: Deteksi currency ─────────────────────────────────────────────
+    // Coba fetchPlatformCurrencies (works on native Capacitor, mungkin gagal di browser)
+    // Fallback ke api.balance() untuk dapat ISO code minimal
+    try {
+      const { fetchPlatformCurrencies } = await import('@/lib/userProfileApi');
+      const { countryToStockityLocale } = await import('@/lib/localeUtils');
+      const stockityLocale = countryToStockityLocale(detectedCountry);
+      const config = await fetchPlatformCurrencies(res.accessToken, res.deviceId, stockityLocale, browserTz);
+      detectedCurrency    = config.currencyIso;
+      detectedCurrencyIso = config.currencyUnit;
+    } catch {
+      // Fallback: baca ISO currency dari balance (backend proxy, bebas CORS)
+      try {
+        const { api } = await import('@/lib/api');
+        const bal = await api.balance();
+        if (bal.currency) detectedCurrency = bal.currency;
+      } catch { /* tetap IDR */ }
+    }
+
+    // ── Step 5: Map country ISO → language ───────────────────────────────────
     const validCodes   = AVAILABLE_LANGUAGES.map(l => l.code);
     const countryEntry = COUNTRY_ENTRIES.find(
       e => e.region.toUpperCase() === detectedCountry,
@@ -748,24 +776,22 @@ function LoginPageContent() {
     const detectedLang = (
       countryEntry && validCodes.includes(countryEntry.code as Language)
         ? countryEntry.code
-        : 'en'                  // fallback ke English jika negara tidak dikenali
+        : 'en'
     ) as Language;
 
-    // ── Simpan preferensi bahasa ke localStorage agar dashboard ikut ─────────
-    // setLanguage juga memanggil localStorage.setItem → dashboard load dengan bahasa ini
     setLanguage(detectedLang, detectedCountry);
 
-    // ── Simpan sesi (dengan currency yang benar) ──────────────────────────────
+    // ── Step 6: Update sesi dengan currency yang benar ───────────────────────
     await saveUserSession({
       authtoken:    res.accessToken,
       userId:       res.userId,
       deviceId:     res.deviceId,
       email:        res.email,
-      userTimezone: 'Asia/Bangkok',
+      userTimezone: browserTz,
       userAgent:    typeof window !== 'undefined' ? navigator.userAgent : '',
       deviceType:   'web',
       currency:     detectedCurrency,    // e.g. "COP" / "IDR"
-      currencyIso:  detectedCurrencyIso, // e.g. "Col$" / "Rp"  ← SIMBOL, bukan ISO code
+      currencyIso:  detectedCurrencyIso, // e.g. "Col$" / "Rp"
     });
 
     setSplash('welcome');

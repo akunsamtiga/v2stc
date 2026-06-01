@@ -3742,10 +3742,12 @@ export default function DashboardPage() {
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
 
-  // ── Load currency config langsung dari Stockity API ───────────────────────
-  // Dipanggil sekali saat mount — ambil authToken + deviceId dari session storage,
-  // lalu fetch /platform/private/v2/currencies untuk minAmount, quickAmounts, unit.
-  // Juga terapkan bahasa UI berdasarkan country akun jika user belum set manual.
+  // ── Load currency config ─────────────────────────────────────────────────
+  // Urutan prioritas:
+  //   1. fetchPlatformCurrencies (Stockity langsung) — full config, works on native
+  //   2. Fallback ke session storage (stc_currency + stc_currency_iso) — dari login flow
+  //      Ini penting untuk browser/web di mana direct Stockity call kena CORS
+  // Bahasa UI: dibaca dari stc_language (sudah di-set benar oleh runSplash di login).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -3760,18 +3762,38 @@ export default function DashboardPage() {
         if (!authToken || !deviceId) return;
         if (cancelled) return;
 
-        // Terapkan bahasa UI dari country akun (hanya jika user belum pilih manual)
+        // Terapkan bahasa UI dari country akun.
+        // CATATAN: applyLanguageFromCountry punya guard 'stc_language' — jika sudah di-set
+        // dari login (runSplash), fungsi ini jadi no-op. Itu OK karena stc_language sudah benar.
+        // Ini hanya safety net untuk kasus edge (misal login dari device lain).
         if (country) {
           applyLanguageFromCountry(country, setLanguageHook);
         }
 
-        const stockityLocale = countryToStockityLocale(country ?? undefined);
-        const config = await fetchPlatformCurrencies(authToken, deviceId, stockityLocale, timezone ?? undefined);
-        if (!cancelled) {
-          setCurrencyConfig(config);
-          // Jika amount saat ini 0 (default baru), set ke minAmount hasil API
-          if (_s.amount === 0) {
-            _upd('amount', config.minAmount);
+        // Coba fetch full config dari Stockity (works on native Capacitor)
+        try {
+          const stockityLocale = countryToStockityLocale(country ?? undefined);
+          const config = await fetchPlatformCurrencies(authToken, deviceId, stockityLocale, timezone ?? undefined);
+          if (!cancelled) {
+            setCurrencyConfig(config);
+            if (_s.amount === 0) _upd('amount', config.minAmount);
+          }
+        } catch (fetchErr) {
+          // PERBAIKAN Bug #3: fetchPlatformCurrencies gagal (CORS di browser / token salah)
+          // Fallback ke currency yang sudah dideteksi saat login dan disimpan di session
+          console.warn('[Dashboard] fetchPlatformCurrencies gagal, pakai session fallback:', fetchErr);
+          if (!cancelled) {
+            const sessionCurrencyIso  = await storage.get(SESSION_KEYS.CURRENCY);     // "COP"
+            const sessionCurrencyUnit = await storage.get(SESSION_KEYS.CURRENCY_ISO); // "Col$"
+            if (sessionCurrencyIso && sessionCurrencyUnit && sessionCurrencyIso !== 'IDR') {
+              // Pakai ISO + unit dari session, minAmount/quickAmounts pakai default per currency
+              setCurrencyConfig({
+                ...DEFAULT_CURRENCY_CONFIG,
+                currencyIso:  sessionCurrencyIso,
+                currencyUnit: sessionCurrencyUnit,
+              });
+              // amount tetap 0 → akan di-set ke DEFAULT_CURRENCY_CONFIG.minAmount saat bot start
+            }
           }
         }
       } catch (e) {

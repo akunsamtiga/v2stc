@@ -8,6 +8,10 @@ export type { Language };
 // Storage key for language preference
 const LANGUAGE_STORAGE_KEY = 'stc_language';
 const REGION_STORAGE_KEY   = 'stc_language_region';
+// Key khusus: hanya di-set saat user MANUAL pilih bahasa via UI settings
+// (bukan dari auto-detect login). Dipakai oleh applyLanguageFromCountry
+// untuk membedakan preferensi manual vs auto-detected.
+const MANUAL_LANGUAGE_KEY  = 'stc_language_manual';
 
 // Default language
 const DEFAULT_LANGUAGE: Language = 'id';
@@ -97,7 +101,9 @@ export function isWindows(): boolean {
 interface LanguageContextType {
   language:           Language;
   selectedRegion:     string;
-  setLanguage:        (lang: Language, region?: string) => void;
+  // isManual=true: dipanggil dari UI settings (user pilih manual) → set stc_language_manual
+  // isManual=false (default): dipanggil dari login auto-detect → tidak set stc_language_manual
+  setLanguage:        (lang: Language, region?: string, isManual?: boolean) => void;
   t:                  (key: string) => string;
   isLoading:          boolean;
   availableLanguages: typeof AVAILABLE_LANGUAGES;
@@ -167,8 +173,9 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
   }, [isClient]);
 
   // Set language (+ optional region) and save to storage
-  const setLanguage = useCallback((lang: Language, region?: string) => {
-    // Determine region: pakai region yang diberikan, atau default ke entry pertama
+  // isManual=true → dipanggil dari UI (user pilih sendiri) → set stc_language_manual flag
+  // isManual=false (default) → auto-detect dari login, TIDAK set manual flag
+  const setLanguage = useCallback((lang: Language, region?: string, isManual = false) => {
     const resolvedRegion = region ??
       COUNTRY_ENTRIES.find(e => e.code === lang)?.region ?? '';
 
@@ -180,6 +187,10 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
         localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
         localStorage.setItem(REGION_STORAGE_KEY,   resolvedRegion);
         document.documentElement.lang = lang;
+        // Tandai sebagai manual HANYA jika benar-benar dipilih user via UI
+        if (isManual) {
+          localStorage.setItem(MANUAL_LANGUAGE_KEY, 'true');
+        }
       } catch (error) {
         console.warn('Failed to save language preference:', error);
       }
@@ -296,27 +307,29 @@ export function formatTime(date: Date | number, language: Language, options?: In
 
 /**
  * Set bahasa app berdasarkan kode negara akun (dari profile.country).
- * Hanya set jika user belum pernah pilih bahasa manual sebelumnya.
- * Simpan ke localStorage agar LanguageProvider bisa baca saat load.
+ * Hanya override jika user BELUM pernah pilih bahasa manual via UI.
+ * (stc_language_manual = 'true' berarti user sudah pilih manual → jangan override)
  *
  * @param countryIso  Kode negara ISO-2, e.g. "CO", "ID"
  * @param setLangFn   Fungsi setLanguage dari useLanguage()
  */
 export function applyLanguageFromCountry(
   countryIso: string,
-  setLangFn: (lang: Language, region?: string) => void,
+  setLangFn: (lang: Language, region?: string, isManual?: boolean) => void,
 ): void {
   if (typeof window === 'undefined') return;
   try {
     // Simpan country untuk dipakai LanguageProvider saat reload
     localStorage.setItem('stc_account_country', countryIso.toUpperCase());
 
-    // Hanya auto-switch jika user belum pernah pilih manual
-    const manualPick = localStorage.getItem('stc_language');
-    if (manualPick) return;
+    // PERBAIKAN Bug #4: cek MANUAL_LANGUAGE_KEY, bukan stc_language
+    // Sebelumnya: cek stc_language → selalu block karena login flow juga nulis stc_language
+    // Sekarang: hanya block jika user benar-benar pilih manual via UI settings
+    const isManuallySet = localStorage.getItem('stc_language_manual') === 'true';
+    if (isManuallySet) return;
 
     const lang = countryToAppLang(countryIso);
-    setLangFn(lang, countryIso.toUpperCase());
+    setLangFn(lang, countryIso.toUpperCase(), false);
   } catch {
     // ignore localStorage errors
   }
