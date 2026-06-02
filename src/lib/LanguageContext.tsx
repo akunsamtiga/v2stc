@@ -140,16 +140,22 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
 
     const loadLanguage = async () => {
       try {
-        const validCodes = AVAILABLE_LANGUAGES.map(l => l.code);
+        const validCodes    = AVAILABLE_LANGUAGES.map(l => l.code);
         const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
         const savedRegion   = localStorage.getItem(REGION_STORAGE_KEY) ?? '';
+        // ✅ FIX: Hanya pakai savedLanguage jika user benar-benar pilih MANUAL via UI settings.
+        //    Sebelumnya: cek savedLanguage saja → auto-detect dari login juga nulis stc_language,
+        //    sehingga bahasa terkunci ke hasil auto-detect yang salah (IDR → 'id') dan tidak
+        //    pernah di-override ulang saat user login dengan akun lain (e.g. COP).
+        //    Sekarang: hanya block auto-detect jika stc_language_manual = 'true' (pilihan eksplisit user).
+        const isManuallySet = localStorage.getItem(MANUAL_LANGUAGE_KEY) === 'true';
 
-        if (savedLanguage && validCodes.includes(savedLanguage as Language)) {
-          // User sudah pernah pilih manual → ikut pilihan user
+        if (savedLanguage && validCodes.includes(savedLanguage as Language) && isManuallySet) {
+          // User sudah pilih manual via UI → ikut pilihannya, jangan auto-detect
           setLanguageState(savedLanguage as Language);
           setSelectedRegion(savedRegion);
         } else {
-          // Belum ada pilihan → auto-detect. Prioritas:
+          // Auto-detect setiap login. Prioritas:
           //   1. stc_account_currency  (ditulis saat login, paling presisi)
           //   2. stc_account_country   (fallback jika currency belum ada)
           //   3. Browser language      (fallback terakhir)

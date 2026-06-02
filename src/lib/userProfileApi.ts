@@ -297,57 +297,59 @@ export async function fetchUserCurrency(
 //   data.list[].limits.standard_trade → {min, max} dalam cents
 //
 // Returns CurrencyConfig lengkap — dipakai di dashboard untuk minAmount, quickAmounts, dll.
+//
+// ✅ FIX: Tidak lagi membungkus dengan try/catch internal.
+//    Di browser (bukan native Capacitor), httpGet ke Stockity gagal karena CORS.
+//    Sebelumnya error langsung ditelan di sini dan mengembalikan DEFAULT_CURRENCY_CONFIG (IDR/Rp),
+//    sehingga blok catch di runSplash (loginpage.tsx) tidak pernah tercapai,
+//    dan fallback api.balance() yang bebas CORS tidak pernah jalan.
+//    Sekarang error dibiarkan naik ke caller (runSplash) agar fallback chain bekerja benar.
 export async function fetchPlatformCurrencies(
   authToken: string,
   deviceId:  string,
   locale     = 'en',
   timezone?: string,
 ): Promise<CurrencyConfig> {
-  try {
-    const url  = `${STOCKITY_BASE_URL}platform/private/v2/currencies?locale=${locale}`;
-    const json = await httpGet(url, buildStockityHeaders(authToken, deviceId, timezone)) as {
-      data?: {
-        current?: string;
-        list?: {
-          iso:    string;
-          unit:   string;
-          summs?: { standard_trade?: number[] };
-          limits?: { standard_trade?: { min?: number; max?: number } };
-        }[];
-      };
+  const url  = `${STOCKITY_BASE_URL}platform/private/v2/currencies?locale=${locale}`;
+  const json = await httpGet(url, buildStockityHeaders(authToken, deviceId, timezone)) as {
+    data?: {
+      current?: string;
+      list?: {
+        iso:    string;
+        unit:   string;
+        summs?: { standard_trade?: number[] };
+        limits?: { standard_trade?: { min?: number; max?: number } };
+      }[];
     };
+  };
 
-    const data = json.data;
-    if (!data) return DEFAULT_CURRENCY_CONFIG;
+  const data = json.data;
+  if (!data) throw new Error('[fetchPlatformCurrencies] Response data kosong');
 
-    const current = data.current ?? 'IDR';
-    const item    = data.list?.find(c => c.iso === current);
-    if (!item) return DEFAULT_CURRENCY_CONFIG;
+  const current = data.current ?? 'IDR';
+  const item    = data.list?.find(c => c.iso === current);
+  if (!item) throw new Error(`[fetchPlatformCurrencies] Item currency tidak ditemukan untuk: ${current}`);
 
-    const unit        = item.unit || ISO_TO_UNIT[current] || current;
-    // ✅ FIX: Sebelumnya `item.unit ?? 'Rp'` → jika Stockity API return unit=null/""
-    //    untuk COP/USD/dll, symbol akan tampil sebagai 'Rp'. Sekarang pakai ISO_TO_UNIT
-    //    sebagai fallback sehingga COP → 'Col$', USD → '$', dsb.
-    const rawSumms    = item.summs?.standard_trade ?? [];
-    const rawMin      = item.limits?.standard_trade?.min ?? 1_400_000;
-    const rawMax      = item.limits?.standard_trade?.max ?? 74_000_000_00;
+  const unit        = item.unit || ISO_TO_UNIT[current] || current;
+  // ✅ FIX: Sebelumnya `item.unit ?? 'Rp'` → jika Stockity API return unit=null/""
+  //    untuk COP/USD/dll, symbol akan tampil sebagai 'Rp'. Sekarang pakai ISO_TO_UNIT
+  //    sebagai fallback sehingga COP → 'Col$', USD → '$', dsb.
+  const rawSumms    = item.summs?.standard_trade ?? [];
+  const rawMin      = item.limits?.standard_trade?.min ?? 1_400_000;
+  const rawMax      = item.limits?.standard_trade?.max ?? 74_000_000_00;
 
-    // Stockity menyimpan amounts dalam cents (×100) → bagi 100 untuk display
-    const quickAmounts = rawSumms.map((v: number) => Math.round(v / 100));
-    const minAmount    = Math.round(rawMin / 100);
-    const maxAmount    = Math.round(rawMax / 100);
+  // Stockity menyimpan amounts dalam cents (×100) → bagi 100 untuk display
+  const quickAmounts = rawSumms.map((v: number) => Math.round(v / 100));
+  const minAmount    = Math.round(rawMin / 100);
+  const maxAmount    = Math.round(rawMax / 100);
 
-    return {
-      currencyIso:  current,
-      currencyUnit: unit,
-      minAmount,
-      maxAmount,
-      quickAmounts: quickAmounts.length > 0 ? quickAmounts : DEFAULT_CURRENCY_CONFIG.quickAmounts,
-    };
-  } catch (e) {
-    console.warn('[Currency] fetchPlatformCurrencies error:', e);
-    return DEFAULT_CURRENCY_CONFIG;
-  }
+  return {
+    currencyIso:  current,
+    currencyUnit: unit,
+    minAmount,
+    maxAmount,
+    quickAmounts: quickAmounts.length > 0 ? quickAmounts : DEFAULT_CURRENCY_CONFIG.quickAmounts,
+  };
 }
 
 // ── checkHasTradingHistory ────────────────────────────────────────────────────

@@ -750,8 +750,10 @@ function LoginPageContent() {
     }
 
     // ── Step 4: Deteksi currency ─────────────────────────────────────────────
-    // Coba fetchPlatformCurrencies (works on native Capacitor, mungkin gagal di browser)
-    // Fallback ke api.balance() untuk dapat ISO code minimal
+    // Coba fetchPlatformCurrencies (works on native Capacitor, mungkin gagal di browser).
+    // Setelah fix di userProfileApi.ts, fungsi ini TIDAK lagi menelan error internal —
+    // sehingga blok catch di bawah benar-benar dieksekusi saat CORS/error di browser.
+    // Fallback ke api.balance() (backend proxy, bebas CORS) untuk mendapatkan currency.
     try {
       const { fetchPlatformCurrencies } = await import('@/lib/userProfileApi');
       const { countryToStockityLocale } = await import('@/lib/localeUtils');
@@ -760,19 +762,20 @@ function LoginPageContent() {
       detectedCurrency    = config.currencyIso;   // e.g. "COP"
       detectedCurrencyIso = config.currencyUnit;  // e.g. "Col$"
     } catch {
-      // ✅ FIX CURRENCY Bug #2: Fallback — baca ISO currency dari balance (backend proxy, bebas CORS)
-      // Sebelumnya: hanya baca bal.currency (ISO) tapi detectedCurrencyIso tetap 'Rp'.
-      // Sekarang: derive currencyUnit dari ISO code via map lokal agar simbol juga benar.
+      // ✅ FIX CURRENCY: Fallback via backend proxy — bebas CORS, currency & unit keduanya benar.
+      // Blok ini sekarang benar-benar jalan (sebelumnya tidak karena fetchPlatformCurrencies
+      // menelan error-nya sendiri dan mengembalikan DEFAULT_CURRENCY_CONFIG/IDR/Rp secara diam-diam).
       try {
         const { api } = await import('@/lib/api');
         const bal = await api.balance();
-        if (bal.currency && bal.currency !== 'IDR') {
+        if (bal.currency) {
+          // ✅ FIX: Hapus syarat '!== IDR' agar user IDR asli pun dapat symbol 'Rp' dari ISO_TO_UNIT,
+          //    bukan dari tebak-tebakan default. Semua currency di-resolve via ISO_TO_UNIT.
           detectedCurrency = bal.currency;
-          // ✅ Pakai ISO_TO_UNIT dari userProfileApi (single source of truth)
           const { ISO_TO_UNIT } = await import('@/lib/userProfileApi');
           detectedCurrencyIso = ISO_TO_UNIT[detectedCurrency] ?? detectedCurrency;
         }
-      } catch { /* tetap IDR / Rp */ }
+      } catch { /* tetap default IDR / Rp */ }
     }
 
     // ── Step 5: Deteksi bahasa dari currency (lebih presisi dari country) ────────
