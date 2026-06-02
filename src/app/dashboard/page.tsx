@@ -3806,13 +3806,17 @@ export default function DashboardPage() {
           applyLanguageFromCountry(country, setLanguageHook);
         }
 
-        // ── SYNC LANGUAGE DARI PROFILE API ──────────────────────────────────
-        // Fallback jika session storage tidak punya country data.
+        // ── SYNC LANGUAGE & CURRENCY DARI PROFILE API ───────────────────────
+        // Fallback jika session storage tidak punya country/currency data.
         // Profile API mengembalikan country/registrasi country yang akurat.
+        let profileCountry = country;
+        let profileCurrency = '';
         try {
           const prof = await api.getProfile();
           if (!cancelled && prof) {
-            const profileCountry = prof.country || prof.registrationCountryIso;
+            profileCountry = prof.country || prof.registrationCountryIso || country;
+            // ✅ FIX: Juga baca currency dari profile jika tersedia
+            profileCurrency = (prof as any).currency || '';
             if (profileCountry && !country) {
               applyLanguageFromCountry(profileCountry, setLanguageHook);
             }
@@ -3822,50 +3826,80 @@ export default function DashboardPage() {
         }
         // ─────────────────────────────────────────────────────────────────────
 
+        // ✅ FIX CURRENCY: Coba baca currency dari balance API sebagai safety net
+        // Ini menangani kasus di mana session storage masih IDR tapi user sebenarnya COP
+        let balanceCurrency = '';
+        try {
+          const bal = await api.balance();
+          if (bal?.currency && bal.currency !== 'IDR') {
+            balanceCurrency = bal.currency;
+            // Update session storage dengan currency yang benar
+            await storage.set(SESSION_KEYS.CURRENCY, bal.currency);
+            const { ISO_TO_UNIT } = await import('@/lib/userProfileApi');
+            const unit = ISO_TO_UNIT[bal.currency] ?? bal.currency;
+            await storage.set(SESSION_KEYS.CURRENCY_ISO, unit);
+            console.log('[Dashboard] Currency synced from balance:', bal.currency, unit);
+          }
+        } catch {
+          // Balance fetch gagal — gunakan session storage
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         // Coba fetch full config dari Stockity (works on native Capacitor)
         try {
-          const stockityLocale = countryToStockityLocale(country ?? undefined);
+          const stockityLocale = countryToStockityLocale(profileCountry ?? undefined);
           const config = await fetchPlatformCurrencies(authToken, deviceId, stockityLocale, timezone ?? undefined);
           if (!cancelled) {
             setCurrencyConfig(config);
             if (_s.amount === 0) _upd('amount', config.minAmount);
           }
         } catch (fetchErr) {
-          // ✅ FIX CURRENCY Bug #3: fetchPlatformCurrencies gagal (CORS di browser / token salah)
+          // ✅ FIX CURRENCY Bug #3+4: fetchPlatformCurrencies gagal (CORS di browser / token salah)
           // Fallback ke currency yang sudah dideteksi saat login dan disimpan di session
           console.warn('[Dashboard] fetchPlatformCurrencies gagal, pakai session fallback:', fetchErr);
           if (!cancelled) {
-            const sessionCurrencyIso  = await storage.get(SESSION_KEYS.CURRENCY);     // "COP"
+            // ✅ FIX: Gunakan balance currency > session currency > default IDR
+            const sessionCurrencyIso  = balanceCurrency
+              || await storage.get(SESSION_KEYS.CURRENCY)     // "COP"
+              || 'IDR';
             const sessionCurrencyUnit = await storage.get(SESSION_KEYS.CURRENCY_ISO); // "Col$"
 
-            // ✅ FIX: Kondisi sebelumnya: `sessionCurrencyIso !== 'IDR'`
-            //    Bug: jika ISO benar (e.g. "COP") tapi unit masih "Rp" karena Bug #2,
-            //    currency config tetap salah. Sekarang: selalu apply jika ada ISO apapun,
-            //    dan derive unit dari ISO map jika unit masih default IDR.
-            if (sessionCurrencyIso) {
-              const ISO_TO_UNIT: Record<string, string> = {
-                IDR: 'Rp', USD: '$', EUR: '€', GBP: '£', BRL: 'R$',
-                COP: 'Col$', MXN: 'MX$', ARS: 'AR$', PEN: 'S/', CLP: 'CL$',
-                NGN: '₦', KES: 'KSh', GHS: 'GH₵', ZAR: 'R',
-                INR: '₹', PKR: '₨', BDT: '৳', LKR: 'Rs',
-                PHP: '₱', VND: '₫', THB: '฿', MYR: 'RM', SGD: 'S$',
-                TRY: '₺', UAH: '₴', KZT: '₸', UZS: "so'm",
-                RUB: '₽', AMD: '֏', AZN: '₼', GEL: '₾',
-                EGP: 'E£', MAD: 'MAD', TND: 'DT', DZD: 'DA',
-                SAR: '﷼', AED: 'AED', KWD: 'KD', QAR: 'QR', OMR: 'OMR',
-              };
-              // Jika unit dari storage masih 'Rp' tapi ISO bukan IDR → derive dari map
-              const resolvedUnit =
-                sessionCurrencyUnit && sessionCurrencyUnit !== 'Rp'
-                  ? sessionCurrencyUnit
-                  : (ISO_TO_UNIT[sessionCurrencyIso] ?? sessionCurrencyIso);
+            // ✅ FIX: Derive unit dari ISO map jika unit tidak ada atau masih default Rp
+            const { ISO_TO_UNIT } = await import('@/lib/userProfileApi');
+            const resolvedUnit =
+              sessionCurrencyUnit && sessionCurrencyUnit !== 'Rp'
+                ? sessionCurrencyUnit
+                : (ISO_TO_UNIT[sessionCurrencyIso] ?? sessionCurrencyIso);
 
-              setCurrencyConfig({
-                ...DEFAULT_CURRENCY_CONFIG,
-                currencyIso:  sessionCurrencyIso,
-                currencyUnit: resolvedUnit,
-              });
+            // ✅ FIX CURRENCY DERIVE: Jika currency masih IDR tapi country bukan ID,
+            // derive currency umum dari country (untuk COP, MXN, ARS, dll)
+            let finalCurrencyIso = sessionCurrencyIso;
+            let finalCurrencyUnit = resolvedUnit;
+            if (sessionCurrencyIso === 'IDR' && profileCountry && profileCountry !== 'ID') {
+              const countryCurrencyMap: Record<string, string> = {
+                CO: 'COP', MX: 'MXN', AR: 'ARS', CL: 'CLP', PE: 'PEN', VE: 'VES',
+                EC: 'USD', BO: 'BOB', PY: 'PYG', UY: 'UYU', GT: 'GTQ', HN: 'HNL',
+                CR: 'CRC', PA: 'PAB', DO: 'DOP', CU: 'CUP', NI: 'NIO',
+                ID: 'IDR', MY: 'MYR', TH: 'THB', VN: 'VND', PH: 'PHP',
+                RU: 'RUB', UA: 'UAH', KZ: 'KZT', UZ: 'UZS',
+                TR: 'TRY', BR: 'BRL', IN: 'INR', NG: 'NGN',
+              };
+              const derivedCurrency = countryCurrencyMap[profileCountry];
+              if (derivedCurrency) {
+                finalCurrencyIso = derivedCurrency;
+                finalCurrencyUnit = ISO_TO_UNIT[derivedCurrency] ?? derivedCurrency;
+                // Update session storage juga
+                await storage.set(SESSION_KEYS.CURRENCY, finalCurrencyIso);
+                await storage.set(SESSION_KEYS.CURRENCY_ISO, finalCurrencyUnit);
+                console.log('[Dashboard] Derived currency from country:', profileCountry, '->', finalCurrencyIso, finalCurrencyUnit);
+              }
             }
+
+            setCurrencyConfig({
+              ...DEFAULT_CURRENCY_CONFIG,
+              currencyIso:  finalCurrencyIso,
+              currencyUnit: finalCurrencyUnit,
+            });
           }
         }
       } catch (e) {

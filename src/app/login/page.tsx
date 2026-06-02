@@ -784,8 +784,19 @@ function LoginPageContent() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('stc_account_currency', detectedCurrency);
     }
-    const { currencyToAppLang } = await import('@/lib/localeUtils');
-    const detectedLang = currencyToAppLang(detectedCurrency);
+    const { currencyToAppLang, countryToAppLang } = await import('@/lib/localeUtils');
+
+    // ✅ FIX LANGUAGE BUG COP/ES: Jika detectedCurrency masih default 'IDR' padahal
+    // detectedCountry bukan 'ID', berarti deteksi currency gagal (CORS/error).
+    // Gunakan countryToAppLang sebagai fallback agar user COP/CO tetap dapat 'es'.
+    let detectedLang: Language;
+    if (detectedCurrency === 'IDR' && detectedCountry !== 'ID') {
+      detectedLang = countryToAppLang(detectedCountry);
+      console.log('[runSplash] Currency masih default IDR, pakai bahasa dari country:', detectedCountry, '->', detectedLang);
+    } else {
+      detectedLang = currencyToAppLang(detectedCurrency);
+      console.log('[runSplash] Bahasa dari currency:', detectedCurrency, '->', detectedLang);
+    }
 
     // detectedCountry tetap dikirim sebagai region (untuk region selector di settings)
     setLanguage(detectedLang, detectedCountry);

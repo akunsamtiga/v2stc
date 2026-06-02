@@ -191,6 +191,57 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
     loadLanguage();
   }, [isClient]);
 
+  // ✅ FIX LANGUAGE BUG: Listen untuk perubahan localStorage dari tab lain
+  // dan juga re-detect saat window focus (setelah login / redirect).
+  useEffect(() => {
+    if (!isClient) return;
+
+    const handleStorageChange = (e: StorageEvent) => {
+      // Re-detect language ketika currency atau country berubah di localStorage
+      if (e.key === 'stc_account_currency' || e.key === 'stc_account_country') {
+        const isManuallySet = localStorage.getItem(MANUAL_LANGUAGE_KEY) === 'true';
+        if (isManuallySet) return; // Jangan override pilihan manual user
+
+        const accountCurrency = localStorage.getItem('stc_account_currency');
+        if (accountCurrency) {
+          const detectedLang = currencyToAppLang(accountCurrency);
+          setLanguageState(detectedLang);
+        } else {
+          const accountCountry = localStorage.getItem('stc_account_country');
+          if (accountCountry) {
+            const detectedLang = countryToAppLang(accountCountry);
+            setLanguageState(detectedLang);
+          }
+        }
+      }
+    };
+
+    const handleWindowFocus = () => {
+      // Re-detect saat window focus jika user baru saja login (currency di-set)
+      const isManuallySet = localStorage.getItem(MANUAL_LANGUAGE_KEY) === 'true';
+      if (isManuallySet) return;
+
+      const accountCurrency = localStorage.getItem('stc_account_currency');
+      if (accountCurrency) {
+        const detectedLang = currencyToAppLang(accountCurrency);
+        // Hanya update jika berbeda — hindari re-render sia-sia
+        setLanguageState(prev => {
+          if (prev !== detectedLang) {
+            return detectedLang;
+          }
+          return prev;
+        });
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleWindowFocus);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [isClient]);
+
   // Set language (+ optional region) and save to storage
   // isManual=true → dipanggil dari UI (user pilih sendiri) → set stc_language_manual flag
   // isManual=false (default) → auto-detect dari login, TIDAK set manual flag
