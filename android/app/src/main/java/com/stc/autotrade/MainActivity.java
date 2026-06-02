@@ -14,9 +14,15 @@ import com.stc.autotrade.plugins.StcWebViewPlugin;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        // ✅ Daftarkan kedua plugin sebelum super.onCreate()
+        // ✅ Daftarkan plugin sebelum super.onCreate()
         registerPlugin(StcWebViewPlugin.class);
-        registerPlugin(ApkInstallerPlugin.class);   // ← BARU: plugin download + install APK
+
+        // ╔══════════════════════════════════════════════════════════════════╗
+        // ║  PLAY STORE BUILD — ApkInstallerPlugin DINONAKTIFKAN            ║
+        // ║  REQUEST_INSTALL_PACKAGES tidak diizinkan di Play Store.        ║
+        // ║  Aktifkan kembali untuk build distribusi luar Play Store.       ║
+        // ╚══════════════════════════════════════════════════════════════════╝
+        // registerPlugin(ApkInstallerPlugin.class);
         super.onCreate(savedInstanceState);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {

@@ -1,10 +1,21 @@
 package com.stc.autotrade.plugins;
 
-// ✅ ApkInstallerPlugin.java
-// Capacitor native plugin: download APK dari URL + install otomatis.
-// Progress dikirim ke JS via notifyListeners("downloadProgress", { progress: 0-100 }).
-// Setelah download selesai, install prompt muncul secara native (bukan via Chrome).
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║  PLAY STORE BUILD — ApkInstallerPlugin SELURUHNYA DINONAKTIFKAN            ║
+// ║                                                                              ║
+// ║  Plugin ini membutuhkan:                                                     ║
+// ║    • permission REQUEST_INSTALL_PACKAGES (dilarang Play Store)              ║
+// ║    • FileProvider di AndroidManifest.xml (ikut dinonaktifkan)               ║
+// ║                                                                              ║
+// ║  Untuk mengaktifkan kembali (distribusi luar Play Store / sideload):        ║
+// ║    1. Uncomment seluruh kode di bawah ini                                   ║
+// ║    2. Uncomment FileProvider di AndroidManifest.xml                         ║
+// ║    3. Uncomment REQUEST_INSTALL_PACKAGES di AndroidManifest.xml             ║
+// ║    4. Uncomment registerPlugin(ApkInstallerPlugin.class) di MainActivity    ║
+// ║    5. Uncomment downloadAndInstall + handleDownload di AppUpdateCard.tsx    ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
 
+/*
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Handler;
@@ -42,10 +53,7 @@ public class ApkInstallerPlugin extends Plugin {
             return;
         }
 
-        // Reset cancel flag
         cancelRequested = false;
-
-        // Simpan call agar bisa resolve/reject dari thread lain
         call.setKeepAlive(true);
 
         downloadThread = new Thread(() -> {
@@ -54,11 +62,10 @@ public class ApkInstallerPlugin extends Plugin {
             FileOutputStream out  = null;
 
             try {
-                // ── Buka koneksi HTTP ──────────────────────────────────────
                 URL url = new URL(urlStr);
                 conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(15_000);  // 15 detik connect timeout
-                conn.setReadTimeout(300_000);    // 5 menit read timeout
+                conn.setConnectTimeout(15_000);
+                conn.setReadTimeout(300_000);
                 conn.connect();
 
                 int httpCode = conn.getResponseCode();
@@ -67,20 +74,18 @@ public class ApkInstallerPlugin extends Plugin {
                     return;
                 }
 
-                long fileSize = conn.getContentLengthLong(); // -1 jika tidak diketahui
+                long fileSize = conn.getContentLengthLong();
                 input = conn.getInputStream();
 
-                // ── Simpan ke cache dir ────────────────────────────────────
                 File apkFile = new File(getContext().getCacheDir(), "app-update.apk");
                 out = new FileOutputStream(apkFile);
 
-                byte[] buffer    = new byte[16_384]; // 16 KB buffer
+                byte[] buffer    = new byte[16_384];
                 long downloaded  = 0;
                 int  lastEmitted = -1;
                 int  count;
 
                 while ((count = input.read(buffer)) != -1) {
-                    // Cek cancel
                     if (cancelRequested) {
                         call.reject("Download dibatalkan");
                         return;
@@ -89,10 +94,9 @@ public class ApkInstallerPlugin extends Plugin {
                     out.write(buffer, 0, count);
                     downloaded += count;
 
-                    // Kirim progress ke JS
                     int pct = (fileSize > 0)
                             ? (int) Math.min(99, (downloaded * 100L) / fileSize)
-                            : -1; // indeterminate
+                            : -1;
 
                     if (pct != lastEmitted) {
                         lastEmitted = pct;
@@ -104,12 +108,10 @@ public class ApkInstallerPlugin extends Plugin {
 
                 out.flush();
 
-                // Progress 100% final
                 JSObject ev100 = new JSObject();
                 ev100.put("progress", 100);
                 notifyListeners("downloadProgress", ev100);
 
-                // ── Trigger install di main thread ─────────────────────────
                 File finalApkFile = apkFile;
                 new Handler(Looper.getMainLooper()).post(() -> {
                     try {
@@ -148,7 +150,6 @@ public class ApkInstallerPlugin extends Plugin {
     }
 
     // ── cancelDownload ─────────────────────────────────────────────────────
-    // Dipanggil dari JS saat user menekan tombol Batalkan.
     @PluginMethod
     public void cancelDownload(PluginCall call) {
         cancelRequested = true;
@@ -157,4 +158,11 @@ public class ApkInstallerPlugin extends Plugin {
         }
         call.resolve();
     }
+}
+*/
+
+// Stub kosong agar file tetap valid sebagai Java class (tidak menyebabkan compile error).
+// Hapus stub ini dan uncomment blok di atas saat fitur diaktifkan kembali.
+public class ApkInstallerPlugin extends com.getcapacitor.Plugin {
+    // intentionally empty — Play Store build
 }

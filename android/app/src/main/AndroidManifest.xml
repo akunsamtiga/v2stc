@@ -26,9 +26,11 @@
         </activity>
 
         <!--
-            FileProvider — dipakai oleh ApkInstallerPlugin untuk membuat URI
-            yang bisa dibaca oleh package installer Android.
-        -->
+            ╔══════════════════════════════════════════════════════════════════╗
+            ║  PLAY STORE BUILD — FITUR IN-APP UPDATE DINONAKTIFKAN           ║
+            ║  FileProvider dipakai oleh ApkInstallerPlugin.                  ║
+            ║  Aktifkan kembali saat distribusi di luar Play Store.           ║
+            ╚══════════════════════════════════════════════════════════════════╝
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -38,6 +40,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"/>
         </provider>
+        -->
 
     </application>
 
@@ -47,11 +50,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
-        ✅ BARU: Izin untuk install APK dari sumber tidak dikenal (API 26+).
-        Tanpa ini, ACTION_VIEW dengan APK tidak bisa memicu package installer.
-        User akan diminta mengizinkan "Install from unknown sources" untuk app ini
-        pertama kali — itu normal dan hanya perlu sekali.
-    -->
+        ╔══════════════════════════════════════════════════════════════════════╗
+        ║  PLAY STORE BUILD — REQUEST_INSTALL_PACKAGES DINONAKTIFKAN         ║
+        ║  Permission ini tidak diizinkan untuk app yang didistribusikan      ║
+        ║  melalui Google Play Store.                                         ║
+        ║  Aktifkan kembali hanya untuk build distribusi luar Play Store      ║
+        ║  (sideload / direct APK distribution).                              ║
+        ╚══════════════════════════════════════════════════════════════════════╝
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    -->
 
 </manifest>

@@ -17,28 +17,34 @@ type Phase =
   | 'downloading'
   | 'error';
 
-// ── ApkInstaller plugin bridge ────────────────────────────────────────────────
-async function downloadAndInstall(
-  url: string,
-  onProgress: (p: number) => void,
-): Promise<void> {
-  const { registerPlugin } = await import('@capacitor/core');
-  const ApkInstaller = registerPlugin<{
-    downloadAndInstall(opts: { url: string }): Promise<{ success: boolean }>;
-    cancelDownload(): Promise<void>;
-    addListener(event: string, cb: (data: { progress: number }) => void): Promise<{ remove(): void }>;
-  }>('ApkInstaller');
-
-  const handle = await ApkInstaller.addListener('downloadProgress', ({ progress }) => {
-    onProgress(progress);
-  });
-
-  try {
-    await ApkInstaller.downloadAndInstall({ url });
-  } finally {
-    handle.remove();
-  }
-}
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  PLAY STORE BUILD — downloadAndInstall DINONAKTIFKAN                   ║
+// ║  ApkInstallerPlugin membutuhkan REQUEST_INSTALL_PACKAGES yang tidak    ║
+// ║  diizinkan Google Play Store. Aktifkan kembali untuk distribusi        ║
+// ║  luar Play Store (sideload / direct APK).                              ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+//
+// async function downloadAndInstall(
+//   url: string,
+//   onProgress: (p: number) => void,
+// ): Promise<void> {
+//   const { registerPlugin } = await import('@capacitor/core');
+//   const ApkInstaller = registerPlugin<{
+//     downloadAndInstall(opts: { url: string }): Promise<{ success: boolean }>;
+//     cancelDownload(): Promise<void>;
+//     addListener(event: string, cb: (data: { progress: number }) => void): Promise<{ remove(): void }>;
+//   }>('ApkInstaller');
+//
+//   const handle = await ApkInstaller.addListener('downloadProgress', ({ progress }) => {
+//     onProgress(progress);
+//   });
+//
+//   try {
+//     await ApkInstaller.downloadAndInstall({ url });
+//   } finally {
+//     handle.remove();
+//   }
+// }
 
 // ── Palette (hardcode dark green — sinkron dengan login & profile) ────────────
 const C = {
@@ -80,8 +86,9 @@ const ProgressBar = ({ value }: { value: number }) => (
 export function AppUpdateCard() {
   const [phase,    setPhase]    = useState<Phase>('idle');
   const [result,   setResult]   = useState<UpdateCheckResult | null>(null);
-  const [progress, setProgress] = useState<number>(-1);
-  const [dlError,  setDlError]  = useState<string | null>(null);
+  // ── PLAY STORE BUILD: progress & dlError tidak dipakai (download dinonaktifkan) ──
+  // const [progress, setProgress] = useState<number>(-1);
+  // const [dlError,  setDlError]  = useState<string | null>(null);
   const cancelRef = useRef(false);
 
   useEffect(() => {
@@ -103,7 +110,6 @@ export function AppUpdateCard() {
   }, []);
 
   const handleRetry = async () => {
-    setDlError(null);
     setPhase('checking');
     try {
       const res = await checkForUpdate();
@@ -114,23 +120,27 @@ export function AppUpdateCard() {
     }
   };
 
-  const handleDownload = async () => {
-    if (!result?.resolvedDownloadUrl) return;
-    cancelRef.current = false;
-    setDlError(null);
-    setPhase('downloading');
-    setProgress(-1);
-    try {
-      await downloadAndInstall(result.resolvedDownloadUrl, (p) => {
-        if (!cancelRef.current) setProgress(p);
-      });
-    } catch (e: unknown) {
-      if (!cancelRef.current) {
-        setDlError(e instanceof Error ? e.message : 'Download gagal');
-        setPhase('available');
-      }
-    }
-  };
+  // ╔══════════════════════════════════════════════════════════════════════════╗
+  // ║  PLAY STORE BUILD — handleDownload DINONAKTIFKAN                       ║
+  // ║  Aktifkan kembali untuk distribusi luar Play Store.                    ║
+  // ╚══════════════════════════════════════════════════════════════════════════╝
+  // const handleDownload = async () => {
+  //   if (!result?.resolvedDownloadUrl) return;
+  //   cancelRef.current = false;
+  //   setDlError(null);
+  //   setPhase('downloading');
+  //   setProgress(-1);
+  //   try {
+  //     await downloadAndInstall(result.resolvedDownloadUrl, (p) => {
+  //       if (!cancelRef.current) setProgress(p);
+  //     });
+  //   } catch (e: unknown) {
+  //     if (!cancelRef.current) {
+  //       setDlError(e instanceof Error ? e.message : 'Download gagal');
+  //       setPhase('available');
+  //     }
+  //   }
+  // };
 
   // ── Icon wrapper helper ───────────────────────────────────────────────────
   const IconBox = ({ bg, children }: { bg: string; children: React.ReactNode }) => (
@@ -255,11 +265,21 @@ export function AppUpdateCard() {
                 <p style={{ fontSize: 12, color: C.textTert }}>
                   Saat ini: v{APP_VERSION_NAME} → Terbaru: v{result.latest.versionName}
                 </p>
-                {dlError && (
-                  <p style={{ fontSize: 12, color: C.red, marginTop: 6 }}>{dlError}</p>
-                )}
+                {/* ── PLAY STORE BUILD: pesan update via store, tombol download dinonaktifkan ── */}
+                <p style={{ fontSize: 12, color: C.orange, marginTop: 6 }}>
+                  Perbarui aplikasi melalui Google Play Store.
+                </p>
               </div>
             </div>
+
+            {/* ╔══════════════════════════════════════════════════════════════╗
+                ║  PLAY STORE BUILD — tombol "Unduh & Pasang" DINONAKTIFKAN   ║
+                ║  REQUEST_INSTALL_PACKAGES tidak diizinkan di Play Store.    ║
+                ║  Aktifkan kembali untuk distribusi luar Play Store.         ║
+                ╚══════════════════════════════════════════════════════════════╝
+            {dlError && (
+              <p style={{ fontSize: 12, color: C.red, marginTop: 6 }}>{dlError}</p>
+            )}
             <button
               className="auc-btn"
               onClick={handleDownload}
@@ -270,10 +290,14 @@ export function AppUpdateCard() {
               </svg>
               Unduh &amp; Pasang
             </button>
+            */}
           </div>
         )}
 
-        {/* ── DOWNLOADING ── */}
+        {/* ╔══════════════════════════════════════════════════════════════════╗
+            ║  PLAY STORE BUILD — phase "downloading" DINONAKTIFKAN          ║
+            ║  Aktifkan kembali untuk distribusi luar Play Store.            ║
+            ╚══════════════════════════════════════════════════════════════════╝
         {phase === 'downloading' && (
           <div style={{ padding: '14px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -296,6 +320,7 @@ export function AppUpdateCard() {
             <ProgressBar value={progress} />
           </div>
         )}
+        */}
 
         {/* ── ERROR ── */}
         {phase === 'error' && (
