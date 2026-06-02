@@ -42,10 +42,10 @@ const PROFILE_STYLES = `
   /* ── Hardcoded dark-green variables — tidak bergantung pada isDarkMode ── */
   .pf-root, .pf-root * { box-sizing: border-box; }
   .pf-root {
-    --bg:           #080e0a;
-    --surface:      rgba(6, 30, 15, 0.88);
-    --surface-2:    rgba(8, 35, 18, 0.70);
-    --border:       rgba(76, 175, 80, 0.20);
+    --bg:           #07070f;
+    --surface:      rgba(12, 12, 26, 0.90);
+    --surface-2:    rgba(14, 14, 28, 0.70);
+    --border:       rgba(110, 130, 120, 0.16);
     --border-focus: rgba(100, 220, 100, 0.50);
     --text-1:       #ffffff;
     --text-2:       rgba(255,255,255,0.55);
@@ -84,19 +84,19 @@ const PROFILE_STYLES = `
   }
   .pf-orb-1 {
     width: clamp(280px,70vw,520px); height: clamp(280px,70vw,520px);
-    background: radial-gradient(circle, rgba(30,140,60,0.28) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(20,80,45,0.16) 0%, transparent 65%);
     bottom: -12%; right: -10%; filter: blur(90px);
   }
   .pf-orb-2 {
     width: clamp(220px,55vw,420px); height: clamp(220px,55vw,420px);
-    background: radial-gradient(circle, rgba(10,80,35,0.22) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(15,30,80,0.18) 0%, transparent 65%);
     top: -15%; left: -8%; filter: blur(75px); animation-delay: -11s;
   }
 
   /* ── Skeleton ── */
   .pf-skel {
     border-radius: 6px;
-    background: rgba(76,175,80,0.10);
+    background: rgba(120,120,160,0.12);
     animation: pf-skel-pulse 1.6s ease-in-out infinite;
   }
 
@@ -110,7 +110,7 @@ const PROFILE_STYLES = `
     -webkit-backdrop-filter: saturate(110%) blur(24px);
     box-shadow:
       0 8px 32px rgba(0,0,0,0.45),
-      0 0 0 0.5px rgba(76,175,80,0.10),
+      0 0 0 0.5px rgba(80,80,120,0.12),
       inset 0 1px 0 rgba(255,255,255,0.05);
   }
 
@@ -126,7 +126,7 @@ const PROFILE_STYLES = `
   }
 
   /* ── Info row divider ── */
-  .pf-info-row { border-bottom: 1px solid rgba(76,175,80,0.10); }
+  .pf-info-row { border-bottom: 1px solid rgba(255,255,255,0.07); }
   .pf-info-row:last-child { border-bottom: none; }
 
   /* ── Tappable rows ── */
@@ -136,12 +136,12 @@ const PROFILE_STYLES = `
     padding: 11px 16px 11px 14px;
     gap: 12px; text-align: left;
     -webkit-tap-highlight-color: transparent;
-    border-bottom: 1px solid rgba(76,175,80,0.08);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
     transition: background 0.12s;
   }
   .pf-tap-row:last-child { border-bottom: none; }
-  @media (hover: hover) { .pf-tap-row:hover { background: rgba(76,175,80,0.06) !important; } }
-  .pf-tap-row:active { background: rgba(76,175,80,0.10) !important; }
+  @media (hover: hover) { .pf-tap-row:hover { background: rgba(255,255,255,0.05) !important; } }
+  .pf-tap-row:active { background: rgba(255,255,255,0.08) !important; }
 
   /* ── Copy btn ── */
   .pf-copy-btn:active { opacity: 0.6; }
@@ -174,8 +174,8 @@ const PROFILE_STYLES = `
       width: 272px; min-width: 272px;
       height: 100%; overflow-y: auto;
       padding: 24px 20px 100px;
-      background: rgba(6,20,12,0.60);
-      border-right: 0.5px solid rgba(76,175,80,0.15);
+      background: rgba(8,8,18,0.60);
+      border-right: 0.5px solid rgba(255,255,255,0.08);
     }
     .pf-left::-webkit-scrollbar { width: 0; }
     .pf-right {
@@ -203,28 +203,28 @@ const PROFILE_STYLES = `
     align-items: center; justify-content: center;
     font-family: var(--font);
     -webkit-font-smoothing: antialiased;
-    background: linear-gradient(160deg, #080e0a 0%, #0a1a0c 60%, #0d1f10 100%);
+    background: linear-gradient(160deg, #07070f 0%, #0b0b1a 60%, #0e0e22 100%);
     overflow: hidden;
     animation: lo-fade-in 0.32s cubic-bezier(0.22,1,0.36,1) forwards;
   }
   .lo-orb {
     position: absolute; border-radius: 50%; pointer-events: none;
   }
-  .lo-orb-1 { width:380px;height:380px;background:radial-gradient(circle,rgba(30,140,60,0.28) 0%,transparent 70%);filter:blur(80px);top:-100px;right:-100px;animation:lo-orb-1 7s ease-in-out infinite alternate; }
-  .lo-orb-2 { width:340px;height:340px;background:radial-gradient(circle,rgba(10,80,35,0.22) 0%,transparent 70%);filter:blur(75px);bottom:-80px;left:-80px;animation:lo-orb-2 6s ease-in-out infinite alternate; }
-  .lo-orb-3 { width:260px;height:260px;background:radial-gradient(circle,rgba(76,175,80,0.12) 0%,transparent 70%);filter:blur(70px);top:40%;left:-60px;animation:lo-orb-1 5s ease-in-out infinite alternate; }
+  .lo-orb-1 { width:380px;height:380px;background:radial-gradient(circle,rgba(20,80,45,0.18) 0%,transparent 70%);filter:blur(80px);top:-100px;right:-100px;animation:lo-orb-1 7s ease-in-out infinite alternate; }
+  .lo-orb-2 { width:340px;height:340px;background:radial-gradient(circle,rgba(15,30,80,0.18) 0%,transparent 70%);filter:blur(75px);bottom:-80px;left:-80px;animation:lo-orb-2 6s ease-in-out infinite alternate; }
+  .lo-orb-3 { width:260px;height:260px;background:radial-gradient(circle,rgba(50,50,100,0.12) 0%,transparent 70%);filter:blur(70px);top:40%;left:-60px;animation:lo-orb-1 5s ease-in-out infinite alternate; }
 
   .lo-icon-wrap { position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center;margin-bottom:28px; }
-  .lo-ring       { position:absolute;inset:0;border-radius:50%;border:2px solid rgba(76,175,80,0.25);animation:lo-ring-anim 2.2s ease-in-out infinite; }
-  .lo-ring-2     { inset:-12px;border-color:rgba(76,175,80,0.14);animation-delay:0.4s; }
-  .lo-ring-3     { inset:-24px;border-color:rgba(76,175,80,0.07);animation-delay:0.8s; }
-  .lo-icon       { width:90px;height:90px;border-radius:28px;background:rgba(6,30,15,0.95);border:1px solid rgba(76,175,80,0.25);box-shadow:0 8px 36px rgba(76,175,80,0.20),0 2px 8px rgba(0,0,0,0.30);display:flex;align-items:center;justify-content:center;position:relative;z-index:1;animation:lo-icon-in 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.12s both;font-size:40px;line-height:1; }
+  .lo-ring       { position:absolute;inset:0;border-radius:50%;border:2px solid rgba(100,100,160,0.22);animation:lo-ring-anim 2.2s ease-in-out infinite; }
+  .lo-ring-2     { inset:-12px;border-color:rgba(100,100,160,0.13);animation-delay:0.4s; }
+  .lo-ring-3     { inset:-24px;border-color:rgba(100,100,160,0.06);animation-delay:0.8s; }
+  .lo-icon       { width:90px;height:90px;border-radius:28px;background:rgba(10,10,22,0.97);border:1px solid rgba(100,100,160,0.22);box-shadow:0 8px 36px rgba(80,80,130,0.18),0 2px 8px rgba(0,0,0,0.30);display:flex;align-items:center;justify-content:center;position:relative;z-index:1;animation:lo-icon-in 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.12s both;font-size:40px;line-height:1; }
 
   .lo-text   { text-align:center;padding:0 32px;animation:lo-msg-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.24s both; }
   .lo-title  { font-size:clamp(26px,8vw,32px);font-weight:800;letter-spacing:-1px;line-height:1.1;margin-bottom:8px;color:#fff; }
   .lo-sub    { font-size:14.5px;color:rgba(255,255,255,0.50);font-weight:400;line-height:1.6; }
 
-  .lo-bar-wrap { margin-top:36px;width:120px;height:3px;background:rgba(76,175,80,0.15);border-radius:99px;overflow:hidden;animation:lo-msg-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.35s both; }
+  .lo-bar-wrap { margin-top:36px;width:120px;height:3px;background:rgba(100,100,160,0.15);border-radius:99px;overflow:hidden;animation:lo-msg-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.35s both; }
   .lo-bar      { height:100%;border-radius:99px;background:linear-gradient(90deg,#4caf50,#66bb6a);animation:lo-bar-anim 1.65s cubic-bezier(0.4,0,0.2,1) 0.4s forwards; }
 
   /* ── Modals ── */
@@ -242,8 +242,8 @@ const PROFILE_STYLES = `
   }
   .pf-modal-sheet {
     position: relative; z-index: 1;
-    background: rgba(6,30,15,0.97);
-    border: 1px solid rgba(76,175,80,0.20);
+    background: rgba(10,10,22,0.97);
+    border: 1px solid rgba(100,100,160,0.18);
     border-radius: 20px;
     box-shadow: 0 24px 80px rgba(0,0,0,0.60), 0 4px 16px rgba(0,0,0,0.20);
     overflow: hidden;
@@ -262,17 +262,17 @@ const PROFILE_STYLES = `
   .pf-curr-item {
     width: 100%; background: transparent; border: none; cursor: pointer;
     display: flex; align-items: center; padding: 13px 20px;
-    border-bottom: 1px solid rgba(76,175,80,0.08);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
     gap: 14px; -webkit-tap-highlight-color: transparent;
     transition: background 0.12s;
   }
   .pf-curr-item:last-child { border-bottom: none; }
-  .pf-curr-item:hover { background: rgba(76,175,80,0.08); }
+  .pf-curr-item:hover { background: rgba(255,255,255,0.05); }
 
   /* Search input inside currency sheet */
   .pf-search-input {
     width: 100%; padding: 9px 10px 9px 34px;
-    border-radius: 10px; border: 1px solid rgba(76,175,80,0.18);
+    border-radius: 10px; border: 1px solid rgba(120,120,160,0.22);
     background: rgba(0,0,0,0.30); outline: none;
     font-size: 15px; color: #fff; font-family: var(--font);
     -webkit-appearance: none; appearance: none;
@@ -322,9 +322,9 @@ const CurrencySheet: React.FC<{
   return (
     <div className="pf-root" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, touchAction: 'none' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', animation: 'pf-bd-in 0.25s ease' }} />
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 400, maxHeight: '70dvh', display: 'flex', flexDirection: 'column', background: 'rgba(6,30,15,0.97)', border: '1px solid rgba(76,175,80,0.22)', borderRadius: 20, boxShadow: '0 24px 64px rgba(0,0,0,0.55)', animation: 'pf-pop-in 0.28s cubic-bezier(0.32,0.72,0,1)', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 400, maxHeight: '70dvh', display: 'flex', flexDirection: 'column', background: 'rgba(10,10,22,0.97)', border: '1px solid rgba(100,100,160,0.22)', borderRadius: 20, boxShadow: '0 24px 64px rgba(0,0,0,0.55)', animation: 'pf-pop-in 0.28s cubic-bezier(0.32,0.72,0,1)', overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ flexShrink: 0, padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(76,175,80,0.12)' }}>
+        <div style={{ flexShrink: 0, padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <span style={{ fontSize: 17, fontWeight: 600, color: '#fff', letterSpacing: -0.4 }}>{t('profile.selectCurrency')}</span>
           <button onClick={onClose} className="pf-modal-close-btn" aria-label="Tutup">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
@@ -381,7 +381,7 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
     <div className="pf-root" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px', touchAction: 'none' }}>
       <div onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', animation: 'pf-bd-in 0.2s ease' }} />
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 320, animation: 'pf-pop-in 0.28s cubic-bezier(0.32,0.72,0,1)' }}>
-        <div style={{ background: 'rgba(6,30,15,0.97)', border: '1px solid rgba(76,175,80,0.22)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', borderRadius: 18, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.55)' }}>
+        <div style={{ background: 'rgba(10,10,22,0.97)', border: '1px solid rgba(100,100,160,0.22)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', borderRadius: 18, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.55)' }}>
           <div style={{ padding: '24px 20px 16px', textAlign: 'center' }}>
             <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,69,58,0.12)', border: '1px solid rgba(255,69,58,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff453a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -391,8 +391,8 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
             <p style={{ fontSize: 17, fontWeight: 600, color: '#fff', marginBottom: 6, letterSpacing: -0.3 }}>{t('profile.logoutConfirm')}</p>
             <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.50)', lineHeight: 1.5 }}>{t('profile.logoutMessage')}</p>
           </div>
-          <div style={{ borderTop: '1px solid rgba(76,175,80,0.12)', display: 'flex' }}>
-            <button onClick={onCancel} style={{ flex: 1, padding: '16px', background: 'transparent', border: 'none', borderRight: '1px solid rgba(76,175,80,0.12)', cursor: 'pointer', fontSize: 17, fontWeight: 600, color: '#66bb6a', fontFamily: 'inherit', WebkitTapHighlightColor: 'transparent' }}>{t('common.cancel')}</button>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.09)', display: 'flex' }}>
+            <button onClick={onCancel} style={{ flex: 1, padding: '16px', background: 'transparent', border: 'none', borderRight: '1px solid rgba(255,255,255,0.09)', cursor: 'pointer', fontSize: 17, fontWeight: 600, color: '#66bb6a', fontFamily: 'inherit', WebkitTapHighlightColor: 'transparent' }}>{t('common.cancel')}</button>
             <button onClick={onConfirm} style={{ flex: 1, padding: '16px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 400, color: '#ff453a', fontFamily: 'inherit', WebkitTapHighlightColor: 'transparent' }}>{t('profile.logout')}</button>
           </div>
         </div>
@@ -586,7 +586,7 @@ function ProfilePageContent() {
   const AvatarBlock = () => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
       {/* Avatar circle */}
-      <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(145deg, #4caf50, #66bb6a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 700, color: '#fff', boxShadow: '0 4px 24px rgba(76,175,80,0.40), 0 0 0 3px rgba(76,175,80,0.18)', marginBottom: 12, animation: 'pf-pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.08s both', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+      <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(145deg, #4caf50, #66bb6a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 700, color: '#fff', boxShadow: '0 4px 20px rgba(76,175,80,0.25), 0 0 0 3px rgba(76,175,80,0.12)', marginBottom: 12, animation: 'pf-pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.08s both', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
         {isLoading ? '' : profile?.avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -618,7 +618,7 @@ function ProfilePageContent() {
               </span>
             )}
             {profile?.id && (
-              <button className="pf-copy-btn" onClick={copyId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'rgba(255,255,255,0.45)', background: 'rgba(76,175,80,0.10)', border: '1px solid rgba(76,175,80,0.18)', padding: '3px 10px', borderRadius: 99, cursor: 'pointer', transition: 'opacity 0.15s', WebkitTapHighlightColor: 'transparent' }}>
+              <button className="pf-copy-btn" onClick={copyId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', padding: '3px 10px', borderRadius: 99, cursor: 'pointer', transition: 'opacity 0.15s', WebkitTapHighlightColor: 'transparent' }}>
                 ID: {String(profile.id).slice(0, 8)}…
                 {copied
                   ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -644,7 +644,7 @@ function ProfilePageContent() {
           icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff9f0a" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>,
         },
       ].map(({ label, color, bgColor, val, sub, icon }) => (
-        <div key={label} style={{ flex: 1, minWidth: 0, background: 'rgba(6,30,15,0.75)', border: '1px solid rgba(76,175,80,0.16)', borderRadius: 12, padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 8, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+        <div key={label} style={{ flex: 1, minWidth: 0, background: 'rgba(10,10,22,0.75)', border: '1px solid rgba(120,120,160,0.16)', borderRadius: 12, padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 8, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 30, height: 30, borderRadius: 8, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
             <span style={{ fontSize: 10, fontWeight: 600, color, textTransform: 'uppercase' as const, letterSpacing: '0.04em', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
@@ -704,7 +704,7 @@ function ProfilePageContent() {
       )}
 
       {/* ── MOBILE HEADER ── */}
-      <div className="pf-mob-header" style={{ width: '100%', zIndex: 50, background: 'rgba(6,30,15,0.85)', backdropFilter: 'saturate(140%) blur(22px)', WebkitBackdropFilter: 'saturate(140%) blur(22px)', borderBottom: '0.5px solid rgba(76,175,80,0.18)', position: 'relative' }}>
+      <div className="pf-mob-header" style={{ width: '100%', zIndex: 50, background: 'rgba(8,8,18,0.88)', backdropFilter: 'saturate(140%) blur(22px)', WebkitBackdropFilter: 'saturate(140%) blur(22px)', borderBottom: '0.5px solid rgba(255,255,255,0.09)', position: 'relative' }}>
         <div style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <h1 style={{ fontSize: 17, fontWeight: 600, color: '#fff', letterSpacing: -0.4 }}>{t('profile.title')}</h1>
         </div>
@@ -716,7 +716,7 @@ function ProfilePageContent() {
         {/* ══ LEFT SIDEBAR (desktop) ══ */}
         <div className="pf-left">
           <AvatarBlock />
-          <div style={{ height: '0.5px', background: 'rgba(76,175,80,0.15)', margin: '0 4px' }} />
+          <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.09)', margin: '0 4px' }} />
           <div>
             <SectionLabel>{t('common.balance')}</SectionLabel>
             <BalanceBlock />
@@ -755,13 +755,13 @@ function ProfilePageContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button
                 onClick={() => setLangSheetOpen(true)}
-                style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(76,175,80,0.10)', border: '1px solid rgba(76,175,80,0.18)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}
+                style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}
                 title={t('language.title')}
               >
                 🌐
               </button>
               <button onClick={() => loadProfile(true)} disabled={refreshing || isLoading}
-                style={{ width: 32, height: 32, background: 'rgba(76,175,80,0.10)', border: '1px solid rgba(76,175,80,0.18)', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#66bb6a', opacity: (refreshing || isLoading) ? 0.4 : 1, transition: 'opacity 0.15s' }}>
+                style={{ width: 32, height: 32, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#66bb6a', opacity: (refreshing || isLoading) ? 0.4 : 1, transition: 'opacity 0.15s' }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{ animation: (refreshing || isLoading) ? 'pf-spin 0.8s linear infinite' : 'none' }}>
                   <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>

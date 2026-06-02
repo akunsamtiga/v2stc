@@ -551,23 +551,19 @@ const TodayProfitCard: React.FC<{
   t: (k: string) => string;
   isMobile?: boolean;
 }> = ({ data, localProfit, isLoading, isRefreshing, lastUpdatedAt, flash, onRefresh, t, isMobile }) => {
-  // ✅ FIX FLICKER: Simpan nilai terakhir yang "bermakna" — hanya update jika data punya trades
-  //    ATAU data memang benar-benar 0 (totalTrades > 0 tapi PnL = 0, artinya break-even).
-  //    Jika data return { totalTrades: 0, totalPnL: 0 } sementara ref sudah non-zero,
-  //    itu adalah race condition backend (sedang aggregating) → JANGAN update ref.
+  // ✅ FIX FLICKER: lastKnownProfitRef — simpan nilai NON-ZERO terakhir yang valid.
+  //    Aturan: ref hanya di-update jika data.totalPnL !== 0.
+  //    Jika data.totalPnL === 0 sementara ref sudah non-zero → SKIP (transient 0 dari backend).
+  //    Pengecualian: ref masih 0 (belum pernah dapat data) → boleh update ke apapun.
   const lastKnownProfitRef = useRef<number>(localProfit);
   if (data !== null) {
-    const isDefinitiveZero = data.totalTrades > 0; // genuinely break-even
-    const isNonZero        = data.totalPnL !== 0;
-    const isFirstData      = lastKnownProfitRef.current === 0;
-    if (isNonZero || isDefinitiveZero || isFirstData) {
+    if (data.totalPnL !== 0 || lastKnownProfitRef.current === 0) {
+      // Update ref hanya jika: nilai baru non-zero, ATAU belum ada data (ref=0)
       lastKnownProfitRef.current = data.totalPnL;
     }
-    // Jika data.totalTrades === 0 && data.totalPnL === 0 && ref sudah non-zero:
-    // SKIP — ini transient 0 dari backend race condition, jangan ubah ref.
+    // Jika data.totalPnL === 0 DAN ref sudah non-zero → JANGAN update (flicker protection)
   }
-  // Gunakan ref sebagai sumber utama display — bukan data.totalPnL langsung.
-  // Ini memastikan transient 0 dari backend tidak pernah terlihat user.
+  // Selalu tampilkan dari ref, bukan langsung dari data.totalPnL
   const profit  = lastKnownProfitRef.current;
   const isPos   = profit >= 0;
   const col     = isPos ? C.cyan : C.coral;
@@ -1161,37 +1157,38 @@ const OrderInputModal: React.FC<{open:boolean;onClose:()=>void;orders:ScheduleOr
             const winPct = Math.round((winCount / total) * 100);
             return (
               <div style={{
-                display:'flex',alignItems:'center',gap:8,
+                display:'flex',alignItems:'center',gap:6,
                 padding:'8px 12px',borderRadius:12,
                 background:C.card2,border:`1px solid ${C.bdr}`,
+                minWidth:0,overflow:'hidden',
               }}>
                 {/* Win */}
-                <div style={{display:'flex',alignItems:'center',gap:5,flex:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:4,flex:1,minWidth:0,overflow:'hidden'}}>
                   <span style={{
-                    width:7,height:7,borderRadius:'50%',flexShrink:0,
+                    width:6,height:6,borderRadius:'50%',flexShrink:0,
                     background:C.cyan,boxShadow:`0 0 5px ${C.cyan}`,
                   }}/>
-                  <span style={{fontSize:10,fontWeight:600,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase'}}>Win</span>
-                  <span style={{fontSize:16,fontWeight:700,color:C.cyan,fontFamily:'monospace',lineHeight:1}}>{winCount}</span>
+                  <span style={{fontSize:9,fontWeight:600,color:C.muted,letterSpacing:'0.05em',textTransform:'uppercase',flexShrink:0}}>Win</span>
+                  <span style={{fontSize:'clamp(13px,3.5vw,16px)',fontWeight:700,color:C.cyan,fontFamily:'monospace',lineHeight:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{winCount}</span>
                 </div>
                 {/* Win % badge center */}
                 <div style={{
-                  padding:'3px 10px',borderRadius:99,
+                  padding:'3px 8px',borderRadius:99,flexShrink:0,
                   background: winPct >= 50 ? `${C.cyan}14` : `${C.coral}14`,
                   border:`1px solid ${winPct >= 50 ? C.cyan : C.coral}35`,
-                  flexShrink:0,
                 }}>
                   <span style={{
-                    fontSize:11,fontWeight:700,letterSpacing:'0.04em',fontFamily:'monospace',
+                    fontSize:10,fontWeight:700,letterSpacing:'0.04em',fontFamily:'monospace',
                     color: winPct >= 50 ? C.cyan : C.coral,
+                    whiteSpace:'nowrap',
                   }}>{winPct}%</span>
                 </div>
                 {/* Loss */}
-                <div style={{display:'flex',alignItems:'center',gap:5,flex:1,justifyContent:'flex-end'}}>
-                  <span style={{fontSize:16,fontWeight:700,color:C.coral,fontFamily:'monospace',lineHeight:1}}>{loseCount}</span>
-                  <span style={{fontSize:10,fontWeight:600,color:C.muted,letterSpacing:'0.06em',textTransform:'uppercase'}}>Loss</span>
+                <div style={{display:'flex',alignItems:'center',gap:4,flex:1,minWidth:0,justifyContent:'flex-end',overflow:'hidden'}}>
+                  <span style={{fontSize:'clamp(13px,3.5vw,16px)',fontWeight:700,color:C.coral,fontFamily:'monospace',lineHeight:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{loseCount}</span>
+                  <span style={{fontSize:9,fontWeight:600,color:C.muted,letterSpacing:'0.05em',textTransform:'uppercase',flexShrink:0}}>Loss</span>
                   <span style={{
-                    width:7,height:7,borderRadius:'50%',flexShrink:0,
+                    width:6,height:6,borderRadius:'50%',flexShrink:0,
                     background:C.coral,boxShadow:`0 0 5px ${C.coral}`,
                   }}/>
                 </div>
@@ -3876,6 +3873,10 @@ export default function DashboardPage() {
   const [todayProfitData,setTodayProfitData] = useState<TodayProfitSummary|null>(null);
   const [profitRefreshing,setProfitRefreshing] = useState(false);
   const [profitLastUpdated,setProfitLastUpdated] = useState<number|null>(null);
+  // ✅ FIX FLICKER: stableProfitRef — menyimpan nilai profit terakhir yang VALID (non-null, dari data yg credible).
+  //    Gunakan ref ini sebagai "source of truth" untuk display, sementara todayProfitData state tetap di-update normal.
+  //    Ini mencegah flicker ke 0 saat transient data 0 dari backend race condition.
+  const stableProfitRef = useRef<number>(0);
 
   // ── Persistent trading settings (auto-save ke localStorage) ────────────────
   const { settings: _s, loaded: settingsLoaded, update: _upd } = useTradingSettings();
@@ -3950,21 +3951,23 @@ export default function DashboardPage() {
   // ✅ FIX delay: Tidak pakai profitRefreshing guard agar bisa jalan paralel dengan manual refresh
   const silentRefreshProfit = useCallback(async () => {
     try {
-      // ✅ FIX: gunakan realtimeProfit bukan todayProfit.
-      //    todayProfit hanya berisi data yang sudah committed ke DB — selama sesi aktif,
-      //    trade yang baru selesai BELUM ada di sini, sehingga nilainya 0 / stale.
-      //    realtimeProfit menyertakan in-session PnL, konsisten dengan 10s polling.
-      //    isDemoRef.current agar tidak perlu isDemo di deps (hindari stale closure).
       const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
-      if (isMounted.current) {
-        // ✅ FIX FLICKER: stale-protection — jangan overwrite data valid dengan 0 transient
-        setTodayProfitData(prev =>
-          prev && prev.totalTrades > 0 && result.totalTrades === 0 && result.totalPnL === 0
-            ? prev
-            : result
-        );
-        setProfitLastUpdated(Date.now());
-      }
+      if (!isMounted.current) return;
+
+      // ✅ FIX FLICKER: Robust stale-protection
+      setTodayProfitData(prev => {
+        if (!prev) return result; // pertama kali → trust
+        if (prev.totalPnL !== 0 && result.totalPnL === 0 && result.totalTrades <= prev.totalTrades) {
+          // Transient 0 dari race condition → pertahankan data lama
+          return prev;
+        }
+        if (result.totalTrades > 0 || result.totalPnL !== 0) {
+          // Data baru valid → update stable ref juga
+          stableProfitRef.current = result.totalPnL;
+        }
+        return result;
+      });
+      setProfitLastUpdated(Date.now());
     } catch (e) {
       console.warn('[Profit] silent refresh error:', e);
     }
@@ -4203,14 +4206,17 @@ export default function DashboardPage() {
       if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
       if(tpRes.status==='fulfilled'){
         const newTp = tpRes.value;
-        // ✅ FIX FLICKER: stale-protection — jika response baru punya 0 trades tapi
-        // data sebelumnya sudah punya trades, itu race condition backend (belum aggregated),
-        // bukan kondisi nyata "tidak ada trade hari ini". Pertahankan data lama.
-        setTodayProfitData(prev =>
-          prev && prev.totalTrades > 0 && newTp.totalTrades === 0 && newTp.totalPnL === 0
-            ? prev
-            : newTp
-        );
+        // ✅ FIX FLICKER: Robust stale-protection dengan stable ref update
+        setTodayProfitData(prev => {
+          if (!prev) { stableProfitRef.current = newTp.totalPnL; return newTp; }
+          if (prev.totalPnL !== 0 && newTp.totalPnL === 0 && newTp.totalTrades <= prev.totalTrades) {
+            return prev; // transient 0 → skip
+          }
+          if (newTp.totalTrades > 0 || newTp.totalPnL !== 0) {
+            stableProfitRef.current = newTp.totalPnL; // update stable ref
+          }
+          return newTp;
+        });
         setProfitLastUpdated(Date.now());
       }
 
@@ -4259,10 +4265,14 @@ export default function DashboardPage() {
       api.realtimeProfit(isDemo ? 'demo' : 'real')
         .then(data => {
           if (isMounted.current) {
-            setTodayProfitData(prev =>
-              prev && prev.totalTrades > 0 && data.totalTrades === 0 && data.totalPnL === 0
-                ? prev : data
-            );
+            setTodayProfitData(prev => {
+              if (!prev) { stableProfitRef.current = data.totalPnL; return data; }
+              if (prev.totalPnL !== 0 && data.totalPnL === 0 && data.totalTrades <= prev.totalTrades) {
+                return prev; // transient 0 → skip
+              }
+              stableProfitRef.current = data.totalPnL;
+              return data;
+            });
             setProfitLastUpdated(Date.now());
           }
         })
@@ -4281,6 +4291,7 @@ export default function DashboardPage() {
       .then(data => {
         if (isMounted.current) {
           // Saat switch akun (real↔demo), selalu trust data baru (beda akun = reset wajar)
+          stableProfitRef.current = data.totalPnL;
           setTodayProfitData(data);
           setProfitLastUpdated(Date.now());
         }
@@ -4304,10 +4315,10 @@ export default function DashboardPage() {
     if (profitRefreshing) return;
     setProfitRefreshing(true);
     try {
-      // ✅ FIX: realtimeProfit menyertakan sesi aktif — konsisten dengan polling
       const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
       if (isMounted.current) {
-        // Manual refresh: selalu trust hasil (user sengaja minta refresh)
+        // Manual refresh: trust hasil tapi tetap update stable ref
+        stableProfitRef.current = result.totalPnL;
         setTodayProfitData(result);
         setProfitLastUpdated(Date.now());
       }
@@ -4352,13 +4363,17 @@ export default function DashboardPage() {
         if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
         if(tpRes.status==='fulfilled'){
           const newTp = tpRes.value;
-          // ✅ FIX FLICKER: stale-protection — skip update jika backend race condition
-          // return 0 trades padahal sebelumnya sudah ada trades (transient 0).
-          setTodayProfitData(prev =>
-            prev && prev.totalTrades > 0 && newTp.totalTrades === 0 && newTp.totalPnL === 0
-              ? prev
-              : newTp
-          );
+          // ✅ FIX FLICKER: Robust stale-protection
+          setTodayProfitData(prev => {
+            if (!prev) { stableProfitRef.current = newTp.totalPnL; return newTp; }
+            if (prev.totalPnL !== 0 && newTp.totalPnL === 0 && newTp.totalTrades <= prev.totalTrades) {
+              return prev; // transient 0 → skip
+            }
+            if (newTp.totalTrades > 0 || newTp.totalPnL !== 0) {
+              stableProfitRef.current = newTp.totalPnL;
+            }
+            return newTp;
+          });
           setProfitLastUpdated(Date.now());
         }
       });
@@ -4374,20 +4389,20 @@ export default function DashboardPage() {
     const iv = setInterval(async () => {
       if (!isMounted.current) return;
       try {
-        // ✅ FIX: gunakan realtimeProfit (bukan todayProfit) agar data sesi aktif
-        //    ikut tercermin — sama seperti 10s polling. todayProfit hanya berisi
-        //    data yang sudah committed ke DB, sehingga selama sesi aktif nilainya
-        //    bisa 0 / stale dan menyebabkan flash ke 0 setiap 30 detik.
-        //    isDemoRef.current agar interval tidak perlu di-recreate saat isDemo berubah.
+        // ✅ FIX: gunakan realtimeProfit agar data sesi aktif ikut tercermin
         const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
         if (isMounted.current) {
-          // ✅ FIX FLICKER: stale-protection — skip jika backend return 0 trades
-          // sementara data sebelumnya sudah punya trades (race condition backend).
-          setTodayProfitData(prev =>
-            prev && prev.totalTrades > 0 && result.totalTrades === 0 && result.totalPnL === 0
-              ? prev
-              : result
-          );
+          // ✅ FIX FLICKER: Robust stale-protection
+          setTodayProfitData(prev => {
+            if (!prev) { stableProfitRef.current = result.totalPnL; return result; }
+            if (prev.totalPnL !== 0 && result.totalPnL === 0 && result.totalTrades <= prev.totalTrades) {
+              return prev; // transient 0 → skip
+            }
+            if (result.totalTrades > 0 || result.totalPnL !== 0) {
+              stableProfitRef.current = result.totalPnL;
+            }
+            return result;
+          });
           setProfitLastUpdated(Date.now());
         }
       } catch (e) {
@@ -4441,19 +4456,28 @@ export default function DashboardPage() {
   })();
 
   const profitToday = React.useMemo(()=>{
-    // ✅ Prioritaskan data dari /today-profit API (aggregates semua mode)
-    if(todayProfitData) return todayProfitData.totalPnL;
-    // Fallback: hitung lokal dari schedule + fastrade logs
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    let total = 0;
-    for(const log of scheduleLogs){
-      if((log.executedAt??0)>=cutoff&&log.profit!=null&&log.isDemoAccount===isDemo) total+=log.profit;
+    // ✅ FIX FLICKER: Gunakan stableProfitRef sebagai source of truth.
+    //    todayProfitData state bisa transient 0 saat race condition, tapi ref ini
+    //    selalu menyimpan nilai terakhir yang valid.
+    //    Hanya update ke nilai baru jika data benar-benar valid (non-null, reasonable).
+    if (todayProfitData && todayProfitData.totalTrades > 0) {
+      // Data valid dengan trades > 0 → update stable ref dan gunakan nilai ini
+      stableProfitRef.current = todayProfitData.totalPnL;
+      return todayProfitData.totalPnL;
     }
-    for(const log of ftLogs){
-      if((log.executedAt??0)>=cutoff&&log.profit!=null&&log.isDemoAccount===isDemo) total+=log.profit;
+    if (todayProfitData && todayProfitData.totalTrades === 0 && stableProfitRef.current !== 0) {
+      // Data mengatakan 0 trades tapi sebelumnya ada profit → transient 0, jangan trust
+      // Pertahankan nilai stable
+      return stableProfitRef.current;
     }
-    return total;
-  },[todayProfitData,scheduleLogs,ftLogs,isDemo]);
+    if (todayProfitData) {
+      // Data valid tapi memang 0 trades dan belum pernah ada profit → memang 0
+      stableProfitRef.current = todayProfitData.totalPnL;
+      return todayProfitData.totalPnL;
+    }
+    // todayProfitData null → gunakan stable ref (tidak reset ke 0)
+    return stableProfitRef.current;
+  },[todayProfitData]); // ✅ Hanya depend on todayProfitData — stable ref tidak butuh re-render trigger
 
   const isBelowMin = amount > 0 && amount < MIN_AMOUNT;
 
@@ -5478,26 +5502,30 @@ export default function DashboardPage() {
                         ?? (momentumStatus as any)?.alwaysSignalStep ?? 0;
                       return (
                         <div style={{display:'flex',flexDirection:'column',gap:5}}>
-                          {/* Kotak W / L / WR */}
-                          <div style={{display:'flex',gap:4}}>
-                            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.cyan}0c`,border:`1px solid ${C.cyan}20`}}>
-                              <span style={{fontSize:14,fontWeight:800,color:C.cyan,lineHeight:1,fontFamily:'monospace'}}>{wins}</span>
-                              <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Win</span>
+                          {/* Kotak W / L / WR — overflow-safe */}
+                          <div style={{display:'flex',gap:4,minWidth:0}}>
+                            {/* Win */}
+                            <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 2px',borderRadius:7,background:`${C.cyan}0c`,border:`1px solid ${C.cyan}20`,overflow:'hidden'}}>
+                              <span style={{fontSize:'clamp(11px,3.5vw,14px)',fontWeight:800,color:C.cyan,lineHeight:1,fontFamily:'monospace',maxWidth:'100%',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{wins}</span>
+                              <span style={{fontSize:'clamp(6px,1.8vw,7px)',color:C.muted,textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Win</span>
                             </div>
-                            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.coral}0c`,border:`1px solid ${C.coral}20`}}>
-                              <span style={{fontSize:14,fontWeight:800,color:C.coral,lineHeight:1,fontFamily:'monospace'}}>{losses}</span>
-                              <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>Loss</span>
+                            {/* Loss */}
+                            <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 2px',borderRadius:7,background:`${C.coral}0c`,border:`1px solid ${C.coral}20`,overflow:'hidden'}}>
+                              <span style={{fontSize:'clamp(11px,3.5vw,14px)',fontWeight:800,color:C.coral,lineHeight:1,fontFamily:'monospace',maxWidth:'100%',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{losses}</span>
+                              <span style={{fontSize:'clamp(6px,1.8vw,7px)',color:C.muted,textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Loss</span>
                             </div>
+                            {/* WR */}
                             {wr!==null&&(
-                              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:wr>=50?`${ac}0c`:`${C.coral}0c`,border:`1px solid ${wr>=50?ac:C.coral}20`}}>
-                                <span style={{fontSize:14,fontWeight:800,color:wr>=50?ac:C.coral,lineHeight:1,fontFamily:'monospace'}}>{wr}%</span>
-                                <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>WR</span>
+                              <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 2px',borderRadius:7,background:wr>=50?`${ac}0c`:`${C.coral}0c`,border:`1px solid ${wr>=50?ac:C.coral}20`,overflow:'hidden'}}>
+                                <span style={{fontSize:'clamp(11px,3.5vw,14px)',fontWeight:800,color:wr>=50?ac:C.coral,lineHeight:1,fontFamily:'monospace',maxWidth:'100%',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{wr}%</span>
+                                <span style={{fontSize:'clamp(6px,1.8vw,7px)',color:C.muted,textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>WR</span>
                               </div>
                             )}
+                            {/* Always Signal */}
                             {asActive&&asStep>0&&(
-                              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 4px',borderRadius:7,background:`${C.amber}0c`,border:`1px solid ${C.amber}20`}}>
-                                <span style={{fontSize:11,fontWeight:800,color:C.amber,lineHeight:1,fontFamily:'monospace'}}>K{asStep}</span>
-                                <span style={{fontSize:7,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>AS</span>
+                              <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',gap:1,padding:'5px 2px',borderRadius:7,background:`${C.amber}0c`,border:`1px solid ${C.amber}20`,overflow:'hidden'}}>
+                                <span style={{fontSize:'clamp(10px,3vw,11px)',fontWeight:800,color:C.amber,lineHeight:1,fontFamily:'monospace',maxWidth:'100%',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>K{asStep}</span>
+                                <span style={{fontSize:'clamp(6px,1.8vw,7px)',color:C.muted,textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>AS</span>
                               </div>
                             )}
                           </div>

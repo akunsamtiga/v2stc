@@ -17,10 +17,10 @@ const LOGIN_STYLES = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:           #080e0a;
-    --surface:      rgba(6, 30, 15, 0.88);
-    --border:       rgba(76, 175, 80, 0.22);
-    --border-focus: rgba(100, 220, 100, 0.55);
+    --bg:           #07070f;
+    --surface:      rgba(12, 12, 26, 0.90);
+    --border:       rgba(100, 140, 110, 0.20);
+    --border-focus: rgba(100, 220, 100, 0.50);
     --text-1:       #ffffff;
     --text-2:       rgba(255,255,255,0.55);
     --text-3:       rgba(255,255,255,0.30);
@@ -39,10 +39,10 @@ const LOGIN_STYLES = `
      yang diwariskan (inherited) dari body[data-theme="light"] globals.css.
      Ini menjamin tema login tetap gelap meskipun user pakai light mode.  */
   .lr-page, .splash, .tutor-modal, .tutor-overlay {
-    --bg:           #080e0a;
-    --surface:      rgba(6, 30, 15, 0.88);
-    --border:       rgba(76, 175, 80, 0.22);
-    --border-focus: rgba(100, 220, 100, 0.55);
+    --bg:           #07070f;
+    --surface:      rgba(12, 12, 26, 0.90);
+    --border:       rgba(100, 140, 110, 0.20);
+    --border-focus: rgba(100, 220, 100, 0.50);
     --text-1:       #ffffff;
     --text-2:       rgba(255,255,255,0.55);
     --text-3:       rgba(255,255,255,0.30);
@@ -105,12 +105,12 @@ const LOGIN_STYLES = `
   .orb { position: fixed; border-radius: 50%; pointer-events: none; animation: drift 20s ease-in-out infinite alternate; }
   .o1 {
     width: clamp(280px,70vw,520px); height: clamp(280px,70vw,520px);
-    background: radial-gradient(circle, rgba(30,140,60,0.30) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(20,80,45,0.18) 0%, transparent 65%);
     bottom: -12%; right: -10%; filter: blur(80px);
   }
   .o2 {
     width: clamp(220px,55vw,420px); height: clamp(220px,55vw,420px);
-    background: radial-gradient(circle, rgba(10,80,35,0.25) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(15,30,80,0.20) 0%, transparent 65%);
     top: -15%; left: -8%; filter: blur(70px); animation-delay: -9s;
   }
   @keyframes drift {
@@ -197,8 +197,8 @@ const LOGIN_STYLES = `
     backdrop-filter: saturate(120%) blur(30px);
     -webkit-backdrop-filter: saturate(120%) blur(30px);
     box-shadow:
-      0 8px 40px rgba(0,0,0,0.50),
-      0 0 0 0.5px rgba(76,175,80,0.12),
+      0 8px 40px rgba(0,0,0,0.55),
+      0 0 0 0.5px rgba(80,80,120,0.14),
       inset 0 1px 0 rgba(255,255,255,0.06);
   }
   @media (min-width: 600px) {
@@ -228,12 +228,12 @@ const LOGIN_STYLES = `
   }
   .fg-row.active {
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(76,175,80,0.15);
+    box-shadow: 0 0 0 3px rgba(76,175,80,0.12);
   }
   .fg-icon {
     display: flex; align-items: center; justify-content: center;
     width: 44px; flex-shrink: 0;
-    background: rgba(30,100,50,0.45);
+    background: rgba(18, 18, 32, 0.70);
     align-self: stretch;
     border-right: 1px solid var(--border);
     color: var(--accent-light);
@@ -344,7 +344,7 @@ const LOGIN_STYLES = `
   .badge {
     display: inline-flex; align-items: center; gap: 6px;
     margin-top: 14px; padding: 6px 13px; border-radius: 99px;
-    background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.18);
+    background: rgba(76,175,80,0.06); border: 1px solid rgba(76,175,80,0.14);
   }
   .badge-txt { font-size: 11px; color: var(--accent-light); font-weight: 600; letter-spacing: 0.01em; }
 
@@ -392,7 +392,7 @@ const LOGIN_STYLES = `
   }
   .tutor-close:hover { background: rgba(255,255,255,0.14); }
   .tutor-img-wrap {
-    position: relative; width: 100%; background: #080e0a;
+    position: relative; width: 100%; background: #07070f;
     aspect-ratio: 9/16;
     /* Limit height based on viewport to avoid overflow on short screens */
     max-height: min(55vh, 480px);
@@ -640,7 +640,7 @@ function LoginPageContent() {
         try {
           const { StatusBar, Style } = await import('@capacitor/status-bar');
           await StatusBar.setStyle({ style: Style.Dark });
-          await StatusBar.setBackgroundColor({ color: '#080e0a' });
+          await StatusBar.setBackgroundColor({ color: '#07070f' });
         } catch { /* plugin tidak tersedia */ }
       }
 
@@ -1205,17 +1205,7 @@ function LoginPageContent() {
             © 2026 STC AutoTrade ·{' '}
             <a href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)', fontWeight: 500, cursor: 'pointer', transition: 'opacity 0.14s' }}>{t('login.terms')}</a>
           </div>
-          <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-3)', paddingBottom: 8 }}>
-            Ada pertanyaan?{' '}
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--accent-light)', fontWeight: 600, textDecoration: 'none' }}
-            >
-              Hubungi kami
-            </a>
-          </div>
+
         </div>
       )}
 
