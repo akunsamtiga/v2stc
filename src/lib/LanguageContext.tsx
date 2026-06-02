@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Language, Translations, getTranslation } from './translations';
-import { countryToAppLang } from './localeUtils';
+import { countryToAppLang, currencyToAppLang } from './localeUtils';
 export type { Language };
 
 // Storage key for language preference
@@ -149,18 +149,29 @@ export function LanguageProvider({ children, defaultLanguage = DEFAULT_LANGUAGE 
           setLanguageState(savedLanguage as Language);
           setSelectedRegion(savedRegion);
         } else {
-          // Belum ada pilihan manual → coba deteksi dari country akun Stockity
-          // (disimpan di localStorage dengan key 'stc_account_country' oleh login flow)
-          const accountCountry = localStorage.getItem('stc_account_country');
-          if (accountCountry) {
-            const detectedLang = countryToAppLang(accountCountry);
+          // Belum ada pilihan → auto-detect. Prioritas:
+          //   1. stc_account_currency  (ditulis saat login, paling presisi)
+          //   2. stc_account_country   (fallback jika currency belum ada)
+          //   3. Browser language      (fallback terakhir)
+          const accountCurrency = localStorage.getItem('stc_account_currency');
+          if (accountCurrency) {
+            const detectedLang = currencyToAppLang(accountCurrency);
             setLanguageState(detectedLang);
-            setSelectedRegion(accountCountry);
+            // region tetap dari savedRegion atau stc_account_country agar selector tampil benar
+            const accountCountry = localStorage.getItem('stc_account_country') ?? '';
+            setSelectedRegion(savedRegion || accountCountry);
           } else {
-            // Fallback ke bahasa browser
-            const browserLang = navigator.language.split('-')[0];
-            if (validCodes.includes(browserLang as Language)) {
-              setLanguageState(browserLang as Language);
+            const accountCountry = localStorage.getItem('stc_account_country');
+            if (accountCountry) {
+              const detectedLang = countryToAppLang(accountCountry);
+              setLanguageState(detectedLang);
+              setSelectedRegion(accountCountry);
+            } else {
+              // Fallback ke bahasa browser
+              const browserLang = navigator.language.split('-')[0];
+              if (validCodes.includes(browserLang as Language)) {
+                setLanguageState(browserLang as Language);
+              }
             }
           }
         }
@@ -332,6 +343,37 @@ export function applyLanguageFromCountry(
 
     const lang = countryToAppLang(countryIso);
     setLangFn(lang, countryIso.toUpperCase(), false);
+  } catch {
+    // ignore localStorage errors
+  }
+}
+
+/**
+ * Set bahasa app berdasarkan ISO code mata uang (dari currency config Stockity).
+ * Lebih presisi dari country karena langsung dari setting akun user.
+ * Hanya override jika user BELUM pernah pilih bahasa manual via UI.
+ *
+ * Contoh: applyLanguageFromCurrency('IDR', setLanguage) → set 'id'
+ *         applyLanguageFromCurrency('USD', setLanguage) → set 'en'
+ *         applyLanguageFromCurrency('COP', setLanguage) → set 'es'
+ *
+ * @param currencyIso  ISO code mata uang, e.g. "IDR", "USD", "COP"
+ * @param setLangFn    Fungsi setLanguage dari useLanguage()
+ */
+export function applyLanguageFromCurrency(
+  currencyIso: string,
+  setLangFn: (lang: Language, region?: string, isManual?: boolean) => void,
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const iso = currencyIso.toUpperCase();
+    localStorage.setItem('stc_account_currency', iso);
+
+    const isManuallySet = localStorage.getItem('stc_language_manual') === 'true';
+    if (isManuallySet) return;
+
+    const lang = currencyToAppLang(iso);
+    setLangFn(lang, undefined, false);
   } catch {
     // ignore localStorage errors
   }

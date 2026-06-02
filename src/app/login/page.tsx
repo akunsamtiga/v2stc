@@ -768,34 +768,23 @@ function LoginPageContent() {
         const bal = await api.balance();
         if (bal.currency && bal.currency !== 'IDR') {
           detectedCurrency = bal.currency;
-          // ✅ FIX: Map ISO → simbol secara lokal (tidak perlu request tambahan)
-          const ISO_TO_UNIT: Record<string, string> = {
-            IDR: 'Rp', USD: '$', EUR: '€', GBP: '£', BRL: 'R$',
-            COP: 'Col$', MXN: 'MX$', ARS: 'AR$', PEN: 'S/', CLP: 'CL$',
-            NGN: '₦', KES: 'KSh', GHS: 'GH₵', ZAR: 'R',
-            INR: '₹', PKR: '₨', BDT: '৳', LKR: 'Rs',
-            PHP: '₱', VND: '₫', THB: '฿', MYR: 'RM', SGD: 'S$',
-            TRY: '₺', UAH: '₴', KZT: '₸', UZS: "so'm",
-            RUB: '₽', AMD: '֏', AZN: '₼', GEL: '₾',
-            EGP: 'E£', MAD: 'MAD', TND: 'DT', DZD: 'DA',
-            SAR: '﷼', AED: 'AED', KWD: 'KD', QAR: 'QR', OMR: 'OMR',
-          };
+          // ✅ Pakai ISO_TO_UNIT dari userProfileApi (single source of truth)
+          const { ISO_TO_UNIT } = await import('@/lib/userProfileApi');
           detectedCurrencyIso = ISO_TO_UNIT[detectedCurrency] ?? detectedCurrency;
         }
       } catch { /* tetap IDR / Rp */ }
     }
 
-    // ── Step 5: Map country ISO → language ───────────────────────────────────
-    const validCodes   = AVAILABLE_LANGUAGES.map(l => l.code);
-    const countryEntry = COUNTRY_ENTRIES.find(
-      e => e.region.toUpperCase() === detectedCountry,
-    );
-    const detectedLang = (
-      countryEntry && validCodes.includes(countryEntry.code as Language)
-        ? countryEntry.code
-        : 'en'
-    ) as Language;
+    // ── Step 5: Deteksi bahasa dari currency (lebih presisi dari country) ────────
+    // Currency ISO sudah tersedia dari Step 4 (detectedCurrency, e.g. "IDR", "USD", "COP").
+    // Simpan ke localStorage agar LanguageContext bisa sinkronisasi saat app reload/refresh.
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stc_account_currency', detectedCurrency);
+    }
+    const { currencyToAppLang } = await import('@/lib/localeUtils');
+    const detectedLang = currencyToAppLang(detectedCurrency);
 
+    // detectedCountry tetap dikirim sebagai region (untuk region selector di settings)
     setLanguage(detectedLang, detectedCountry);
 
     // ── Step 6: Update sesi dengan currency yang benar ───────────────────────

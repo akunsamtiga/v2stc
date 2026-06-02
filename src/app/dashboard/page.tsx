@@ -480,7 +480,7 @@ const getAutoScaleFontSize = (valueLength: number): string => {
   return 'clamp(12px, 3vw, 16px)';
 };
 
-const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'|null;t:(k:string)=>string}> = ({profit,isLoading,flash,t}) => {
+const ProfitCard: React.FC<{profit:number;currencyUnit:string;isLoading?:boolean;flash?:'win'|'lose'|null;t:(k:string)=>string}> = ({profit,currencyUnit,isLoading,flash,t}) => {
   const isPos = profit>=0;
   const col   = isPos?C.cyan:C.coral;
   const prevR = useRef(profit);
@@ -519,7 +519,7 @@ const ProfitCard: React.FC<{profit:number;isLoading?:boolean;flash?:'win'|'lose'
               fontWeight:700,letterSpacing:'-0.02em',lineHeight:1,color:col,
               fontSize:fontSize,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
             }}>
-              {isPos?'+':'-'}{CURR_UNIT} {displayValue}
+              {isPos?'+':'-'}{currencyUnit} {displayValue}
             </p>
           )}
         </div>
@@ -543,6 +543,7 @@ const MODE_COLORS: Record<string, string> = {
 const TodayProfitCard: React.FC<{
   data: TodayProfitSummary | null;
   localProfit: number;
+  currencyUnit: string;
   isLoading?: boolean;
   isRefreshing?: boolean;
   lastUpdatedAt?: number | null;
@@ -550,7 +551,7 @@ const TodayProfitCard: React.FC<{
   onRefresh?: () => void;
   t: (k: string) => string;
   isMobile?: boolean;
-}> = ({ data, localProfit, isLoading, isRefreshing, lastUpdatedAt, flash, onRefresh, t, isMobile }) => {
+}> = ({ data, localProfit, currencyUnit, isLoading, isRefreshing, lastUpdatedAt, flash, onRefresh, t, isMobile }) => {
   // ✅ FIX FLICKER: lastKnownProfitRef — simpan nilai NON-ZERO terakhir yang valid.
   //    Aturan: ref hanya di-update jika data.totalPnL !== 0.
   //    Jika data.totalPnL === 0 sementara ref sudah non-zero → SKIP (transient 0 dari backend).
@@ -657,7 +658,7 @@ const TodayProfitCard: React.FC<{
           // opacity TIDAK diturunkan saat isRefreshing — itu yg bikin fade-flicker tiap poll
           textShadow: isMobile ? 'none' : `0 0 18px ${col}90, 0 0 6px ${col}55`,
         }}>
-          {isPos ? '+' : '−'}{CURR_UNIT} {displayValue}
+          {isPos ? '+' : '−'}{currencyUnit} {displayValue}
         </p>
       )}
     </Card>
@@ -3751,6 +3752,33 @@ export default function DashboardPage() {
   const isMounted = useRef(true);
   useEffect(()=>{isMounted.current=true;return()=>{isMounted.current=false;};},[]);
 
+  // ── Re-sync currency dari session storage saat tab kembali visible ───────
+  // Skenario: user ganti currency di halaman Profile, lalu kembali ke Dashboard.
+  // Tanpa ini, Dashboard tetap pakai currencyConfig lama yang di-load saat mount.
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const { storage: _st, SESSION_KEYS: _sk } = await import('@/lib/storage');
+        const sessionIso  = await _st.get(_sk.CURRENCY);
+        const sessionUnit = await _st.get(_sk.CURRENCY_ISO);
+        if (!sessionIso) return;
+        setCurrencyConfig(prev => {
+          // Hanya update jika memang berbeda — hindari re-render sia-sia
+          if (prev.currencyIso === sessionIso && prev.currencyUnit === (sessionUnit ?? prev.currencyUnit)) return prev;
+          return {
+            ...prev,
+            currencyIso:  sessionIso,
+            currencyUnit: sessionUnit ?? prev.currencyUnit,
+          };
+        });
+      } catch { /* silent — jangan crash dashboard */ }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Load currency config & sync language dari profil akun ───────────────
   // Urutan prioritas:
   //   1. fetchPlatformCurrencies (Stockity langsung) — full config, works on native
@@ -4682,7 +4710,7 @@ export default function DashboardPage() {
     }
   `, [isDarkMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} isLoading={isLoading} isRefreshing={profitRefreshing} lastUpdatedAt={profitLastUpdated} flash={flash} onRefresh={refreshProfit} t={t} isMobile={deviceType==='mobile'}/>;
+  const TopCards = <TodayProfitCard data={todayProfitData} localProfit={profitToday} currencyUnit={currencyConfig.currencyUnit} isLoading={isLoading} isRefreshing={profitRefreshing} lastUpdatedAt={profitLastUpdated} flash={flash} onRefresh={refreshProfit} t={t} isMobile={deviceType==='mobile'}/>;
 
   const InfoRow = (
     <div style={{display:'grid',gridTemplateColumns:deviceType==='desktop'?'repeat(3,1fr)':deviceType==='tablet'?'repeat(2,1fr)':'1fr 1fr',gap:g}}>

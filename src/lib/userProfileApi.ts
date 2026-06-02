@@ -98,6 +98,24 @@ export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
   quickAmounts: [14_000, 70_000, 140_000, 280_000, 700_000, 1_400_000, 2_800_000],
 };
 
+// ── ISO_TO_UNIT — fallback simbol jika API tidak mengembalikan unit ────────────
+// Dipakai di fetchPlatformCurrencies & fetchUserCurrency agar tidak hardcode 'Rp'
+// sebagai default untuk semua currency.
+export const ISO_TO_UNIT: Record<string, string> = {
+  IDR: 'Rp',    USD: '$',     EUR: '€',     GBP: '£',     BRL: 'R$',
+  COP: 'Col$',  MXN: 'MX$',  ARS: 'AR$',   PEN: 'S/',    CLP: 'CL$',
+  NGN: '₦',     KES: 'KSh',  GHS: 'GH₵',   ZAR: 'R',
+  INR: '₹',     PKR: '₨',    BDT: '৳',      LKR: 'Rs',
+  PHP: '₱',     VND: '₫',    THB: '฿',      MYR: 'RM',    SGD: 'S$',
+  TRY: '₺',     UAH: '₴',    KZT: '₸',      UZS: "so'm",
+  RUB: '₽',     AMD: '֏',    AZN: '₼',      GEL: '₾',
+  EGP: 'E£',    MAD: 'MAD',  TND: 'DT',     DZD: 'DA',
+  SAR: '﷼',     AED: 'AED',  KWD: 'KD',     QAR: 'QR',    OMR: 'OMR',
+  HKD: 'HK$',   TWD: 'NT$',  CAD: 'CA$',    AUD: 'A$',    NZD: 'NZ$',
+  VES: 'Bs.S',  BOB: 'Bs.',  PYG: '₲',      UYU: '$U',    GTQ: 'Q',
+  HNL: 'L',     CRC: '₡',    DOP: 'RD$',    CUP: '$',     NIO: 'C$',
+};
+
 /** Mirrors: userProfile.getFullName() di Kotlin */
 export function getFullName(p: UserProfile): string {
   const full = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim();
@@ -257,7 +275,9 @@ export async function fetchUserCurrency(
 
     const currentCode = data.current ?? 'IDR';
     const currentItem = data.list?.find(c => c.iso === currentCode);
-    const unitSymbol  = currentItem?.unit ?? 'Rp';
+    // ✅ FIX: Gunakan ISO_TO_UNIT sebagai fallback agar tidak selalu default ke 'Rp'
+    //    Sebelumnya: ?? 'Rp' → COP/USD/dll tanpa unit dari API akan salah tampil sebagai 'Rp'
+    const unitSymbol  = currentItem?.unit || ISO_TO_UNIT[currentCode] || currentCode;
 
     return { currency: currentCode, currencyIso: unitSymbol };
   } catch (e) {
@@ -304,7 +324,10 @@ export async function fetchPlatformCurrencies(
     const item    = data.list?.find(c => c.iso === current);
     if (!item) return DEFAULT_CURRENCY_CONFIG;
 
-    const unit        = item.unit ?? 'Rp';
+    const unit        = item.unit || ISO_TO_UNIT[current] || current;
+    // ✅ FIX: Sebelumnya `item.unit ?? 'Rp'` → jika Stockity API return unit=null/""
+    //    untuk COP/USD/dll, symbol akan tampil sebagai 'Rp'. Sekarang pakai ISO_TO_UNIT
+    //    sebagai fallback sehingga COP → 'Col$', USD → '$', dsb.
     const rawSumms    = item.summs?.standard_trade ?? [];
     const rawMin      = item.limits?.standard_trade?.min ?? 1_400_000;
     const rawMax      = item.limits?.standard_trade?.max ?? 74_000_000_00;

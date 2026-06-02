@@ -57,6 +57,36 @@ const COUNTRY_TO_STOCKITY_LOCALE: Record<string, StockityLocale> = {
   MY: 'en',
 };
 
+// ── Currency ISO → App UI Language ────────────────────────────────────────────
+// Dipakai setelah login untuk sinkronisasi bahasa berdasarkan mata uang akun.
+// Currency lebih presisi dari country karena langsung dari setting akun Stockity user.
+// Bahasa yang didukung app: 'en' | 'id' | 'ru' | 'es' | 'ms' | 'hi' | 'th' | 'tr'
+const CURRENCY_TO_APP_LANG: Record<string, Language> = {
+  // Indonesian
+  IDR: 'id',
+  // English — semua mata uang tanpa mapping spesifik fallback ke 'en'
+  USD: 'en', EUR: 'en', GBP: 'en', SGD: 'en', AUD: 'en', CAD: 'en',
+  NZD: 'en', HKD: 'en', TWD: 'en', PHP: 'en', NGN: 'en', GHS: 'en',
+  ZAR: 'en', KES: 'en', LKR: 'en', VND: 'en', BRL: 'en',
+  // Arabic countries → 'ar' tidak ada di app, fallback 'en'
+  SAR: 'en', AED: 'en', EGP: 'en', MAD: 'en', KWD: 'en', QAR: 'en',
+  OMR: 'en', BHD: 'en', TND: 'en', DZD: 'en',
+  // Russian / CIS
+  RUB: 'ru', KZT: 'ru', UAH: 'ru', UZS: 'ru', AZN: 'ru', AMD: 'ru', GEL: 'ru',
+  // Spanish — Latin America + Spain
+  COP: 'es', MXN: 'es', ARS: 'es', PEN: 'es', CLP: 'es', VES: 'es',
+  BOB: 'es', PYG: 'es', UYU: 'es', GTQ: 'es', HNL: 'es', CRC: 'es',
+  DOP: 'es', CUP: 'es', NIO: 'es', PAB: 'es',
+  // Malay
+  MYR: 'ms', BND: 'ms',
+  // Hindi / South Asia
+  INR: 'hi', PKR: 'hi', BDT: 'hi',
+  // Thai
+  THB: 'th',
+  // Turkish
+  TRY: 'tr',
+};
+
 // ── Country ISO-2 → App UI Language (hanya 8 yang didukung LanguageContext) ──
 const COUNTRY_TO_APP_LANG: Record<string, Language> = {
   // Indonesian
@@ -97,6 +127,22 @@ export function countryToStockityLocale(countryIso: string | null | undefined): 
 export function countryToAppLang(countryIso: string | null | undefined): Language {
   if (!countryIso) return 'en';
   return COUNTRY_TO_APP_LANG[countryIso.toUpperCase()] ?? 'en';
+}
+
+/**
+ * Dari ISO code mata uang, kembalikan Language yang dipakai di LanguageContext.
+ * Dipakai setelah login untuk sinkronisasi bahasa berdasarkan currency akun user.
+ * Currency lebih presisi dari country (langsung dari setting Stockity).
+ * Default 'en' jika tidak dikenali.
+ *
+ * Contoh: currencyToAppLang('IDR') → 'id'
+ *         currencyToAppLang('USD') → 'en'
+ *         currencyToAppLang('COP') → 'es'
+ *         currencyToAppLang('RUB') → 'ru'
+ */
+export function currencyToAppLang(currencyIso: string | null | undefined): Language {
+  if (!currencyIso) return 'en';
+  return CURRENCY_TO_APP_LANG[currencyIso.toUpperCase()] ?? 'en';
 }
 
 /**

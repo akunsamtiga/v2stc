@@ -691,33 +691,25 @@ export async function updateRegistrationConfig(
   }
 }
 
-// ─────────────────────────────────────────────
-// USER STATISTICS
-// ✅ FIX Bug 1: return key disesuaikan dengan yang dipakai admin page
-//    Sebelum: totalUsers / activeUsers / todayUsers / weekUsers
-//    Sesudah: total / active / inactive / recent / recentAdded
-// ─────────────────────────────────────────────
 
 export async function getUserStatistics(
   _email?: string,
   _superAdmin?: boolean,
-): Promise<{
-  total:        number;
-  active:       number;
-  inactive:     number;
-  recent:       number;
-  recentAdded:  number;
-}> {
+): Promise<{ total: number; active: number; inactive: number; recent: number; recentAdded: number }> {
   const threshold24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  // Helper: buat base query dengan filter admin biasa jika diperlukan
   const base = () => {
-    let q = supabase.from('whitelist_users').select('*', { count: 'exact', head: true });
+    let q = supabase
+      .from('whitelist_users')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_primary', false);   // ✅ TAMBAHKAN INI — konsisten dengan getAllWhitelistUsers()
+
     if (_superAdmin === false && _email) {
       q = q.eq('added_by', _email);
     }
     return q;
   };
+
 
   // Jalankan semua count query secara paralel untuk efisiensi
   const [

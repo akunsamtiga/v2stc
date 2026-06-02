@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type ProfileBalance } from '@/lib/api';
 import { resolveAvatarUrl } from '@/lib/userProfileApi';
-import { storage, isSessionValid, sessionLogout, getAuthToken } from '@/lib/storage';
+import { storage, isSessionValid, sessionLogout, getAuthToken, saveCurrencyWithIso } from '@/lib/storage';
 import { checkIsAdmin, checkIsSuperAdmin } from '@/lib/supabaseRepository';
 import { LanguageProvider, useLanguage, formatCurrency, formatDate, Language } from '@/lib';
 import { applyLanguageFromCountry } from '@/lib/LanguageContext';
@@ -486,6 +486,24 @@ function ProfilePageContent() {
       });
       const bal = await api.balance().catch(() => null);
       if (bal) setBalance(bal);
+
+      // ✅ FIX: Simpan currency baru ke session storage agar Dashboard
+      // membaca nilai yang benar saat user kembali dari halaman ini.
+      const ISO_TO_UNIT: Record<string, string> = {
+        IDR: 'Rp',    USD: '$',    EUR: '€',    GBP: '£',    BRL: 'R$',
+        COP: 'Col$',  MXN: 'MX$', ARS: 'AR$',  PEN: 'S/',   CLP: 'CL$',
+        NGN: '₦',     KES: 'KSh', GHS: 'GH₵',  ZAR: 'R',
+        INR: '₹',     PKR: '₨',   BDT: '৳',    LKR: 'Rs',
+        PHP: '₱',     VND: '₫',   THB: '฿',    MYR: 'RM',   SGD: 'S$',
+        TRY: '₺',     UAH: '₴',   KZT: '₸',    UZS: "so'm",
+        RUB: '₽',     AMD: '֏',   AZN: '₼',    GEL: '₾',
+        EGP: 'E£',    MAD: 'MAD', TND: 'DT',   DZD: 'DA',
+        SAR: '﷼',     AED: 'AED', KWD: 'KD',   QAR: 'QR',   OMR: 'OMR',
+      };
+      const unit = ISO_TO_UNIT[iso] ?? iso;
+      await saveCurrencyWithIso(iso, unit);
+      // Update tampilan di halaman profile secara langsung
+      setProfileCurrencyUnit(unit);
     } finally { setCurrencyLoading(false); }
   };
 
