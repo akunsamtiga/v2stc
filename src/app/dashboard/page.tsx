@@ -4391,7 +4391,13 @@ export default function DashboardPage() {
     }
   }, [profitRefreshing]); // eslint-disable-line
 
-  // ── Fast poll 10 detik: trading status + realtime profit (cepat, pakai Stockity cache) ──
+  // ── Fast poll 10 detik: trading status + balance (tanpa realtimeProfit — punya poll sendiri) ──
+  // ✅ FIX PERF: realtimeProfit dipisah ke interval 5 detik tersendiri.
+  //    Sebelumnya bundled di sini bersama scheduleLogs(500)+fastradeLogs(500) yang berat —
+  //    Promise.allSettled menunggu request TERLAMBAT, sehingga profit ikut terlambat walau
+  //    realtimeProfit sendiri sudah selesai dalam 150-200ms.
+  // ✅ FIX PERF: balance() dipindah ke dalam batch (paralel) — sebelumnya sequential setelah
+  //    allSettled sehingga menambah +1 RTT (~150ms) ekstra setiap 10 detik.
   useEffect(()=>{
     const iv=setInterval(async()=>{
       const results = await Promise.allSettled([
@@ -4403,17 +4409,14 @@ export default function DashboardPage() {
         api.fastradeLogs(500),
         api.aiSignalStatus(),api.aiSignalPendingOrders(),
         api.indicatorStatus(),api.momentumStatus(),
-        // ✅ FIX: gunakan isDemoRef.current — effect ini punya dep [] sehingga
-        // isDemo di closure selalu nilai awal (default true), bukan nilai terkini.
-        // isDemoRef.current selalu up-to-date karena diupdate oleh useEffect([isDemo]).
-        api.realtimeProfit(isDemoRef.current ? 'demo' : 'real'),
+        api.balance(),           // ✅ Paralel — tidak lagi sequential setelah allSettled
       ]);
       if(!isMounted.current)return;
       // ✅ FIX SCROLL: startTransition menandai semua update ini sebagai "tidak mendesak".
       //    React akan yield ke scroll/animation frame sebelum memproses update ini,
       //    sehingga polling tidak pernah meng-interrupt smooth scrolling.
       React.startTransition(()=>{
-        const [sRes,fRes,oRes,logRes,ftlRes,aiRes,aiPendRes,indRes,momRes,tpRes] = results;
+        const [sRes,fRes,oRes,logRes,ftlRes,aiRes,aiPendRes,indRes,momRes,balRes] = results;
         if(sRes.status==='fulfilled')setScheduleStatus(sRes.value);
         if(fRes.status==='fulfilled')setFtStatus(fRes.value);
         if(oRes.status==='fulfilled')setScheduleOrders(oRes.value);
@@ -4423,42 +4426,30 @@ export default function DashboardPage() {
         if(aiPendRes.status==='fulfilled')setAiPendingOrders(aiPendRes.value);
         if(indRes.status==='fulfilled')setIndicatorStatus(indRes.value);
         if(momRes.status==='fulfilled')setMomentumStatus(momRes.value);
-        if(tpRes.status==='fulfilled'){
-          const newTp = tpRes.value;
-          // ✅ FIX FLICKER: Robust stale-protection
-          setTodayProfitData(prev => {
-            if (!prev) { stableProfitRef.current = newTp.totalPnL; return newTp; }
-            if (prev.totalPnL !== 0 && newTp.totalPnL === 0 && newTp.totalTrades <= prev.totalTrades) {
-              return prev; // transient 0 → skip
-            }
-            if (newTp.totalTrades > 0 || newTp.totalPnL !== 0) {
-              stableProfitRef.current = newTp.totalPnL;
-            }
-            return newTp;
-          });
-          setProfitLastUpdated(Date.now());
-        }
+        if(balRes.status==='fulfilled')setBalance(balRes.value);
       });
-      const balRes = await api.balance().catch(()=>null);
-      if(balRes&&isMounted.current) React.startTransition(()=>setBalance(balRes));
     },10000);
     return()=>clearInterval(iv);
   },[]); // eslint-disable-line
 
-  // ── Full Stockity refresh setiap 30 detik (update backend cache + dapat data terbaru) ──
+  // ── Dedicated profit poll 5 detik — terpisah dari batch status 10 detik ───────
+  // ✅ FIX: Sebelumnya realtimeProfit dibundel di batch 10 detik bersama scheduleLogs(500)
+  //    dan fastradeLogs(500). Promise.allSettled menunggu request terlama (log fetch ~400ms+)
+  //    sehingga profit ikut delayed walau realtimeProfit sendiri selesai 150-200ms.
+  //    Sekarang profit punya loop sendiri → tidak diblokir request lain, update setiap 5 detik.
+  // ✅ FIX: Menggantikan interval 30 detik yang terlalu jarang.
+  // ✅ Gunakan isDemoRef.current agar tidak stale closure (dep []).
   useEffect(()=>{
-    // Delay pertama 30s — loadAll() sudah fetch saat mount
     const iv = setInterval(async () => {
       if (!isMounted.current) return;
       try {
-        // ✅ FIX: gunakan realtimeProfit agar data sesi aktif ikut tercermin
         const result = await api.realtimeProfit(isDemoRef.current ? 'demo' : 'real');
-        if (isMounted.current) {
-          // ✅ FIX FLICKER: Robust stale-protection
+        if (!isMounted.current) return;
+        React.startTransition(() => {
           setTodayProfitData(prev => {
             if (!prev) { stableProfitRef.current = result.totalPnL; return result; }
             if (prev.totalPnL !== 0 && result.totalPnL === 0 && result.totalTrades <= prev.totalTrades) {
-              return prev; // transient 0 → skip
+              return prev; // transient 0 dari race condition → pertahankan data lama
             }
             if (result.totalTrades > 0 || result.totalPnL !== 0) {
               stableProfitRef.current = result.totalPnL;
@@ -4466,11 +4457,11 @@ export default function DashboardPage() {
             return result;
           });
           setProfitLastUpdated(Date.now());
-        }
+        });
       } catch (e) {
-        console.warn('[Profit] 30s full refresh error:', e);
+        console.warn('[Profit] 5s poll error:', e);
       }
-    }, 30_000);
+    }, 5_000);
     return () => clearInterval(iv);
   },[]); // eslint-disable-line
 

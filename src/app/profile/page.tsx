@@ -103,15 +103,16 @@ const PROFILE_STYLES = `
   /* ── Cards ── */
   .pf-card {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(76, 175, 80, 0.18);
+    border-top: 1px solid rgba(76, 175, 80, 0.28);
     border-radius: 14px;
     overflow: hidden;
     backdrop-filter: saturate(110%) blur(24px);
     -webkit-backdrop-filter: saturate(110%) blur(24px);
     box-shadow:
       0 8px 32px rgba(0,0,0,0.45),
-      0 0 0 0.5px rgba(80,80,120,0.12),
-      inset 0 1px 0 rgba(255,255,255,0.05);
+      0 0 0 0.5px rgba(76,175,80,0.08),
+      inset 0 1px 0 rgba(76,175,80,0.10);
   }
 
   /* ── Section label ── */
@@ -121,8 +122,9 @@ const PROFILE_STYLES = `
     color: var(--accent-light);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    padding: 0 2px;
+    padding: 0 2px 0 8px;
     margin-bottom: 7px;
+    border-left: 2px solid rgba(76, 175, 80, 0.55);
   }
 
   /* ── Info row divider ── */
@@ -175,7 +177,7 @@ const PROFILE_STYLES = `
       height: 100%; overflow-y: auto;
       padding: 24px 20px 100px;
       background: rgba(8,8,18,0.60);
-      border-right: 0.5px solid rgba(255,255,255,0.08);
+      border-right: 0.5px solid rgba(76, 175, 80, 0.14);
     }
     .pf-left::-webkit-scrollbar { width: 0; }
     .pf-right {
@@ -722,7 +724,7 @@ function ProfilePageContent() {
       )}
 
       {/* ── MOBILE HEADER ── */}
-      <div className="pf-mob-header" style={{ width: '100%', zIndex: 50, background: 'rgba(8,8,18,0.88)', backdropFilter: 'saturate(140%) blur(22px)', WebkitBackdropFilter: 'saturate(140%) blur(22px)', borderBottom: '0.5px solid rgba(255,255,255,0.09)', position: 'relative' }}>
+      <div className="pf-mob-header" style={{ width: '100%', zIndex: 50, background: 'rgba(8,8,18,0.88)', backdropFilter: 'saturate(140%) blur(22px)', WebkitBackdropFilter: 'saturate(140%) blur(22px)', borderBottom: '0.5px solid rgba(76,175,80,0.18)', position: 'relative' }}>
         <div style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <h1 style={{ fontSize: 17, fontWeight: 600, color: '#fff', letterSpacing: -0.4 }}>{t('profile.title')}</h1>
         </div>

@@ -177,7 +177,7 @@ export function LanguageSelectorRow({ showLabel = true, disabled = false }: Lang
                 return (
                   <button
                     key={`${entry.code}-${entry.region}`}
-                    onClick={() => { setLanguage(entry.code, entry.region); setIsOpen(false); }}
+                    onClick={() => { setLanguage(entry.code, entry.region, true); setIsOpen(false); }}
                     style={{
                       width:      '100%',
                       display:    'flex',
@@ -327,7 +327,7 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
                 return (
                   <button
                     key={`${entry.code}-${entry.region}`}
-                    onClick={() => { setLanguage(entry.code, entry.region); onClose(); }}
+                    onClick={() => { setLanguage(entry.code, entry.region, true); onClose(); }}
                     style={{
                       width:       '100%',
                       background:  isSelected ? 'rgba(0,122,255,0.05)' : 'transparent',
@@ -483,7 +483,7 @@ export function LanguageSelectorCompact() {
                 return (
                   <button
                     key={`${entry.code}-${entry.region}`}
-                    onClick={() => { setLanguage(entry.code, entry.region); setIsOpen(false); }}
+                    onClick={() => { setLanguage(entry.code, entry.region, true); setIsOpen(false); }}
                     style={{
                       width:      '100%',
                       display:    'flex',
