@@ -231,7 +231,7 @@ const PROFILE_STYLES = `
 
   /* ── Modals ── */
   .pf-modal-overlay {
-    position: fixed; inset: 0; zIndex: 9999;
+    position: fixed; inset: 0; z-index: 9999;
     display: flex; align-items: center; justify-content: center;
     touch-action: none;
   }
@@ -328,7 +328,7 @@ const CurrencySheet: React.FC<{
         {/* Header */}
         <div style={{ flexShrink: 0, padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <span style={{ fontSize: 17, fontWeight: 600, color: '#fff', letterSpacing: -0.4 }}>{t('profile.selectCurrency')}</span>
-          <button onClick={onClose} className="pf-modal-close-btn" aria-label="Tutup">
+          <button onClick={onClose} className="pf-modal-close-btn" aria-label={t('common.close')}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
           </button>
         </div>
@@ -342,7 +342,10 @@ const CurrencySheet: React.FC<{
         {/* List */}
         <div style={{ overflowY: 'auto', flex: 1, overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}>
           {filtered.length === 0
-            ? <div style={{ padding: '48px 0', textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 14 }}>{t('common.notFound')}</div>
+            ? <div style={{ padding: '48px 0', textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ opacity: 0.3 }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                {t('common.notFound')}
+              </div>
             : filtered.map((c, i) => {
                 const sel = c.iso === current;
                 return (
@@ -424,6 +427,19 @@ function ProfilePageContent() {
   const [error, setError]                     = useState<string | null>(null);
   const [profileCurrencyUnit, setProfileCurrencyUnit] = useState<string>('');
   const [refreshing, setRefreshing]           = useState(false);
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSheetOpen(false);
+        setLangSheetOpen(false);
+        setShowLogout(false);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -540,7 +556,15 @@ function ProfilePageContent() {
 
   const copyId = () => {
     if (profile?.id) {
-      navigator.clipboard.writeText(String(profile.id));
+      navigator.clipboard.writeText(String(profile.id)).catch(() => {
+        // Fallback for environments without clipboard API
+        const el = document.createElement('textarea');
+        el.value = String(profile.id);
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      });
       setCopied(true); setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -638,8 +662,8 @@ function ProfilePageContent() {
               </span>
             )}
             {profile?.id && (
-              <button className="pf-copy-btn" onClick={copyId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', padding: '3px 10px', borderRadius: 99, cursor: 'pointer', transition: 'opacity 0.15s', WebkitTapHighlightColor: 'transparent' }}>
-                ID: {String(profile.id).slice(0, 8)}…
+              <button className="pf-copy-btn" onClick={copyId} title={copied ? t('profile.copiedId') : t('profile.copyId')} aria-label={copied ? t('profile.copiedId') : t('profile.copyId')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: copied ? '#30d158' : 'rgba(255,255,255,0.45)', background: copied ? 'rgba(48,209,88,0.10)' : 'rgba(255,255,255,0.07)', border: `1px solid ${copied ? 'rgba(48,209,88,0.25)' : 'rgba(255,255,255,0.12)'}`, padding: '3px 10px', borderRadius: 99, cursor: 'pointer', transition: 'all 0.2s', WebkitTapHighlightColor: 'transparent' }}>
+                <span style={{ opacity: 0.70 }}>ID: {String(profile.id).slice(0, 8)}…</span>
                 {copied
                   ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
                   : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -652,8 +676,11 @@ function ProfilePageContent() {
     </div>
   );
 
-  const BalanceBlock = () => (
-    <div style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
+  const BalanceBlock = () => {
+    const totalBalance = (balance?.real_balance ?? 0);
+    return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
       {[
         {
           label: t('profile.balanceReal'), color: '#30d158', bgColor: 'rgba(48,209,88,0.12)', val: balance?.real_balance, sub: currencyUnit,
@@ -678,8 +705,10 @@ function ProfilePageContent() {
           </div>
         </div>
       ))}
+      </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div
@@ -714,8 +743,8 @@ function ProfilePageContent() {
             <div className="lo-icon">👋</div>
           </div>
           <div className="lo-text">
-            <p className="lo-title">Sampai jumpa!</p>
-            <p className="lo-sub">Anda berhasil keluar.<br/>Sampai bertemu kembali.</p>
+            <p className="lo-title">{t('profile.logoutTitle')}</p>
+            <p className="lo-sub">{t('profile.logoutSuccess')}<br/>{t('profile.logoutSubtitle')}</p>
           </div>
           <div className="lo-bar-wrap">
             <div className="lo-bar" />
@@ -725,8 +754,26 @@ function ProfilePageContent() {
 
       {/* ── MOBILE HEADER ── */}
       <div className="pf-mob-header" style={{ width: '100%', zIndex: 50, background: 'rgba(8,8,18,0.88)', backdropFilter: 'saturate(140%) blur(22px)', WebkitBackdropFilter: 'saturate(140%) blur(22px)', borderBottom: '0.5px solid rgba(76,175,80,0.18)', position: 'relative' }}>
-        <div style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Language button — left */}
+          <button
+            onClick={() => setLangSheetOpen(true)}
+            title={t('language.title')}
+            style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
+          >🌐</button>
+          {/* Title — center */}
           <h1 style={{ fontSize: 17, fontWeight: 600, color: '#fff', letterSpacing: -0.4 }}>{t('profile.title')}</h1>
+          {/* Refresh button — right */}
+          <button
+            onClick={() => loadProfile(true)}
+            disabled={refreshing || isLoading}
+            title={t('profile.refreshProfile')}
+            style={{ width: 34, height: 34, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#66bb6a', opacity: (refreshing || isLoading) ? 0.4 : 1, transition: 'opacity 0.15s', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{ animation: (refreshing || isLoading) ? 'pf-spin 0.8s linear infinite' : 'none' }}>
+              <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -748,7 +795,7 @@ function ProfilePageContent() {
                   <TappableRow
                     icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
                     iconBg="linear-gradient(135deg, #F59E0B, #D97706)"
-                    label="Admin Panel"
+                    label={t('profile.adminPanel')}
                     value={isSuperAdminUser ? 'Super Admin' : 'Admin'}
                     onClick={() => router.push('/admin')}
                     last
@@ -762,7 +809,7 @@ function ProfilePageContent() {
                 iconBg="#ff453a" label={t('profile.logout')} danger onClick={() => setShowLogout(true)} last
               />
             </Card>
-            <p style={{ textAlign: 'center', fontSize: 11.5, color: 'rgba(255,255,255,0.25)', marginTop: 14 }}>STC AutoTrade v2.0.0</p>
+            <p style={{ textAlign: 'center', fontSize: 11.5, color: 'rgba(255,255,255,0.25)', marginTop: 14 }}>STC AutoTrade · {t('profile.version')} 2.0.0</p>
           </div>
         </div>
 
@@ -789,6 +836,16 @@ function ProfilePageContent() {
               </button>
             </div>
           </div>
+
+          {/* Refreshing overlay indicator */}
+          {refreshing && (
+            <div style={{ position: 'fixed', top: 56, right: 16, zIndex: 40, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, background: 'rgba(10,10,22,0.90)', border: '1px solid rgba(76,175,80,0.25)', backdropFilter: 'blur(12px)', animation: 'pf-fade-up 0.2s ease' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#66bb6a" strokeWidth="2.2" strokeLinecap="round" style={{ animation: 'pf-spin 0.8s linear infinite' }}>
+                <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              <span style={{ fontSize: 12, color: '#66bb6a', fontWeight: 500 }}>{t('common.refresh')}</span>
+            </div>
+          )}
 
           {/* Error banner */}
           {error && (
@@ -854,12 +911,12 @@ function ProfilePageContent() {
           {/* Admin */}
           {isAdminUser && (
             <div>
-              <SectionLabel>Admin</SectionLabel>
+              <SectionLabel>{t('profile.adminPanel')}</SectionLabel>
               <Card>
                 <TappableRow
                   icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
                   iconBg="linear-gradient(135deg, #F59E0B, #D97706)"
-                  label="Admin Panel"
+                  label={t('profile.adminPanel')}
                   value={isSuperAdminUser ? 'Super Admin' : 'Admin'}
                   onClick={() => router.push('/admin')}
                   last
@@ -892,7 +949,7 @@ function ProfilePageContent() {
                 iconBg="#ff453a" label={t('profile.logout')} danger onClick={() => setShowLogout(true)} last
               />
             </Card>
-            <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 14 }}>STC AutoTrade v2.0.0</p>
+            <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 14 }}>STC AutoTrade · {t('profile.version')} 2.0.0</p>
           </div>
 
         </div>

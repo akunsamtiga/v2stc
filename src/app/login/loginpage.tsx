@@ -430,6 +430,22 @@ const LOGIN_STYLES = `
   .tutor-caption-text { font-size: 13px; color: var(--text-2); line-height: 1.5; letter-spacing: -0.1px; }
   .tutor-caption-text strong { color: #fff; font-weight: 600; }
 
+  /* ── Prev button (optional skip) ───────────────────────────────────── */
+  .tutor-prev-btn {
+    background: none; border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
+    color: rgba(255,255,255,0.50); font-family: var(--font);
+    font-size: 13px; font-weight: 500;
+    padding: 9px 16px; border-radius: 99px;
+    transition: opacity 0.15s, border-color 0.15s;
+  }
+  .tutor-prev-btn:hover { opacity: 0.80; border-color: rgba(255,255,255,0.25); }
+
+  /* ── Step counter ───────────────────────────────────────────────────── */
+  .tutor-step-counter {
+    font-size: 11px; color: var(--text-3); letter-spacing: 0.04em;
+    font-weight: 600; text-transform: uppercase;
+  }
+
   /* ── Register link ──────────────────────────────────────────────────── */
   .register-link {
     text-align: center; margin-top: 16px;
@@ -623,6 +639,7 @@ function LoginPageContent() {
   const [tutorialPage, setTutorialPage] = useState(0);
   const [useImg, setUseImg] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('https://wa.me/6285959860015');
+  const [errorKey, setErrorKey] = useState(0); // increment to re-trigger shake
 
   const [toast, setToast] = useState<{ visible: boolean; message: string; hiding: boolean }>({
     visible: false, message: '', hiding: false,
@@ -650,6 +667,10 @@ function LoginPageContent() {
       if (savedPass)  { setPassword(savedPass); }
       const sessionValid = await isSessionValid();
       if (sessionValid) router.push('/dashboard');
+      else {
+        // Auto-focus email field after a short delay (better UX on mobile)
+        setTimeout(() => { if (!savedEmail) emailRef.current?.focus(); }, 500);
+      }
 
       try {
         const config = await getRegistrationConfig();
@@ -663,8 +684,8 @@ function LoginPageContent() {
         const registerEmail = sessionStorage.getItem('stc_register_email');
         if (registerSuccess === '1') {
           const msg = registerEmail
-            ? `Registrasi berhasil! Akun ${registerEmail} telah ditambahkan ke whitelist.`
-            : 'Registrasi berhasil! Silakan login dengan akun Stockity Anda.';
+            ? t('login.registerSuccess').replace('{email}', registerEmail)
+            : t('login.registerSuccessNoEmail');
           setToast({ visible: true, message: msg, hiding: false });
           sessionStorage.removeItem('stc_register_success');
           sessionStorage.removeItem('stc_register_email');
@@ -680,12 +701,21 @@ function LoginPageContent() {
 
   useEffect(() => { setUseImg(isWindows()); }, []);
 
+  // Close lang dropdown on Escape key
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setShowLangSelector(false); setShowTutorial(false); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (langRef.current && !langRef.current.contains(event.target as Node)) {
         setShowLangSelector(false);
       }
-    }
+    };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -865,6 +895,7 @@ function LoginPageContent() {
 
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('login.invalidCredentials'));
+      setErrorKey(k => k + 1);
       setLoading(false);
       setLoginStep('idle');
     }
@@ -872,9 +903,9 @@ function LoginPageContent() {
 
   const stepHintLabel = (): string => {
     switch (loginStep) {
-      case 'auth':      return 'Memverifikasi akun…';
-      case 'whitelist': return 'Memeriksa akses whitelist…';
-      case 'saving':    return 'Menyimpan sesi…';
+      case 'auth':      return t('login.verifyingAccount');
+      case 'whitelist': return t('login.checkingWhitelist');
+      case 'saving':    return t('login.savingSession');
       default:          return '';
     }
   };
@@ -961,7 +992,7 @@ function LoginPageContent() {
           {splash === 'welcome' && (
             <div className="sp-pill" style={{ marginBottom: 18 }}>
               <div className="sp-pill-dot" />
-              Masuk ke akun Anda
+              {t('login.welcomePill')}
             </div>
           )}
 
@@ -969,7 +1000,7 @@ function LoginPageContent() {
             {splash === 'welcome' && (
               <div className="sp-msg sp-msg-welcome-in">
                 <span className="sp-title">{t('login.welcome')}</span>
-                <span className="sp-sub">Senang melihat Anda kembali 🎉</span>
+                <span className="sp-sub">{t('login.welcomeBack')}</span>
               </div>
             )}
             {(splash === 'verified' || splash === 'out') && (
@@ -997,7 +1028,7 @@ function LoginPageContent() {
               </svg>
             </div>
             <span style={{ lineHeight: 1.4 }}>{toast.message}</span>
-            <button className="toast-close" onClick={dismissToast} aria-label="Tutup notifikasi">
+            <button className="toast-close" onClick={dismissToast} aria-label={t('common.close')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -1146,7 +1177,7 @@ function LoginPageContent() {
 
                 {/* Error */}
                 {error && (
-                  <div className={`err${isWhitelistError ? ' err-whitelist' : ''}`}>
+                  <div key={errorKey} className={`err${isWhitelistError ? ' err-whitelist' : ''}`}>
                     {isWhitelistError ? (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
                         <rect x="3" y="11" width="18" height="11" rx="2"/>
@@ -1155,12 +1186,27 @@ function LoginPageContent() {
                     ) : (
                       <div className="err-dot" />
                     )}
-                    <p className="err-txt">{error}</p>
+                    <div>
+                      <p className="err-txt">{error}</p>
+                      {isWhitelistError && (
+                        <a
+                          href={whatsappUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: 11.5, color: 'var(--accent-light)', fontWeight: 600, marginTop: 5, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                          Hubungi admin
+                        </a>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* Submit button */}
-                <button type="submit" className="btn" disabled={loading || !canSubmit}>
+                <button type="submit" className="btn" disabled={loading || !canSubmit}
+                  style={!canSubmit && !loading ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                >
                   {loading && <div className="spin" />}
                   {loading ? t('login.signingIn') : t('login.signIn')}
                   {!loading && (
@@ -1170,18 +1216,20 @@ function LoginPageContent() {
                   )}
                 </button>
 
-                <p className="step-hint" style={{ opacity: loading ? 1 : 0 }}>
+                <p className="step-hint" style={{ opacity: loading ? 1 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  {loading && loginStep !== 'idle' && (
+                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', border: '1.5px solid rgba(76,175,80,0.30)', borderTopColor: 'var(--accent-light)', animation: 'rot 0.7s linear infinite', flexShrink: 0 }} />
+                  )}
                   {stepHintLabel()}
                 </p>
               </form>
 
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
                 <div className="badge">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-light)' }}>
-                    <rect x="3" y="11" width="18" height="11" rx="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
-                  <span className="badge-txt">{t('common.encrypted')} & {t('common.secure')}</span>
+                  <span className="badge-txt">{t('common.encrypted')} &amp; {t('common.secure')}</span>
                 </div>
               </div>
             </div>
@@ -1198,8 +1246,8 @@ function LoginPageContent() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
                 </svg>
-                <span>Cara daftar STC</span>
-                <span style={{ color: 'var(--accent-light)', fontWeight: 700 }}>lihat tutorial</span>
+                <span>{t('login.tutorial.btnLabel')}</span>
+                <span style={{ color: 'var(--accent-light)', fontWeight: 700 }}>{t('login.tutorial.btnAction')}</span>
               </button>
             </div>
           </div>
@@ -1214,27 +1262,18 @@ function LoginPageContent() {
 
       {/* Tutorial Modal Portal */}
       {showTutorial && typeof document !== 'undefined' && createPortal((() => {
-        const TUTOR_CAPTIONS = [
-          {
-            step: 'Langkah 1 — Buat Akun',
-            text: <span>Gunakan <strong>akun baru</strong> ya! Isi <strong>email</strong>, buat <strong>password</strong>, pilih <strong>mata uang</strong> yang sesuai, lalu tekan tombol <strong>Daftar</strong>.</span>,
-          },
-          {
-            step: 'Langkah 2 — Registrasi Berhasil',
-            text: <span>Selamat! Akan muncul pesan sukses seperti gambar di atas. Selanjutnya, tekan tombol <strong>"Login STC AutoTrade"</strong> untuk langsung menuju halaman login 🎉</span>,
-          },
-          {
-            step: 'Langkah 3 — Masuk ke Akun',
-            text: <span>Hampir selesai! Masukkan <strong>email</strong> dan <strong>password</strong> yang tadi didaftarkan, lalu tekan login. Selamat bergabung di STC AutoTrade! 🚀</span>,
-          },
+        const TUTOR_STEPS = [
+          { titleKey: 'login.tutorial.step1Title' as const, textKey: 'login.tutorial.step1Text' as const },
+          { titleKey: 'login.tutorial.step2Title' as const, textKey: 'login.tutorial.step2Text' as const },
+          { titleKey: 'login.tutorial.step3Title' as const, textKey: 'login.tutorial.step3Text' as const },
         ];
-        const cap = TUTOR_CAPTIONS[tutorialPage];
+        const cap = TUTOR_STEPS[tutorialPage];
         return (
           <div className="tutor-overlay" onClick={() => setShowTutorial(false)}>
             <div className="tutor-modal" onClick={e => e.stopPropagation()}>
               <div className="tutor-header">
-                <span className="tutor-title">Tutorial Pendaftaran</span>
-                <button className="tutor-close" onClick={() => setShowTutorial(false)} aria-label="Tutup">
+                <span className="tutor-title">{t('login.tutorial.title')}</span>
+                <button className="tutor-close" onClick={() => setShowTutorial(false)} aria-label={t('login.tutorial.close')}>
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                   </svg>
@@ -1244,7 +1283,7 @@ function LoginPageContent() {
               <div className="tutor-img-wrap">
                 <Image
                   src={`/tutor${tutorialPage + 1}.jpeg`}
-                  alt={`Tutorial langkah ${tutorialPage + 1}`}
+                  alt={`${t('login.tutorial.title')} ${tutorialPage + 1}`}
                   fill
                   style={{ objectFit: 'contain' }}
                   priority
@@ -1252,27 +1291,37 @@ function LoginPageContent() {
               </div>
 
               <div key={tutorialPage} className="tutor-caption">
-                <p className="tutor-caption-step">{cap.step}</p>
-                <p className="tutor-caption-text">{cap.text}</p>
+                <p className="tutor-caption-step">{t(cap.titleKey)}</p>
+                <p className="tutor-caption-text">{t(cap.textKey)}</p>
               </div>
 
               <div className="tutor-footer">
-                <div className="tutor-dots">
-                  {[0, 1, 2].map(i => (
-                    <div
-                      key={i}
-                      className={`tutor-dot${tutorialPage === i ? ' active' : ''}`}
-                      onClick={() => setTutorialPage(i)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+                  <span className="tutor-step-counter">{tutorialPage + 1} / 3</span>
+                  <div className="tutor-dots">
+                    {[0, 1, 2].map(i => (
+                      <div
+                        key={i}
+                        className={`tutor-dot${tutorialPage === i ? ' active' : ''}`}
+                        onClick={() => setTutorialPage(i)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <button
-                  className="tutor-next-btn"
-                  onClick={() => tutorialPage < 2 ? setTutorialPage(p => p + 1) : setShowTutorial(false)}
-                >
-                  {tutorialPage < 2 ? 'Selanjutnya' : 'Selesai'}
-                </button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {tutorialPage > 0 && (
+                    <button className="tutor-prev-btn" onClick={() => setTutorialPage(p => p - 1)}>
+                      ←
+                    </button>
+                  )}
+                  <button
+                    className="tutor-next-btn"
+                    onClick={() => tutorialPage < 2 ? setTutorialPage(p => p + 1) : setShowTutorial(false)}
+                  >
+                    {tutorialPage < 2 ? t('login.tutorial.next') : t('login.tutorial.done')}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -56,6 +56,7 @@ export interface Translations {
     virtual: string;
     encrypted: string;
     secure: string;
+    show: string;
   };
 
   // Login Page
@@ -83,6 +84,28 @@ export interface Translations {
     enterPassword: string;
     invalidEmail: string;
     invalidPassword: string;
+    // ── New keys ──
+    verifyingAccount: string;        // step hint: "Verifying account…"
+    checkingWhitelist: string;       // step hint: "Checking whitelist access…"
+    savingSession: string;           // step hint: "Saving session…"
+    welcomeBack: string;             // splash subtitle: "Good to see you again 🎉"
+    welcomePill: string;             // splash pill: "Signing in to your account"
+    registerSuccess: string;         // toast: "Registration successful! Account {email} added."
+    registerSuccessNoEmail: string;  // toast: "Registration successful! Please login."
+    tutorial: {
+      title: string;      // modal title: "Registration Tutorial"
+      btnLabel: string;   // button prefix: "How to register"
+      btnAction: string;  // button suffix: "see tutorial"
+      next: string;       // "Next"
+      done: string;       // "Done"
+      close: string;      // "Close"
+      step1Title: string;
+      step1Text: string;
+      step2Title: string;
+      step2Text: string;
+      step3Title: string;
+      step3Text: string;
+    };
   };
 
   // Profile Page
@@ -116,6 +139,13 @@ export interface Translations {
     version: string;
     loadError: string;
     updateError: string;
+    logoutTitle: string;
+    logoutSuccess: string;
+    logoutSubtitle: string;
+    copyId: string;
+    copiedId: string;
+    adminPanel: string;
+    refreshProfile: string;
   };
 
   // History Page
@@ -199,6 +229,13 @@ export interface Translations {
       noSignals: string;
       allCompleted: string;
       completed: string;
+      // ── New keys ──
+      managing: string;       // subtitle in modal list view
+      inputFormat: string;    // hint under input view
+      hiddenSignals: string;  // "...and N previous signals (tap to see all)"
+      allDone: string;        // "All orders completed"
+      emptyTitle: string;     // "No Scheduled Orders"
+      emptyDesc: string;      // "Schedule orders to execute automatically..."
     };
     fastTrade: {
       title: string;
@@ -239,6 +276,7 @@ export interface Translations {
       moreItems: string;
       status: string;
       martingaleStep: string;
+      configuring: string;   // "Configuring AI signal analysis system"
     };
     indicator: {
       title: string;
@@ -322,6 +360,11 @@ export interface Translations {
       title: string;
       subtitle: string;
       stopActiveFirst: string;
+      // ── New keys ──
+      running: string;         // "Running" badge when bot is active in mode list
+      activeBanner: string;    // "Mode Active" banner title
+      activeBannerSub: string; // "Stop bot first to switch modes"
+      cannotSwitch: string;    // Info hint at bottom of mode list when locked
     };
     modeDesc: {
       schedule: string;
@@ -330,6 +373,15 @@ export interface Translations {
       aisignal: string;
       indicator: string;
       momentum: string;
+    };
+    // ── New top-level dashboard keys ──
+    chooseModePrompt: string;  // "Choose Mode Based on Your Trading Style"
+    darkMode: string;          // "Dark Mode"
+    lightMode: string;         // "Light Mode"
+    botStatus: {
+      running: string;   // "Running"
+      paused: string;    // "Paused"
+      stopped: string;   // "Stopped"
     };
     errors: {
       loadAssets: string;
@@ -429,6 +481,7 @@ const translations: Record<Language, Translations> = {
       virtual: 'Virtual',
       encrypted: 'Encrypted',
       secure: 'Secure',
+          show: 'Show',
     },
     login: {
       title: 'STC AutoTrade',
@@ -454,6 +507,27 @@ const translations: Record<Language, Translations> = {
       enterPassword: 'Please enter your password',
       invalidEmail: 'Please enter a valid email',
       invalidPassword: 'Password must be at least 6 characters',
+      verifyingAccount: 'Verifying account…',
+      checkingWhitelist: 'Checking whitelist access…',
+      savingSession: 'Saving session…',
+      welcomeBack: 'Good to see you again 🎉',
+      welcomePill: 'Signing in to your account',
+      registerSuccess: 'Registration successful! Account {email} has been added.',
+      registerSuccessNoEmail: 'Registration successful! Please login with your Stockity account.',
+      tutorial: {
+        title: 'Registration Tutorial',
+        btnLabel: 'How to register on STC',
+        btnAction: 'see tutorial',
+        next: 'Next',
+        done: 'Done',
+        close: 'Close',
+        step1Title: 'Step 1 — Create Account',
+        step1Text: 'Use a new account! Fill in your email, create a password, choose your currency, then tap Register.',
+        step2Title: 'Step 2 — Registration Successful',
+        step2Text: 'Congratulations! A success message will appear. Tap "Login STC AutoTrade" to go to the login page 🎉',
+        step3Title: 'Step 3 — Sign In',
+        step3Text: 'Almost done! Enter the email and password you registered, then tap login. Welcome to STC AutoTrade! 🚀',
+      },
     },
     profile: {
       title: 'Profile',
@@ -485,6 +559,13 @@ const translations: Record<Language, Translations> = {
       version: 'Version',
       loadError: 'Failed to load profile. Please try again.',
       updateError: 'Failed to update. Please try again.',
+      logoutTitle: 'See you later!',
+      logoutSuccess: 'You have successfully logged out.',
+      logoutSubtitle: 'Come back anytime.',
+      copyId: 'Copy ID',
+      copiedId: 'ID Copied!',
+      adminPanel: 'Admin Panel',
+      refreshProfile: 'Refresh profile',
     },
     history: {
       title: 'History',
@@ -564,6 +645,12 @@ const translations: Record<Language, Translations> = {
         add: 'Add',
         nextSignal: 'Next Signal',
         completed: 'completed',
+        managing: 'Manage pending trades · History preserved',
+        inputFormat: 'Format: 09:30 B · 14:00 S · one per line',
+        hiddenSignals: '...and {n} previous signals (tap to see all)',
+        allDone: 'All orders completed',
+        emptyTitle: 'No Scheduled Orders',
+        emptyDesc: 'Schedule orders to execute automatically at your specified times.',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -604,6 +691,7 @@ const translations: Record<Language, Translations> = {
         moreItems: 'more',
         status: 'Status',
         martingaleStep: 'Martingale Step',
+        configuring: 'Configuring AI signal analysis system',
       },
       indicator: {
         title: 'Indicator',
@@ -703,6 +791,10 @@ const translations: Record<Language, Translations> = {
         title: 'Trading Mode',
         subtitle: 'Select the mode you want to use',
         stopActiveFirst: 'Stop the active mode first to switch modes',
+        running: 'Running',
+        activeBanner: 'Mode Active',
+        activeBannerSub: 'Stop bot first to switch modes',
+        cannotSwitch: 'Stop bot first to run another mode',
       },
       modeDesc: {
         schedule: 'Scheduled orders',
@@ -711,6 +803,14 @@ const translations: Record<Language, Translations> = {
         aisignal: 'Signals from AI / Telegram',
         indicator: 'SMA / EMA / RSI',
         momentum: 'Candle pattern detection',
+      },
+      chooseModePrompt: 'Choose a Mode That Suits Your Trading Style',
+      darkMode: 'Dark Mode',
+      lightMode: 'Light Mode',
+      botStatus: {
+        running: 'Running',
+        paused: 'Paused',
+        stopped: 'Stopped',
       },
       phaseMap: {
         waitingMinute1: 'Waiting candle 1',
@@ -791,6 +891,7 @@ const translations: Record<Language, Translations> = {
       virtual: 'Virtual',
       encrypted: 'Terenkripsi',
       secure: 'Aman',
+          show: 'Tampilkan',
     },
     login: {
       title: 'STC AutoTrade',
@@ -816,6 +917,27 @@ const translations: Record<Language, Translations> = {
       enterPassword: 'Silakan masukkan password Anda',
       invalidEmail: 'Silakan masukkan email yang valid',
       invalidPassword: 'Password minimal 6 karakter',
+      verifyingAccount: 'Memverifikasi akun…',
+      checkingWhitelist: 'Memeriksa akses whitelist…',
+      savingSession: 'Menyimpan sesi…',
+      welcomeBack: 'Senang melihat Anda kembali 🎉',
+      welcomePill: 'Masuk ke akun Anda',
+      registerSuccess: 'Registrasi berhasil! Akun {email} telah ditambahkan ke whitelist.',
+      registerSuccessNoEmail: 'Registrasi berhasil! Silakan login dengan akun Stockity Anda.',
+      tutorial: {
+        title: 'Tutorial Pendaftaran',
+        btnLabel: 'Cara daftar STC',
+        btnAction: 'lihat tutorial',
+        next: 'Selanjutnya',
+        done: 'Selesai',
+        close: 'Tutup',
+        step1Title: 'Langkah 1 — Buat Akun',
+        step1Text: 'Gunakan akun baru ya! Isi email, buat password, pilih mata uang yang sesuai, lalu tekan tombol Daftar.',
+        step2Title: 'Langkah 2 — Registrasi Berhasil',
+        step2Text: 'Selamat! Akan muncul pesan sukses. Tekan tombol "Login STC AutoTrade" untuk menuju halaman login 🎉',
+        step3Title: 'Langkah 3 — Masuk ke Akun',
+        step3Text: 'Hampir selesai! Masukkan email dan password yang tadi didaftarkan, lalu tekan login. Selamat bergabung di STC AutoTrade! 🚀',
+      },
     },
     profile: {
       title: 'Profil',
@@ -847,6 +969,13 @@ const translations: Record<Language, Translations> = {
       version: 'Versi',
       loadError: 'Gagal memuat profil. Coba lagi.',
       updateError: 'Gagal memperbarui. Coba lagi.',
+      logoutTitle: 'Sampai jumpa!',
+      logoutSuccess: 'Anda berhasil keluar.',
+      logoutSubtitle: 'Sampai bertemu kembali.',
+      copyId: 'Salin ID',
+      copiedId: 'ID Disalin!',
+      adminPanel: 'Panel Admin',
+      refreshProfile: 'Muat ulang profil',
     },
     history: {
       title: 'Riwayat',
@@ -926,6 +1055,12 @@ const translations: Record<Language, Translations> = {
         add: 'Tambah',
         nextSignal: 'Signal Berikutnya',
         completed: 'selesai',
+        managing: 'Kelola signal · Riwayat tersimpan',
+        inputFormat: 'Format: 09:30 B · 14:00 S · satu per baris',
+        hiddenSignals: '...dan {n} signal sebelumnya (ketuk untuk lihat semua)',
+        allDone: 'Semua order telah selesai',
+        emptyTitle: 'Belum Ada Signal',
+        emptyDesc: 'Tambahkan signal untuk dieksekusi otomatis sesuai jadwal.',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -966,6 +1101,7 @@ const translations: Record<Language, Translations> = {
         moreItems: 'lainnya',
         status: 'Status',
         martingaleStep: 'Martingale Step',
+        configuring: 'Sedang mengkonfigurasi sistem analisis sinyal AI',
       },
       indicator: {
         title: 'Indicator',
@@ -1065,6 +1201,10 @@ const translations: Record<Language, Translations> = {
         title: 'Mode Trading',
         subtitle: 'Pilih mode yang ingin digunakan',
         stopActiveFirst: 'Hentikan mode aktif terlebih dahulu untuk berpindah mode',
+        running: 'Berjalan',
+        activeBanner: 'Mode Sedang Aktif',
+        activeBannerSub: 'Stop bot terlebih dahulu untuk mengganti mode',
+        cannotSwitch: 'Hentikan bot dulu untuk menjalankan mode lain',
       },
       modeDesc: {
         schedule: 'Order terjadwal',
@@ -1073,6 +1213,14 @@ const translations: Record<Language, Translations> = {
         aisignal: 'Sinyal dari AI / Telegram',
         indicator: 'SMA / EMA / RSI',
         momentum: 'Deteksi pola candle',
+      },
+      chooseModePrompt: 'Pilih Mode Sesuai Style Pengaturan Trading Anda',
+      darkMode: 'Mode Gelap',
+      lightMode: 'Mode Terang',
+      botStatus: {
+        running: 'Berjalan',
+        paused: 'Dijeda',
+        stopped: 'Berhenti',
       },
       phaseMap: {
         waitingMinute1: 'Menunggu candle 1',
@@ -1153,6 +1301,7 @@ const translations: Record<Language, Translations> = {
       virtual: 'Виртуальный',
       encrypted: 'Зашифровано',
       secure: 'Безопасно',
+          show: 'Показать',
     },
     login: {
       title: 'STC AutoTrade',
@@ -1178,6 +1327,27 @@ const translations: Record<Language, Translations> = {
       enterPassword: 'Пожалуйста, введите ваш пароль',
       invalidEmail: 'Пожалуйста, введите действительный email',
       invalidPassword: 'Пароль должен быть не менее 6 символов',
+      verifyingAccount: 'Проверка аккаунта…',
+      checkingWhitelist: 'Проверка доступа…',
+      savingSession: 'Сохранение сессии…',
+      welcomeBack: 'Рады снова вас видеть 🎉',
+      welcomePill: 'Выполняется вход',
+      registerSuccess: 'Регистрация успешна! Аккаунт {email} добавлен в белый список.',
+      registerSuccessNoEmail: 'Регистрация успешна! Войдите через аккаунт Stockity.',
+      tutorial: {
+        title: 'Руководство по регистрации',
+        btnLabel: 'Как зарегистрироваться в STC',
+        btnAction: 'смотреть',
+        next: 'Далее',
+        done: 'Готово',
+        close: 'Закрыть',
+        step1Title: 'Шаг 1 — Создайте аккаунт',
+        step1Text: 'Используйте новый аккаунт! Введите email, создайте пароль, выберите валюту, нажмите Зарегистрироваться.',
+        step2Title: 'Шаг 2 — Регистрация успешна',
+        step2Text: 'Поздравляем! Появится сообщение об успехе. Нажмите «Войти в STC AutoTrade» 🎉',
+        step3Title: 'Шаг 3 — Войдите в систему',
+        step3Text: 'Почти готово! Введите email и пароль, нажмите войти. Добро пожаловать в STC AutoTrade! 🚀',
+      },
     },
     profile: {
       title: 'Профиль',
@@ -1209,6 +1379,13 @@ const translations: Record<Language, Translations> = {
       version: 'Версия',
       loadError: 'Не удалось загрузить профиль. Попробуйте снова.',
       updateError: 'Не удалось обновить. Попробуйте снова.',
+      logoutTitle: 'До свидания!',
+      logoutSuccess: 'Вы успешно вышли из системы.',
+      logoutSubtitle: 'Возвращайтесь в любое время.',
+      copyId: 'Скопировать ID',
+      copiedId: 'ID скопирован!',
+      adminPanel: 'Панель администратора',
+      refreshProfile: 'Обновить профиль',
     },
     history: {
       title: 'История',
@@ -1288,6 +1465,12 @@ const translations: Record<Language, Translations> = {
         add: 'Добавить',
         nextSignal: 'Следующий сигнал',
         completed: 'выполнено',
+        managing: 'Управление · История сохранена',
+        inputFormat: 'Формат: 09:30 B · 14:00 S · одна строка на сигнал',
+        hiddenSignals: '...и {n} предыдущих сигналов (нажмите, чтобы увидеть все)',
+        allDone: 'Все ордера выполнены',
+        emptyTitle: 'Нет запланированных ордеров',
+        emptyDesc: 'Добавьте сигналы для автоматического исполнения в заданное время.',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -1328,6 +1511,7 @@ const translations: Record<Language, Translations> = {
         moreItems: 'ещё',
         status: 'Статус',
         martingaleStep: 'Шаг мартингала',
+        configuring: 'Настройка системы анализа AI-сигналов',
       },
       indicator: {
         title: 'Индикатор',
@@ -1427,6 +1611,10 @@ const translations: Record<Language, Translations> = {
         title: 'Режим торговли',
         subtitle: 'Выберите режим',
         stopActiveFirst: 'Сначала остановите активный режим',
+        running: 'Работает',
+        activeBanner: 'Режим активен',
+        activeBannerSub: 'Остановите бота для смены режима',
+        cannotSwitch: 'Сначала остановите бота для смены режима',
       },
       modeDesc: {
         schedule: 'Запланированные ордера',
@@ -1435,6 +1623,14 @@ const translations: Record<Language, Translations> = {
         aisignal: 'Сигналы от AI / Telegram',
         indicator: 'SMA / EMA / RSI',
         momentum: 'Паттерны свечей',
+      },
+      chooseModePrompt: 'Выберите режим, соответствующий вашему стилю торговли',
+      darkMode: 'Тёмный режим',
+      lightMode: 'Светлый режим',
+      botStatus: {
+        running: 'Работает',
+        paused: 'Пауза',
+        stopped: 'Остановлен',
       },
       phaseMap: {
         waitingMinute1: 'Ожидание свечи 1',
@@ -1515,6 +1711,7 @@ const translations: Record<Language, Translations> = {
       virtual: 'Virtual',
       encrypted: 'Encriptado',
       secure: 'Seguro',
+          show: 'Mostrar',
     },
     login: {
       title: 'STC AutoTrade',
@@ -1540,6 +1737,27 @@ const translations: Record<Language, Translations> = {
       enterPassword: 'Por favor ingresa tu contraseña',
       invalidEmail: 'Por favor ingresa un correo válido',
       invalidPassword: 'La contraseña debe tener al menos 6 caracteres',
+      verifyingAccount: 'Verificando cuenta…',
+      checkingWhitelist: 'Verificando acceso…',
+      savingSession: 'Guardando sesión…',
+      welcomeBack: 'Qué bueno verte de nuevo 🎉',
+      welcomePill: 'Iniciando sesión',
+      registerSuccess: '¡Registro exitoso! La cuenta {email} ha sido agregada.',
+      registerSuccessNoEmail: '¡Registro exitoso! Por favor inicia sesión con tu cuenta Stockity.',
+      tutorial: {
+        title: 'Tutorial de Registro',
+        btnLabel: 'Cómo registrarse en STC',
+        btnAction: 'ver tutorial',
+        next: 'Siguiente',
+        done: 'Listo',
+        close: 'Cerrar',
+        step1Title: 'Paso 1 — Crear Cuenta',
+        step1Text: '¡Usa una cuenta nueva! Ingresa correo, contraseña, elige moneda y toca Registrarse.',
+        step2Title: 'Paso 2 — Registro Exitoso',
+        step2Text: '¡Felicitaciones! Aparecerá un mensaje de éxito. Toca "Iniciar sesión STC AutoTrade" 🎉',
+        step3Title: 'Paso 3 — Inicia Sesión',
+        step3Text: '¡Casi listo! Ingresa correo y contraseña registrados y toca iniciar sesión. ¡Bienvenido a STC AutoTrade! 🚀',
+      },
     },
     profile: {
       title: 'Perfil',
@@ -1571,6 +1789,13 @@ const translations: Record<Language, Translations> = {
       version: 'Versión',
       loadError: 'Error al cargar el perfil. Inténtalo de nuevo.',
       updateError: 'Error al actualizar. Inténtalo de nuevo.',
+      logoutTitle: '¡Hasta pronto!',
+      logoutSuccess: 'Has cerrado sesión exitosamente.',
+      logoutSubtitle: 'Vuelve cuando quieras.',
+      copyId: 'Copiar ID',
+      copiedId: '¡ID copiado!',
+      adminPanel: 'Panel de administrador',
+      refreshProfile: 'Actualizar perfil',
     },
     history: {
       title: 'Historial',
@@ -1650,6 +1875,12 @@ const translations: Record<Language, Translations> = {
         add: 'Agregar',
         nextSignal: 'Siguiente Señal',
         completed: 'completado',
+        managing: 'Gestionar señales · Historial conservado',
+        inputFormat: 'Formato: 09:30 B · 14:00 S · una por línea',
+        hiddenSignals: '...y {n} señales anteriores (toca para ver todo)',
+        allDone: 'Todas las órdenes completadas',
+        emptyTitle: 'Sin Órdenes Programadas',
+        emptyDesc: 'Agrega señales para ejecutarlas automáticamente en los horarios especificados.',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -1690,6 +1921,7 @@ const translations: Record<Language, Translations> = {
         moreItems: 'más',
         status: 'Estado',
         martingaleStep: 'Paso Martingala',
+        configuring: 'Configurando el sistema de análisis de señales AI',
       },
       indicator: {
         title: 'Indicador',
@@ -1789,6 +2021,10 @@ const translations: Record<Language, Translations> = {
         title: 'Modo de Trading',
         subtitle: 'Selecciona el modo que deseas usar',
         stopActiveFirst: 'Detén el modo activo primero para cambiar',
+        running: 'En Curso',
+        activeBanner: 'Modo Activo',
+        activeBannerSub: 'Detén el bot primero para cambiar de modo',
+        cannotSwitch: 'Detén el bot primero para ejecutar otro modo',
       },
       modeDesc: {
         schedule: 'Órdenes programadas',
@@ -1797,6 +2033,14 @@ const translations: Record<Language, Translations> = {
         aisignal: 'Señales de AI / Telegram',
         indicator: 'SMA / EMA / RSI',
         momentum: 'Detección de patrones de velas',
+      },
+      chooseModePrompt: 'Elige el Modo que Se Adapta a Tu Estilo de Trading',
+      darkMode: 'Modo Oscuro',
+      lightMode: 'Modo Claro',
+      botStatus: {
+        running: 'En Curso',
+        paused: 'Pausado',
+        stopped: 'Detenido',
       },
       phaseMap: {
         waitingMinute1: 'Esperando vela 1',
@@ -1877,6 +2121,7 @@ const translations: Record<Language, Translations> = {
       virtual: 'Maya',
       encrypted: 'Disulitkan',
       secure: 'Selamat',
+          show: 'Tunjuk',
     },
     login: {
       title: 'STC AutoTrade',
@@ -1902,6 +2147,27 @@ const translations: Record<Language, Translations> = {
       enterPassword: 'Sila masukkan kata laluan anda',
       invalidEmail: 'Sila masukkan e-mel yang sah',
       invalidPassword: 'Kata laluan mestilah sekurang-kurangnya 6 aksara',
+      verifyingAccount: 'Mengesahkan akaun…',
+      checkingWhitelist: 'Memeriksa akses senarai putih…',
+      savingSession: 'Menyimpan sesi…',
+      welcomeBack: 'Seronok melihat anda kembali 🎉',
+      welcomePill: 'Log masuk ke akaun anda',
+      registerSuccess: 'Pendaftaran berjaya! Akaun {email} telah ditambah.',
+      registerSuccessNoEmail: 'Pendaftaran berjaya! Sila log masuk dengan akaun Stockity anda.',
+      tutorial: {
+        title: 'Tutorial Pendaftaran',
+        btnLabel: 'Cara daftar STC',
+        btnAction: 'lihat tutorial',
+        next: 'Seterusnya',
+        done: 'Selesai',
+        close: 'Tutup',
+        step1Title: 'Langkah 1 — Cipta Akaun',
+        step1Text: 'Gunakan akaun baru! Isi emel, cipta kata laluan, pilih mata wang, kemudian ketik Daftar.',
+        step2Title: 'Langkah 2 — Pendaftaran Berjaya',
+        step2Text: 'Tahniah! Mesej kejayaan akan muncul. Ketik "Log Masuk STC AutoTrade" 🎉',
+        step3Title: 'Langkah 3 — Log Masuk',
+        step3Text: 'Hampir selesai! Masukkan emel dan kata laluan yang baru didaftarkan. Selamat datang ke STC AutoTrade! 🚀',
+      },
     },
     profile: {
       title: 'Profil',
@@ -1933,6 +2199,13 @@ const translations: Record<Language, Translations> = {
       version: 'Versi',
       loadError: 'Gagal memuatkan profil. Sila cuba lagi.',
       updateError: 'Gagal mengemas kini. Sila cuba lagi.',
+      logoutTitle: 'Jumpa lagi!',
+      logoutSuccess: 'Anda berjaya log keluar.',
+      logoutSubtitle: 'Kembali bila-bila masa.',
+      copyId: 'Salin ID',
+      copiedId: 'ID Disalin!',
+      adminPanel: 'Panel Pentadbir',
+      refreshProfile: 'Muat semula profil',
     },
     history: {
       title: 'Sejarah',
@@ -2012,6 +2285,12 @@ const translations: Record<Language, Translations> = {
         add: 'Tambah',
         nextSignal: 'Isyarat Seterusnya',
         completed: 'selesai',
+        managing: 'Urus isyarat · Sejarah disimpan',
+        inputFormat: 'Format: 09:30 B · 14:00 S · satu per baris',
+        hiddenSignals: '...dan {n} isyarat sebelumnya (ketuk untuk lihat semua)',
+        allDone: 'Semua pesanan selesai',
+        emptyTitle: 'Tiada Pesanan Dijadualkan',
+        emptyDesc: 'Tambah isyarat untuk dilaksanakan secara automatik pada masa yang ditetapkan.',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -2052,6 +2331,7 @@ const translations: Record<Language, Translations> = {
         moreItems: 'lagi',
         status: 'Status',
         martingaleStep: 'Langkah Martingale',
+        configuring: 'Mengkonfigurasi sistem analisis isyarat AI',
       },
       indicator: {
         title: 'Penunjuk',
@@ -2151,6 +2431,10 @@ const translations: Record<Language, Translations> = {
         title: 'Mod Dagangan',
         subtitle: 'Pilih mod yang ingin digunakan',
         stopActiveFirst: 'Hentikan mod aktif dahulu untuk bertukar mod',
+        running: 'Sedang Berjalan',
+        activeBanner: 'Mod Sedang Aktif',
+        activeBannerSub: 'Hentikan bot dahulu untuk menukar mod',
+        cannotSwitch: 'Hentikan bot dahulu untuk menjalankan mod lain',
       },
       modeDesc: {
         schedule: 'Pesanan berjadual',
@@ -2159,6 +2443,14 @@ const translations: Record<Language, Translations> = {
         aisignal: 'Isyarat dari AI / Telegram',
         indicator: 'SMA / EMA / RSI',
         momentum: 'Pengesanan corak lilin',
+      },
+      chooseModePrompt: 'Pilih Mod Yang Sesuai Dengan Gaya Trading Anda',
+      darkMode: 'Mod Gelap',
+      lightMode: 'Mod Cerah',
+      botStatus: {
+        running: 'Sedang Berjalan',
+        paused: 'Dijeda',
+        stopped: 'Berhenti',
       },
       phaseMap: {
         waitingMinute1: 'Menunggu lilin 1',
@@ -2239,6 +2531,7 @@ const translations: Record<Language, Translations> = {
       virtual: 'वर्चुअल',
       encrypted: 'एन्क्रिप्टेड',
       secure: 'सुरक्षित',
+          show: 'दिखाएं',
     },
     login: {
       title: 'STC AutoTrade',
@@ -2264,6 +2557,27 @@ const translations: Record<Language, Translations> = {
       enterPassword: 'कृपया अपना पासवर्ड दर्ज करें',
       invalidEmail: 'कृपया एक वैध ईमेल दर्ज करें',
       invalidPassword: 'पासवर्ड कम से कम 6 अक्षर का होना चाहिए',
+      verifyingAccount: 'खाता सत्यापित हो रहा है…',
+      checkingWhitelist: 'व्हाइटलिस्ट एक्सेस जांच रहे हैं…',
+      savingSession: 'सत्र सहेजा जा रहा है…',
+      welcomeBack: 'आपको फिर से देखकर खुशी हुई 🎉',
+      welcomePill: 'आपके खाते में साइन इन हो रहा है',
+      registerSuccess: 'पंजीकरण सफल! खाता {email} व्हाइटलिस्ट में जोड़ा गया।',
+      registerSuccessNoEmail: 'पंजीकरण सफल! अपने Stockity खाते से लॉगिन करें।',
+      tutorial: {
+        title: 'पंजीकरण ट्यूटोरियल',
+        btnLabel: 'STC में कैसे रजिस्टर करें',
+        btnAction: 'ट्यूटोरियल देखें',
+        next: 'अगला',
+        done: 'हो गया',
+        close: 'बंद करें',
+        step1Title: 'चरण 1 — खाता बनाएं',
+        step1Text: 'नया खाता उपयोग करें! ईमेल भरें, पासवर्ड बनाएं, मुद्रा चुनें और रजिस्टर दबाएं।',
+        step2Title: 'चरण 2 — पंजीकरण सफल',
+        step2Text: 'बधाई! सफलता संदेश दिखाई देगा। "STC AutoTrade में लॉगिन करें" दबाएं 🎉',
+        step3Title: 'चरण 3 — साइन इन करें',
+        step3Text: 'लगभग हो गया! ईमेल और पासवर्ड दर्ज करें और लॉगिन दबाएं। STC AutoTrade में स्वागत है! 🚀',
+      },
     },
     profile: {
       title: 'प्रोफ़ाइल',
@@ -2295,6 +2609,13 @@ const translations: Record<Language, Translations> = {
       version: 'संस्करण',
       loadError: 'प्रोफ़ाइल लोड करने में विफल। पुनः प्रयास करें।',
       updateError: 'अपडेट करने में विफल। पुनः प्रयास करें।',
+      logoutTitle: 'फिर मिलेंगे!',
+      logoutSuccess: 'आप सफलतापूर्वक लॉग आउट हो गए।',
+      logoutSubtitle: 'जब चाहें वापस आएं।',
+      copyId: 'ID कॉपी करें',
+      copiedId: 'ID कॉपी हो गया!',
+      adminPanel: 'एडमिन पैनल',
+      refreshProfile: 'प्रोफ़ाइल रीफ्रेश करें',
     },
     history: {
       title: 'इतिहास',
@@ -2374,6 +2695,12 @@ const translations: Record<Language, Translations> = {
         add: 'जोड़ें',
         nextSignal: 'अगला संकेत',
         completed: 'पूर्ण',
+        managing: 'सिग्नल प्रबंधित करें · इतिहास सुरक्षित',
+        inputFormat: 'फॉर्मेट: 09:30 B · 14:00 S · एक प्रति पंक्ति',
+        hiddenSignals: '...और {n} पिछले सिग्नल (सभी देखने के लिए टैप करें)',
+        allDone: 'सभी ऑर्डर पूरे हो गए',
+        emptyTitle: 'कोई निर्धारित ऑर्डर नहीं',
+        emptyDesc: 'निर्धारित समय पर स्वचालित रूप से निष्पादित होने के लिए सिग्नल जोड़ें।',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -2414,6 +2741,7 @@ const translations: Record<Language, Translations> = {
         moreItems: 'और',
         status: 'स्थिति',
         martingaleStep: 'मार्टिंगेल चरण',
+        configuring: 'AI सिग्नल विश्लेषण प्रणाली कॉन्फ़िगर हो रही है',
       },
       indicator: {
         title: 'इंडिकेटर',
@@ -2513,6 +2841,10 @@ const translations: Record<Language, Translations> = {
         title: 'ट्रेडिंग मोड',
         subtitle: 'उपयोग करने वाला मोड चुनें',
         stopActiveFirst: 'मोड बदलने के लिए पहले सक्रिय मोड रोकें',
+        running: 'चल रहा है',
+        activeBanner: 'मोड सक्रिय है',
+        activeBannerSub: 'मोड बदलने के लिए पहले बॉट रोकें',
+        cannotSwitch: 'अन्य मोड चलाने के लिए पहले बॉट रोकें',
       },
       modeDesc: {
         schedule: 'निर्धारित ऑर्डर',
@@ -2521,6 +2853,14 @@ const translations: Record<Language, Translations> = {
         aisignal: 'AI / Telegram से संकेत',
         indicator: 'SMA / EMA / RSI',
         momentum: 'कैंडल पैटर्न पहचान',
+      },
+      chooseModePrompt: 'अपनी ट्रेडिंग शैली के अनुसार मोड चुनें',
+      darkMode: 'डार्क मोड',
+      lightMode: 'लाइट मोड',
+      botStatus: {
+        running: 'चल रहा है',
+        paused: 'रुका हुआ',
+        stopped: 'बंद',
       },
       phaseMap: {
         waitingMinute1: 'कैंडल 1 की प्रतीक्षा',
@@ -2601,6 +2941,7 @@ const translations: Record<Language, Translations> = {
       virtual: 'เสมือน',
       encrypted: 'เข้ารหัสแล้ว',
       secure: 'ปลอดภัย',
+          show: 'แสดง',
     },
     login: {
       title: 'STC AutoTrade',
@@ -2626,6 +2967,27 @@ const translations: Record<Language, Translations> = {
       enterPassword: 'กรุณากรอกรหัสผ่านของคุณ',
       invalidEmail: 'กรุณากรอกอีเมลที่ถูกต้อง',
       invalidPassword: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
+      verifyingAccount: 'กำลังยืนยันบัญชี…',
+      checkingWhitelist: 'กำลังตรวจสอบสิทธิ์เข้าถึง…',
+      savingSession: 'กำลังบันทึกเซสชัน…',
+      welcomeBack: 'ดีใจที่ได้พบคุณอีกครั้ง 🎉',
+      welcomePill: 'กำลังเข้าสู่บัญชีของคุณ',
+      registerSuccess: 'ลงทะเบียนสำเร็จ! บัญชี {email} ถูกเพิ่มแล้ว',
+      registerSuccessNoEmail: 'ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบด้วยบัญชี Stockity ของคุณ',
+      tutorial: {
+        title: 'บทช่วยสอนการลงทะเบียน',
+        btnLabel: 'วิธีลงทะเบียน STC',
+        btnAction: 'ดูบทช่วยสอน',
+        next: 'ถัดไป',
+        done: 'เสร็จสิ้น',
+        close: 'ปิด',
+        step1Title: 'ขั้นตอนที่ 1 — สร้างบัญชี',
+        step1Text: 'ใช้บัญชีใหม่! กรอกอีเมล สร้างรหัสผ่าน เลือกสกุลเงิน แล้วกดลงทะเบียน',
+        step2Title: 'ขั้นตอนที่ 2 — ลงทะเบียนสำเร็จ',
+        step2Text: 'ยินดีด้วย! ข้อความสำเร็จจะปรากฏ กดปุ่ม "เข้าสู่ระบบ STC AutoTrade" 🎉',
+        step3Title: 'ขั้นตอนที่ 3 — เข้าสู่ระบบ',
+        step3Text: 'เกือบเสร็จแล้ว! กรอกอีเมลและรหัสผ่านที่ลงทะเบียนไว้ แล้วกดเข้าสู่ระบบ ยินดีต้อนรับสู่ STC AutoTrade! 🚀',
+      },
     },
     profile: {
       title: 'โปรไฟล์',
@@ -2657,6 +3019,13 @@ const translations: Record<Language, Translations> = {
       version: 'เวอร์ชัน',
       loadError: 'โหลดโปรไฟล์ล้มเหลว กรุณาลองใหม่',
       updateError: 'อัปเดตล้มเหลว กรุณาลองใหม่',
+      logoutTitle: 'ลาก่อน!',
+      logoutSuccess: 'คุณออกจากระบบสำเร็จแล้ว',
+      logoutSubtitle: 'กลับมาเมื่อไหร่ก็ได้',
+      copyId: 'คัดลอก ID',
+      copiedId: 'คัดลอก ID แล้ว!',
+      adminPanel: 'แผงผู้ดูแล',
+      refreshProfile: 'รีเฟรชโปรไฟล์',
     },
     history: {
       title: 'ประวัติ',
@@ -2736,6 +3105,12 @@ const translations: Record<Language, Translations> = {
         add: 'เพิ่ม',
         nextSignal: 'สัญญาณถัดไป',
         completed: 'เสร็จแล้ว',
+        managing: 'จัดการสัญญาณ · ประวัติถูกบันทึก',
+        inputFormat: 'รูปแบบ: 09:30 B · 14:00 S · หนึ่งรายการต่อบรรทัด',
+        hiddenSignals: '...และอีก {n} สัญญาณก่อนหน้า (แตะเพื่อดูทั้งหมด)',
+        allDone: 'คำสั่งทั้งหมดเสร็จสิ้น',
+        emptyTitle: 'ไม่มีคำสั่งที่กำหนดเวลา',
+        emptyDesc: 'เพิ่มสัญญาณเพื่อดำเนินการอัตโนมัติตามเวลาที่กำหนด',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -2776,6 +3151,7 @@ const translations: Record<Language, Translations> = {
         moreItems: 'เพิ่มเติม',
         status: 'สถานะ',
         martingaleStep: 'ขั้น Martingale',
+        configuring: 'กำลังกำหนดค่าระบบวิเคราะห์สัญญาณ AI',
       },
       indicator: {
         title: 'ตัวชี้วัด',
@@ -2875,6 +3251,10 @@ const translations: Record<Language, Translations> = {
         title: 'โหมดการเทรด',
         subtitle: 'เลือกโหมดที่ต้องการใช้',
         stopActiveFirst: 'หยุดโหมดที่ใช้งานก่อนเปลี่ยนโหมด',
+        running: 'กำลังทำงาน',
+        activeBanner: 'โหมดกำลังทำงาน',
+        activeBannerSub: 'หยุดบอทก่อนเปลี่ยนโหมด',
+        cannotSwitch: 'หยุดบอทก่อนเพื่อเรียกใช้โหมดอื่น',
       },
       modeDesc: {
         schedule: 'คำสั่งตามกำหนด',
@@ -2883,6 +3263,14 @@ const translations: Record<Language, Translations> = {
         aisignal: 'สัญญาณจาก AI / Telegram',
         indicator: 'SMA / EMA / RSI',
         momentum: 'ตรวจจับรูปแบบแท่งเทียน',
+      },
+      chooseModePrompt: 'เลือกโหมดที่เหมาะกับสไตล์การเทรดของคุณ',
+      darkMode: 'โหมดมืด',
+      lightMode: 'โหมดสว่าง',
+      botStatus: {
+        running: 'กำลังทำงาน',
+        paused: 'หยุดชั่วคราว',
+        stopped: 'หยุดแล้ว',
       },
       phaseMap: {
         waitingMinute1: 'รอแท่งเทียน 1',
@@ -2963,6 +3351,7 @@ const translations: Record<Language, Translations> = {
       virtual: 'Sanal',
       encrypted: 'Şifreli',
       secure: 'Güvenli',
+          show: 'Göster',
     },
     login: {
       title: 'STC AutoTrade',
@@ -2988,6 +3377,27 @@ const translations: Record<Language, Translations> = {
       enterPassword: 'Lütfen şifrenizi girin',
       invalidEmail: 'Lütfen geçerli bir e-posta girin',
       invalidPassword: 'Şifre en az 6 karakter olmalıdır',
+      verifyingAccount: 'Hesap doğrulanıyor…',
+      checkingWhitelist: 'Beyaz liste erişimi kontrol ediliyor…',
+      savingSession: 'Oturum kaydediliyor…',
+      welcomeBack: 'Sizi tekrar görmek güzel 🎉',
+      welcomePill: 'Hesabınıza giriş yapılıyor',
+      registerSuccess: 'Kayıt başarılı! {email} hesabı beyaz listeye eklendi.',
+      registerSuccessNoEmail: 'Kayıt başarılı! Stockity hesabınızla giriş yapın.',
+      tutorial: {
+        title: 'Kayıt Öğreticisi',
+        btnLabel: "STC'ye nasıl kaydolunur",
+        btnAction: 'öğreticiyi gör',
+        next: 'İleri',
+        done: 'Tamam',
+        close: 'Kapat',
+        step1Title: 'Adım 1 — Hesap Oluşturun',
+        step1Text: 'Yeni bir hesap kullanın! E-posta girin, şifre oluşturun, para birimi seçin ve Kaydol tuşuna basın.',
+        step2Title: 'Adım 2 — Kayıt Başarılı',
+        step2Text: "Tebrikler! Başarı mesajı görünecek. 'STC AutoTrade'e Giriş Yap' butonuna basın 🎉",
+        step3Title: 'Adım 3 — Giriş Yapın',
+        step3Text: "Neredeyse bitti! E-posta ve şifreyi girin, girişe basın. STC AutoTrade'e hoş geldiniz! 🚀",
+      },
     },
     profile: {
       title: 'Profil',
@@ -3019,6 +3429,13 @@ const translations: Record<Language, Translations> = {
       version: 'Sürüm',
       loadError: 'Profil yüklenemedi. Lütfen tekrar deneyin.',
       updateError: 'Güncelleme başarısız. Lütfen tekrar deneyin.',
+      logoutTitle: 'Görüşürüz!',
+      logoutSuccess: 'Başarıyla çıkış yaptınız.',
+      logoutSubtitle: 'İstediğiniz zaman geri gelin.',
+      copyId: 'ID Kopyala',
+      copiedId: 'ID Kopyalandı!',
+      adminPanel: 'Yönetici Paneli',
+      refreshProfile: 'Profili yenile',
     },
     history: {
       title: 'Geçmiş',
@@ -3098,6 +3515,12 @@ const translations: Record<Language, Translations> = {
         add: 'Ekle',
         nextSignal: 'Sonraki Sinyal',
         completed: 'tamamlandı',
+        managing: 'Sinyalleri yönet · Geçmiş korunur',
+        inputFormat: 'Format: 09:30 B · 14:00 S · her satıra bir sinyal',
+        hiddenSignals: '...ve {n} önceki sinyal (tümünü görmek için dokunun)',
+        allDone: 'Tüm emirler tamamlandı',
+        emptyTitle: 'Planlanmış Emir Yok',
+        emptyDesc: 'Belirtilen saatlerde otomatik çalışması için sinyal ekleyin.',
       },
       fastTrade: {
         title: 'FastTrade',
@@ -3138,6 +3561,7 @@ const translations: Record<Language, Translations> = {
         moreItems: 'daha fazla',
         status: 'Durum',
         martingaleStep: 'Martingale Adımı',
+        configuring: 'AI sinyal analiz sistemi yapılandırılıyor',
       },
       indicator: {
         title: 'Gösterge',
@@ -3237,6 +3661,10 @@ const translations: Record<Language, Translations> = {
         title: 'İşlem Modu',
         subtitle: 'Kullanmak istediğiniz modu seçin',
         stopActiveFirst: 'Mod değiştirmek için önce aktif modu durdurun',
+        running: 'Çalışıyor',
+        activeBanner: 'Mod Aktif',
+        activeBannerSub: 'Mod değiştirmek için botu durdurun',
+        cannotSwitch: 'Başka bir mod çalıştırmak için botu durdurun',
       },
       modeDesc: {
         schedule: 'Planlanmış emirler',
@@ -3245,6 +3673,14 @@ const translations: Record<Language, Translations> = {
         aisignal: 'AI / Telegram sinyalleri',
         indicator: 'SMA / EMA / RSI',
         momentum: 'Mum deseni tespiti',
+      },
+      chooseModePrompt: 'Trading Tarzınıza Uygun Modu Seçin',
+      darkMode: 'Karanlık Mod',
+      lightMode: 'Aydınlık Mod',
+      botStatus: {
+        running: 'Çalışıyor',
+        paused: 'Duraklatıldı',
+        stopped: 'Durduruldu',
       },
       phaseMap: {
         waitingMinute1: 'Mum 1 bekleniyor',
