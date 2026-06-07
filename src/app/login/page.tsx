@@ -187,25 +187,30 @@ const LOGIN_STYLES = `
     .brand        { margin-bottom: 20px; }
   }
 
-  /* ── Panel (glassmorphism card) ─────────────────────────────────────── */
+  /* ── Panel (glassmorphism on mobile/tablet, transparent on desktop) ─── */
   .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: rgba(10,12,22,0.93);
+    border: 1px solid rgba(76,175,80,0.12);
     border-radius: var(--r-xl);
-    /* Compact on tiny phones, roomier on larger screens */
-    padding: clamp(16px, 4vw, 24px) clamp(14px, 4vw, 22px) clamp(14px, 4vw, 20px);
-    backdrop-filter: saturate(120%) blur(30px);
-    -webkit-backdrop-filter: saturate(120%) blur(30px);
+    padding: clamp(18px, 4.5vw, 26px) clamp(16px, 4.5vw, 24px);
+    backdrop-filter: saturate(140%) blur(32px);
+    -webkit-backdrop-filter: saturate(140%) blur(32px);
     box-shadow:
-      0 8px 40px rgba(0,0,0,0.55),
-      0 0 0 0.5px rgba(80,80,120,0.14),
-      inset 0 1px 0 rgba(255,255,255,0.06);
+      0 8px 48px rgba(0,0,0,0.60),
+      0 0 0 0.5px rgba(255,255,255,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.05);
   }
-  @media (min-width: 600px) {
-    .panel { padding: 26px 24px 22px; }
-  }
+  @media (min-width: 600px) { .panel { padding: 26px 24px 22px; } }
   @media (min-width: 1024px) {
-    .panel { padding: 30px 28px 26px; border-radius: 26px; }
+    .panel {
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      box-shadow: none !important;
+    }
   }
 
   /* ── Form Fields ────────────────────────────────────────────────────── */
@@ -215,29 +220,33 @@ const LOGIN_STYLES = `
   .fg-label {
     display: block;
     font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.09em; color: var(--accent-light);
+    letter-spacing: 0.09em; color: rgba(255,255,255,0.40);
     margin-bottom: 7px; padding-left: 2px;
   }
   .fg-row {
     display: flex; align-items: center;
-    background: rgba(0,0,0,0.30);
-    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
     border-radius: var(--r-md);
     overflow: hidden;
-    transition: border-color 0.18s, box-shadow 0.18s;
+    transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
   }
+  .fg-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); }
   .fg-row.active {
+    background: rgba(76,175,80,0.06);
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(76,175,80,0.12);
+    box-shadow: 0 0 0 3px rgba(76,175,80,0.10);
   }
   .fg-icon {
     display: flex; align-items: center; justify-content: center;
     width: 44px; flex-shrink: 0;
-    background: rgba(18, 18, 32, 0.70);
+    background: rgba(0,0,0,0.20);
     align-self: stretch;
-    border-right: 1px solid var(--border);
-    color: var(--accent-light);
+    border-right: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.28);
+    transition: color 0.18s;
   }
+  .fg-row.active .fg-icon { color: var(--accent-light); }
   @media (min-width: 600px) { .fg-icon { width: 48px; } }
 
   .fi {
@@ -303,30 +312,25 @@ const LOGIN_STYLES = `
 
   /* ── Submit button ──────────────────────────────────────────────────── */
   .btn {
-    width: 100%;
-    height: clamp(46px, 12vw, 52px);
-    background: linear-gradient(180deg, #55c75a 0%, #3ea844 100%);
-    border: none; border-radius: var(--r-md);
-    color: #fff;
-    font-size: clamp(15px, 4vw, 16px);
-    font-weight: 700; letter-spacing: -0.3px;
+    width: 100%; height: 52px;
+    background: linear-gradient(165deg, #58cb5e 0%, #42a847 50%, #369e3b 100%);
+    border: none; border-radius: var(--r-md); color: #fff;
+    font-size: 15.5px; font-weight: 700; letter-spacing: -0.2px;
     cursor: pointer; font-family: var(--font);
-    display: flex; align-items: center; justify-content: center; gap: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
     position: relative; overflow: hidden;
-    box-shadow: 0 4px 20px rgba(76,175,80,0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
-    transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 6px 24px rgba(76,175,80,0.40), 0 2px 8px rgba(0,0,0,0.30);
+    transition: opacity 0.15s, transform 0.12s, box-shadow 0.2s;
     -webkit-tap-highlight-color: transparent;
   }
-  @media (min-width: 600px) { .btn { height: 52px; font-size: 16px; } }
-
   .btn::before {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.13) 0%, transparent 55%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, transparent 50%);
     pointer-events: none;
   }
-  .btn:hover:not(:disabled)  { opacity: 0.90; box-shadow: 0 6px 26px rgba(76,175,80,0.55); }
-  .btn:active:not(:disabled) { transform: scale(0.984); opacity: 0.82; }
-  .btn:disabled              { opacity: 0.38; cursor: not-allowed; box-shadow: none; }
+  .btn:hover:not(:disabled)  { box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 8px 32px rgba(76,175,80,0.55); }
+  .btn:active:not(:disabled) { transform: scale(0.982); opacity: 0.88; }
+  .btn:disabled              { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
   .spin {
     width: 15px; height: 15px; border-radius: 50%;
     border: 2px solid rgba(255,255,255,0.30); border-top-color: #fff;
@@ -670,9 +674,6 @@ const LOGIN_STYLES = `
   .form-hdr-title { font-size:26px; font-weight:800; color:#fff; letter-spacing:-.7px; margin-bottom:5px; }
   .form-hdr-sub { font-size:13.5px; color:var(--text-2); }
 
-  /* Focus: icon inherits accent color */
-  .fg-row.active .fg-icon { color:var(--accent-light); }
-
   /* Button shimmer sweep */
   .btn::after { content:''; position:absolute; top:0; left:-100%; width:60%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent); pointer-events:none; transition:left .55s ease; }
   .btn:hover:not(:disabled)::after { left:160%; }
@@ -681,6 +682,29 @@ const LOGIN_STYLES = `
   .page-footer { text-align:center; font-size:11.5px; color:var(--text-3); padding:14px 0 4px; position:relative; z-index:2; }
   .page-footer a { color:var(--text-3); font-weight:500; text-decoration:none; transition:color .14s; }
   .page-footer a:hover { color:var(--text-2); }
+
+  /* ── Responsive fixes ───────────────────────────────────────────────── */
+
+  /* form-panel: explicit width for block context on mobile */
+  .form-panel { width:100%; }
+
+  /* Tablet (600-1023px): hide logo image in mob-brand (logo-desktop already shows at top-left) */
+  @media (min-width:600px) and (max-width:1023px) {
+    .mob-logo { display:none; }
+    .mob-brand { margin-top:4px; margin-bottom:18px; }
+  }
+
+  /* Desktop: min-height so split card looks proportional, overflow scroll for short viewports */
+  @media (min-width:1024px) {
+    .login-split { min-height:min(600px,88vh); }
+    .lr-page { overflow-y:auto; }
+  }
+
+  /* Mobile: prevent horizontal overflow */
+  @media (max-width:599px) {
+    .login-split { min-width:0; overflow-x:hidden; }
+    .mob-brand { margin-top:6px; }
+  }
 `;
 
 // ── Loading step labels (shown below the sign-in button while loading) ─────
@@ -1193,7 +1217,7 @@ function LoginPageContent() {
                 <p className="mob-sub">{t('login.subtitle')}</p>
               </div>
 
-            <div className="panel">
+              <div className="panel">
               <div tabIndex={0} aria-hidden="true" style={{position:"absolute",opacity:0,width:0,height:0,overflow:"hidden",pointerEvents:"none"}}/>
               <div className="form-hdr">
                 <div className="form-hdr-title">{t('login.signIn')}</div>
