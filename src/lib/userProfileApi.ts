@@ -310,6 +310,18 @@ export async function fetchPlatformCurrencies(
   locale     = 'en',
   timezone?: string,
 ): Promise<CurrencyConfig> {
+  // ── Browser guard: throw segera, tidak buat HTTP request → tidak ada CORS preflight ──
+  // Di native Capacitor: (window as any).Capacitor.isNativePlatform() === true → skip guard.
+  // Di browser (web/dev): throw → caller catch → fallback ke api.currencyConfig() (backend proxy).
+  if (typeof window !== 'undefined') {
+    const isNative = (window as any).Capacitor?.isNativePlatform?.() === true;
+    if (!isNative) {
+      throw new Error(
+        '[fetchPlatformCurrencies] Browser environment — gunakan api.currencyConfig() (backend proxy, bebas CORS).',
+      );
+    }
+  }
+
   const url  = `${STOCKITY_BASE_URL}platform/private/v2/currencies?locale=${locale}`;
   const json = await httpGet(url, buildStockityHeaders(authToken, deviceId, timezone)) as {
     data?: {

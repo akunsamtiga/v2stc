@@ -780,16 +780,17 @@ function LoginPageContent() {
     }
 
     // ── Step 4: Deteksi currency via backend proxy (bebas CORS) ─────────────────
-    // api.currencyConfig() → stcvps /profile/currency-config → Stockity (server-side)
-    // Returns CurrencyConfig lengkap (minAmount, quickAmounts, dll) tanpa CORS error.
-    // Fallback ke api.balance() jika endpoint currency-config gagal.
+    // api.currencyConfig() → stcvps /profile/currency-config → Stockity server-side.
+    // Tidak ada direct request ke Stockity dari browser → tidak ada CORS error.
+    // Returns CurrencyConfig lengkap (minAmount, quickAmounts, dll).
+    // Fallback ke api.balance() jika currency-config endpoint gagal.
     try {
       const { api } = await import('@/lib/api');
       const config = await api.currencyConfig();
       detectedCurrency    = config.currencyIso;   // e.g. "COP"
       detectedCurrencyIso = config.currencyUnit;  // e.g. "Col$"
     } catch {
-      // Fallback: api.balance() untuk dapat currency basic jika currency-config gagal
+      // Fallback: api.balance() untuk currency basic jika currency-config gagal
       try {
         const { api } = await import('@/lib/api');
         const bal = await api.balance();
