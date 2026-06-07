@@ -18,7 +18,7 @@ import { storage, isSessionValid } from '@/lib/storage';
 import { useTradingSettings } from '@/lib/useTradingSettings';
 import { useLanguage } from '@/lib';
 import { langToIntlLocale } from '@/lib/localeUtils';
-import { CurrencyConfig, DEFAULT_CURRENCY_CONFIG, fetchPlatformCurrencies } from '@/lib/userProfileApi';
+import { CurrencyConfig, DEFAULT_CURRENCY_CONFIG, ISO_TO_UNIT } from '@/lib/userProfileApi';
 import { applyLanguageFromCountry } from '@/lib/LanguageContext';
 import { useDarkMode } from '@/lib/DarkModeContext';
 import {
@@ -3803,9 +3803,9 @@ export default function DashboardPage() {
 
   // ── Load currency config & sync language dari profil akun ───────────────
   // Urutan prioritas:
-  //   1. fetchPlatformCurrencies (Stockity langsung) — full config, works on native
-  //   2. Fallback ke session storage (stc_currency + stc_currency_iso) — dari login flow
-  //      Ini penting untuk browser/web di mana direct Stockity call kena CORS
+  //   1. api.currencyConfig() → stcvps backend proxy → Stockity server-side (bebas CORS)
+  //      Returns full CurrencyConfig: minAmount, maxAmount, quickAmounts, currencyIso, currencyUnit
+  //   2. Fallback ke session storage (stc_currency + stc_currency_iso) jika backend gagal
   //   3. Bahasa UI: dibaca dari stc_language + stc_account_country (di-set oleh runSplash di login).
   //      Juga di-sync dari profile API response sebagai safety net.
   useEffect(() => {
@@ -3813,10 +3813,8 @@ export default function DashboardPage() {
     (async () => {
       try {
         const { storage, SESSION_KEYS } = await import('@/lib/storage');
-        const { countryToStockityLocale } = await import('@/lib/localeUtils');
         const authToken = await storage.get(SESSION_KEYS.AUTHTOKEN);
         const deviceId  = await storage.get(SESSION_KEYS.DEVICE_ID);
-        const timezone  = await storage.get(SESSION_KEYS.USER_TIMEZONE) ?? undefined;
         const country   = await storage.get('stc_account_country');
 
         if (!authToken || !deviceId) return;
@@ -3857,7 +3855,6 @@ export default function DashboardPage() {
             balanceCurrency = bal.currency;
             // Update session storage dengan currency yang benar
             await storage.set(SESSION_KEYS.CURRENCY, bal.currency);
-            const { ISO_TO_UNIT } = await import('@/lib/userProfileApi');
             const unit = ISO_TO_UNIT[bal.currency] ?? bal.currency;
             await storage.set(SESSION_KEYS.CURRENCY_ISO, unit);
             console.log('[Dashboard] Currency synced from balance:', bal.currency, unit);
@@ -3867,60 +3864,32 @@ export default function DashboardPage() {
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        // Coba fetch full config dari Stockity (works on native Capacitor)
+        // ── Fetch full CurrencyConfig via backend proxy (bebas CORS) ───────────
+        // api.currencyConfig() → stcvps /profile/currency-config → Stockity server-side.
+        // Returns minAmount, maxAmount, quickAmounts, currencyIso, currencyUnit — lengkap.
+        // Tidak ada direct request ke Stockity dari browser → tidak ada CORS error.
         try {
-          const stockityLocale = countryToStockityLocale(profileCountry ?? undefined);
-          const config = await fetchPlatformCurrencies(authToken, deviceId, stockityLocale, timezone ?? undefined);
+          const config = await api.currencyConfig();
           if (!cancelled) {
             setCurrencyConfig(config);
             if (_s.amount === 0) _upd('amount', config.minAmount);
           }
         } catch (fetchErr) {
-          // ✅ FIX CURRENCY Bug #3+4: fetchPlatformCurrencies gagal (CORS di browser / token salah)
-          // Fallback ke currency yang sudah dideteksi saat login dan disimpan di session
-          console.warn('[Dashboard] fetchPlatformCurrencies gagal, pakai session fallback:', fetchErr);
+          // Fallback: pakai currency dari balance/session jika backend juga gagal
+          console.warn('[Dashboard] currencyConfig gagal, pakai session fallback:', fetchErr);
           if (!cancelled) {
-            // ✅ FIX: Gunakan balance currency > session currency > default IDR
             const sessionCurrencyIso  = balanceCurrency
-              || await storage.get(SESSION_KEYS.CURRENCY)     // "COP"
+              || await storage.get(SESSION_KEYS.CURRENCY)
               || 'IDR';
-            const sessionCurrencyUnit = await storage.get(SESSION_KEYS.CURRENCY_ISO); // "Col$"
-
-            // ✅ FIX: Derive unit dari ISO map jika unit tidak ada atau masih default Rp
-            const { ISO_TO_UNIT } = await import('@/lib/userProfileApi');
+            const sessionCurrencyUnit = await storage.get(SESSION_KEYS.CURRENCY_ISO);
             const resolvedUnit =
               sessionCurrencyUnit && sessionCurrencyUnit !== 'Rp'
                 ? sessionCurrencyUnit
                 : (ISO_TO_UNIT[sessionCurrencyIso] ?? sessionCurrencyIso);
-
-            // ✅ FIX CURRENCY DERIVE: Jika currency masih IDR tapi country bukan ID,
-            // derive currency umum dari country (untuk COP, MXN, ARS, dll)
-            let finalCurrencyIso = sessionCurrencyIso;
-            let finalCurrencyUnit = resolvedUnit;
-            if (sessionCurrencyIso === 'IDR' && profileCountry && profileCountry !== 'ID') {
-              const countryCurrencyMap: Record<string, string> = {
-                CO: 'COP', MX: 'MXN', AR: 'ARS', CL: 'CLP', PE: 'PEN', VE: 'VES',
-                EC: 'USD', BO: 'BOB', PY: 'PYG', UY: 'UYU', GT: 'GTQ', HN: 'HNL',
-                CR: 'CRC', PA: 'PAB', DO: 'DOP', CU: 'CUP', NI: 'NIO',
-                ID: 'IDR', MY: 'MYR', TH: 'THB', VN: 'VND', PH: 'PHP',
-                RU: 'RUB', UA: 'UAH', KZ: 'KZT', UZ: 'UZS',
-                TR: 'TRY', BR: 'BRL', IN: 'INR', NG: 'NGN',
-              };
-              const derivedCurrency = countryCurrencyMap[profileCountry];
-              if (derivedCurrency) {
-                finalCurrencyIso = derivedCurrency;
-                finalCurrencyUnit = ISO_TO_UNIT[derivedCurrency] ?? derivedCurrency;
-                // Update session storage juga
-                await storage.set(SESSION_KEYS.CURRENCY, finalCurrencyIso);
-                await storage.set(SESSION_KEYS.CURRENCY_ISO, finalCurrencyUnit);
-                console.log('[Dashboard] Derived currency from country:', profileCountry, '->', finalCurrencyIso, finalCurrencyUnit);
-              }
-            }
-
             setCurrencyConfig({
               ...DEFAULT_CURRENCY_CONFIG,
-              currencyIso:  finalCurrencyIso,
-              currencyUnit: finalCurrencyUnit,
+              currencyIso:  sessionCurrencyIso,
+              currencyUnit: resolvedUnit,
             });
           }
         }
