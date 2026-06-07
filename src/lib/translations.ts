@@ -185,6 +185,11 @@ export interface Translations {
     filterByResult: string;
     filterByPeriod: string;
     resetFilters: string;
+    pending: string;
+    buy: string;
+    sell: string;
+    profit: string;
+    records: string;
   };
 
   // Dashboard Page
@@ -603,6 +608,11 @@ const translations: Record<Language, Translations> = {
       filterByResult: 'Result',
       filterByPeriod: 'Period',
       resetFilters: 'Reset Filters',
+      pending: 'Pending',
+      buy: 'Buy',
+      sell: 'Sell',
+      profit: 'Profit',
+      records: 'records',
     },
     dashboard: {
       title: 'Dashboard',
@@ -1013,6 +1023,11 @@ const translations: Record<Language, Translations> = {
       filterByResult: 'Hasil',
       filterByPeriod: 'Periode',
       resetFilters: 'Reset Filter',
+      pending: 'Menunggu',
+      buy: 'Beli',
+      sell: 'Jual',
+      profit: 'Profit',
+      records: 'transaksi',
     },
     dashboard: {
       title: 'Dashboard',
@@ -1423,6 +1438,11 @@ const translations: Record<Language, Translations> = {
       filterByResult: 'Результат',
       filterByPeriod: 'Период',
       resetFilters: 'Сбросить фильтры',
+      pending: 'Ожидание',
+      buy: 'Купить',
+      sell: 'Продать',
+      profit: 'Прибыль',
+      records: 'записей',
     },
     dashboard: {
       title: 'Панель управления',
@@ -1833,6 +1853,11 @@ const translations: Record<Language, Translations> = {
       filterByResult: 'Resultado',
       filterByPeriod: 'Período',
       resetFilters: 'Restablecer filtros',
+      pending: 'Pendiente',
+      buy: 'Comprar',
+      sell: 'Vender',
+      profit: 'Ganancia',
+      records: 'registros',
     },
     dashboard: {
       title: 'Panel',
@@ -2243,6 +2268,11 @@ const translations: Record<Language, Translations> = {
       filterByResult: 'Keputusan',
       filterByPeriod: 'Tempoh',
       resetFilters: 'Set Semula Penapis',
+      pending: 'Menunggu',
+      buy: 'Beli',
+      sell: 'Jual',
+      profit: 'Keuntungan',
+      records: 'rekod',
     },
     dashboard: {
       title: 'Papan Pemuka',
@@ -2653,6 +2683,11 @@ const translations: Record<Language, Translations> = {
       filterByResult: 'परिणाम',
       filterByPeriod: 'अवधि',
       resetFilters: 'फ़िल्टर रीसेट करें',
+      pending: 'लंबित',
+      buy: 'खरीदें',
+      sell: 'बेचें',
+      profit: 'लाभ',
+      records: 'रिकॉर्ड',
     },
     dashboard: {
       title: 'डैशबोर्ड',
@@ -3063,6 +3098,11 @@ const translations: Record<Language, Translations> = {
       filterByResult: 'ผลลัพธ์',
       filterByPeriod: 'ช่วงเวลา',
       resetFilters: 'รีเซ็ตตัวกรอง',
+      pending: 'รอดำเนินการ',
+      buy: 'ซื้อ',
+      sell: 'ขาย',
+      profit: 'กำไร',
+      records: 'รายการ',
     },
     dashboard: {
       title: 'แดชบอร์ด',
@@ -3473,6 +3513,11 @@ const translations: Record<Language, Translations> = {
       filterByResult: 'Sonuç',
       filterByPeriod: 'Dönem',
       resetFilters: 'Filtreleri Sıfırla',
+      pending: 'Bekliyor',
+      buy: 'Al',
+      sell: 'Sat',
+      profit: 'Kâr',
+      records: 'kayıt',
     },
     dashboard: {
       title: 'Panel',

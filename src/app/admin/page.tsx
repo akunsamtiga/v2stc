@@ -18,9 +18,11 @@ type StatsFilter = 'total' | 'active' | 'inactive' | 'recent' | 'recentAdded';
 function fmtDate(ts: number | undefined, showTime = false): string {
   if (!ts) return '—';
   const d = new Date(ts);
-  const base = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  // Use browser locale instead of hardcoded id-ID
+  const locale = typeof navigator !== 'undefined' ? navigator.language : 'id-ID';
+  const base = d.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
   if (!showTime) return base;
-  return `${base} ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+  return `${base} ${d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 async function copyText(text: string) {
@@ -88,8 +90,14 @@ const Modal: React.FC<{ children: React.ReactNode; onClose: () => void; wide?: b
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, []);
+    // ✅ Escape key closes modal
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
 
   return (
     <div
@@ -1004,7 +1012,7 @@ export default function AdminPage() {
   const handleAdd    = (data: any)          => act(async () => { await addWhitelistUser({ ...data, isActive: true, createdAt: Date.now(), lastLogin: 0, addedBy: currentEmail, addedAt: Date.now(), fcmToken: '', fcmTokenUpdatedAt: 0 }, currentEmail); setAddOpen(false); }, 'User berhasil ditambahkan ✓');
   const handleEdit   = (data: WhitelistUser)=> act(async () => { await updateWhitelistUser(data); setEditUser(null); }, 'User berhasil diupdate ✓');
   const handleDelete = ()                   => act(async () => { if (!deleteUser) return; await deleteWhitelistUser(deleteUser.email); setDeleteUser(null); }, 'User berhasil dihapus ✓');
-  const handleToggle = (u: WhitelistUser)   => act(async () => { await toggleWhitelistUserStatus(u); }, `User ${isUserActive(u) ? 'diblokir' : 'diaktifkan'} ✓`);
+  const handleToggle = (u: WhitelistUser) => act(async () => { await toggleWhitelistUserStatus(u); }, isUserActive(u) ? 'User diblokir ✓' : 'User diaktifkan ✓');
   const handleImport = (json: string)       => act(async () => { const parsed = JSON.parse(json); const r = await importWhitelistUsers(parsed, currentEmail); setImportOpen(false); setSuccess(`Import: ${r.success} berhasil, ${r.skipped} dilewati`); }, '');
 
   const handleAddAdmin    = (email: string, name: string, role: string) => act(async () => { await addAdminUser(email, name, role, currentEmail); }, 'Admin ditambahkan ✓');
@@ -1030,9 +1038,12 @@ export default function AdminPage() {
   if (!authReady) {
     return (
       <div className="min-h-dvh bg-slate-100 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Spinner cls="w-8 h-8 border-3 text-cyan-500" />
-          <p className="text-sm text-slate-400">Memuat panel admin…</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center">
+            <span className="text-slate-400">{Icon.shield('w-7 h-7')}</span>
+          </div>
+          <Spinner cls="w-6 h-6 border-2 text-cyan-500" />
+          <p className="text-sm text-slate-400 font-medium">Memuat panel admin…</p>
         </div>
       </div>
     );
@@ -1054,8 +1065,10 @@ export default function AdminPage() {
       `}</style>
 
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3 shadow-sm">
-        <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-40"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
           <button
             onClick={() => router.back()}
             className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors flex-shrink-0"
@@ -1070,7 +1083,7 @@ export default function AdminPage() {
                 <span className="text-[9px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full tracking-wider">SUPER</span>
               )}
             </div>
-            <p className="text-xs text-slate-400">{stats.total} total users · {currentEmail.split('@')[0]}</p>
+            <p className="text-xs text-slate-400">{stats.active} aktif · {stats.total} total · {currentEmail.split('@')[0]}</p>
           </div>
 
           <button
@@ -1084,12 +1097,14 @@ export default function AdminPage() {
 
         {/* Super admin action: manage admins */}
         {isSuperAdmin && (
-          <button
-            onClick={() => setAdminMgmt(true)}
-            className="w-full mt-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors"
-          >
-            {Icon.shield('w-4 h-4')} Kelola Admin
-          </button>
+          <div className="px-4 pb-3">
+            <button
+              onClick={() => setAdminMgmt(true)}
+              className="w-full py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors"
+            >
+              {Icon.shield('w-4 h-4')} Kelola Admin
+            </button>
+          </div>
         )}
       </div>
 
@@ -1256,8 +1271,8 @@ export default function AdminPage() {
                 ))}
                 <p className="text-center text-xs text-slate-400 pt-1 pb-2">
                   {searchQ
-                    ? `${displayedUsers.length} hasil pencarian`
-                    : `${displayedUsers.length} users · Tap stat card untuk filter`
+                    ? `${displayedUsers.length} hasil dari ${allUsers.length} user`
+                    : `${displayedUsers.length} user · Tap stat card untuk filter`
                   }
                 </p>
               </>
@@ -1269,16 +1284,19 @@ export default function AdminPage() {
       {/* ── TOAST ────────────────────────────────────────────────────────── */}
       {(error || success) && (
         <div
-          className={`fixed bottom-24 left-4 right-4 z-50 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg border ${
+          className={`fixed left-4 right-4 z-50 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl border ${
             error
-              ? 'bg-red-50 border-red-100 text-red-700'
-              : 'bg-emerald-50 border-emerald-100 text-emerald-700'
+              ? 'bg-red-50 border-red-200 text-red-700'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
           }`}
-          style={{ animation: 'adminSlideUp 0.25s ease' }}
+          style={{
+            bottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 12px)',
+            animation: 'adminSlideUp 0.25s ease',
+          }}
         >
           <span>{error ? Icon.warn('w-4 h-4') : Icon.check('w-4 h-4')}</span>
-          <p className="flex-1 text-sm font-medium">{error ?? success}</p>
-          <button onClick={() => { setError(null); setSuccess(null); }}>
+          <p className="flex-1 text-sm font-medium leading-tight">{error ?? success}</p>
+          <button onClick={() => { setError(null); setSuccess(null); }} className="p-1 rounded-lg hover:bg-black/5 transition-colors flex-shrink-0">
             <span className="text-current opacity-60">{Icon.x('w-4 h-4')}</span>
           </button>
         </div>

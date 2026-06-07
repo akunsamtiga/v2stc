@@ -51,9 +51,15 @@ function HistoryPageContent() {
   const [dateFilter, setDateFilter]     = useState<DateFilter>('all');
   const [showFilters, setShowFilters]   = useState(false);
   const [refreshing, setRefreshing]     = useState(false);
+  const [currencyUnit, setCurrencyUnit] = useState('Rp');
   const [stats, setStats] = useState({
     totalTrades: 0, wins: 0, losses: 0, draws: 0, totalPnL: 0, winRate: 0,
   });
+
+  // Load currency from session storage
+  useEffect(() => {
+    storage.get('stc_currency_iso').then(unit => { if (unit) setCurrencyUnit(unit); }).catch(() => {});
+  }, []);
 
   // Get localized type labels
   const getTypeLabel = (type: LogType): string => {
@@ -68,12 +74,11 @@ function HistoryPageContent() {
     return labels[type];
   };
 
-  // Get localized result labels
   const getResultLabel = (result: ResultFilter): string => {
     const labels: Record<ResultFilter, string> = {
       all: t('history.all'),
-      win: 'Profit',
-      loss: 'Loss',
+      win:  t('history.profit'),
+      loss: t('history.loss'),
       draw: t('history.draw'),
     };
     return labels[result];
@@ -98,6 +103,13 @@ function HistoryPageContent() {
     };
     init();
   }, []); // eslint-disable-line
+
+  // Close filter panel on Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowFilters(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   // ✅ FIX: Lock body scroll when filter panel is open (mobile UX)
   useEffect(() => {
@@ -236,10 +248,10 @@ function HistoryPageContent() {
   };
 
   const RESULT_META = {
-    WIN:  { label: 'Profit', color: '#34c759', bg: 'rgba(52,199,89,0.10)',   icon: <CheckCircle  size={11} /> },
-    LOSE: { label: 'Loss',   color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
-    LOSS: { label: 'Loss',   color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
-    DRAW: { label: t('history.draw'), color: '#ff9500', bg: 'rgba(255,149,0,0.10)',   icon: <MinusCircle  size={11} /> },
+    WIN:  { label: t('history.profit'), color: '#34c759', bg: 'rgba(52,199,89,0.10)',   icon: <CheckCircle  size={11} /> },
+    LOSE: { label: t('history.loss'),   color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
+    LOSS: { label: t('history.loss'),   color: '#ff3b30', bg: 'rgba(255,59,48,0.10)',   icon: <XCircle      size={11} /> },
+    DRAW: { label: t('history.draw'),   color: '#ff9500', bg: 'rgba(255,149,0,0.10)',   icon: <MinusCircle  size={11} /> },
   };
 
   const Chip: React.FC<{ label: string; active: boolean; color?: string; onClick: () => void }> = ({
@@ -279,7 +291,7 @@ function HistoryPageContent() {
 
   const LogRow: React.FC<{ log: CombinedLog; last: boolean }> = ({ log, last }) => {
     const type      = TYPE_META[log.type] || TYPE_META.fastrade;
-    const res       = log.result ? (RESULT_META[log.result] || null) : null;
+    const res       = log.result ? (RESULT_META[log.result as keyof typeof RESULT_META] || null) : null;
     const isCall    = log.trend === 'call';
     const profitPos = (log.profit ?? 0) >= 0;
     const pending   = !log.result;
@@ -318,7 +330,7 @@ function HistoryPageContent() {
                 {type.label}
               </span>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.03em', color: isCall ? '#34c759' : '#ff3b30', flexShrink: 0 }}>
-                {isCall ? `↑ Buy` : `↓ Sell`}
+                {isCall ? `↑ ${t('history.buy')}` : `↓ ${t('history.sell')}`}
               </span>
               {log.martingaleStep !== undefined && log.martingaleStep > 0 && (
                 <span style={{ fontSize: 9.5, fontWeight: 700, color: '#ff9500', background: 'rgba(255,149,0,0.10)', border: '1px solid rgba(255,149,0,0.20)', padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>
@@ -327,7 +339,7 @@ function HistoryPageContent() {
               )}
               {pending && (
                 <span style={{ fontSize: 9.5, fontWeight: 600, color: '#8e8e93', background: 'rgba(142,142,147,0.10)', border: '1px solid rgba(142,142,147,0.20)', padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>
-                  {t('history.pending') || 'Pending'}
+                  {t('history.pending')}
                 </span>
               )}
             </div>
@@ -352,7 +364,7 @@ function HistoryPageContent() {
           {/* Right: amount + result + profit */}
           <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, minWidth: 0 }}>
             <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1c1c1e', letterSpacing: -0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 'min(110px, 28vw)' }}>
-              Rp {fmt(log.amount)}
+              {currencyUnit} {fmt(log.amount)}
             </span>
             {res ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', color: res.color, background: res.bg, padding: '3px 8px', borderRadius: 99, border: `1px solid ${res.color}30`, flexShrink: 0, whiteSpace: 'nowrap' }}>
@@ -363,7 +375,7 @@ function HistoryPageContent() {
             )}
             {log.profit != null && log.result && (
               <span style={{ fontSize: 11.5, fontWeight: 700, color: profitPos ? '#34c759' : '#ff3b30', letterSpacing: -0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 'min(100px, 28vw)' }}>
-                {profitPos ? '+' : '−'}Rp {fmt(log.profit)}
+                {profitPos ? '+' : '−'}{currencyUnit} {fmt(log.profit)}
               </span>
             )}
           </div>
@@ -465,9 +477,9 @@ function HistoryPageContent() {
                 )}
               </div>
               {[
-                { label: 'Profit', value: stats.wins, color: '#34c759' },
-                { label: 'Loss', value: stats.losses, color: '#ff3b30' },
-                { label: t('history.draw'), value: stats.draws, color: '#ff9500' },
+                { label: t('history.profit'), value: stats.wins,   color: '#34c759' },
+                { label: t('history.loss'),   value: stats.losses, color: '#ff3b30' },
+                { label: t('history.draw'),   value: stats.draws,  color: '#ff9500' },
               ].map(({ label, value, color }, i, arr) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: i < arr.length - 1 ? '1px solid rgba(60,60,67,0.07)' : 'none' }}>
                   <span style={{ fontSize: 14, color: '#3c3c43' }}>{label}</span>
@@ -483,7 +495,7 @@ function HistoryPageContent() {
               </div>
               <div style={{ background: '#fff', borderRadius: 14, padding: '12px', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
                 <p style={{ fontSize: 10, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('history.profitLoss')}</p>
-                {isLoading ? <Skel w="80%" h={22} r={5} /> : <p style={{ fontSize: 14, fontWeight: 700, color: pnlPos ? '#34c759' : '#ff3b30', letterSpacing: -0.3, lineHeight: 1.2 }}>{pnlPos ? '+' : '-'}Rp {fmt(stats.totalPnL)}</p>}
+                {isLoading ? <Skel w="80%" h={22} r={5} /> : <p style={{ fontSize: 14, fontWeight: 700, color: pnlPos ? '#34c759' : '#ff3b30', letterSpacing: -0.3, lineHeight: 1.2 }}>{pnlPos ? '+' : '-'}{currencyUnit} {fmt(stats.totalPnL)}</p>}
               </div>
             </div>
 
@@ -533,7 +545,7 @@ function HistoryPageContent() {
                 <StatTile
                   label={t('history.winRate')}
                   value={isLoading ? '—' : `${stats.winRate}%`}
-                  sub={isLoading ? '' : `${pnlPos ? '+' : '-'}Rp ${fmt(stats.totalPnL)}`}
+                  sub={isLoading ? '' : `${pnlPos ? '+' : '-'}${currencyUnit} ${fmt(stats.totalPnL)}`}
                   color={stats.winRate >= 50 ? '#34c759' : '#ff3b30'}
                   icon={stats.winRate >= 50 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                 />
@@ -573,7 +585,7 @@ function HistoryPageContent() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 4px' }}>
                 <p style={{ fontSize: 11.5, fontWeight: 500, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('history.trades')}</p>
-                <p style={{ fontSize: 11.5, color: '#aeaeb2', whiteSpace: 'nowrap', flexShrink: 0 }}>{filteredLogs.length} {t('common.data')}</p>
+                <p style={{ fontSize: 11.5, color: '#aeaeb2', whiteSpace: 'nowrap', flexShrink: 0 }}>{filteredLogs.length} {t('history.records')}</p>
               </div>
               <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.04)' }}>
                 {isLoading ? (

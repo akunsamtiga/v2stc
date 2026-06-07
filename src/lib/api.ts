@@ -542,6 +542,21 @@ export const api = {
     docsVerified?: boolean;
   }>('GET', '/profile'),
 
+  /**
+   * GET /profile/currency-config
+   * Backend proxy — bebas CORS — untuk fetchPlatformCurrencies.
+   * Returns CurrencyConfig: currencyIso, currencyUnit, minAmount, maxAmount, quickAmounts.
+   * Gunakan ini sebagai pengganti fetchPlatformCurrencies di loginpage/dashboard
+   * agar tidak ada direct hit ke Stockity dari browser.
+   */
+  currencyConfig: () => req<{
+    currencyIso:  string;
+    currencyUnit: string;
+    minAmount:    number;
+    maxAmount:    number;
+    quickAmounts: number[];
+  }>('GET', '/profile/currency-config'),
+
   // ── Assets ───────────────────────────────
   getAssets: () => req<StockityAsset[]>('GET', '/schedule/assets'),
 
