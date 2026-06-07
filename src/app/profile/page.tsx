@@ -478,11 +478,8 @@ function ProfilePageContent() {
         if (sessionCurrencyUnit) { setProfileCurrencyUnit(sessionCurrencyUnit); }
       } catch { /* ignore */ }
       // ─────────────────────────────────────────────────────────────────────────
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/profile/currencies`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()).then(data => {
-        const list: any[] = Array.isArray(data) ? data : (data?.data ?? []);
-        setCurrencies(list.map((c: any) => ({ iso: c.iso ?? c.currency_iso ?? c.code ?? c, name: c.name ?? c.currency_name ?? '', symbol: c.symbol ?? '' })));
+      api.getCurrencies().then(list => {
+        setCurrencies(list.map(c => ({ iso: c.iso ?? '', name: c.name ?? '', symbol: c.symbol ?? '' })));
       }).catch(() => {});
     } catch (err: any) {
       if (err?.status === 401) { router.push('/login'); return; }
@@ -495,13 +492,7 @@ function ProfilePageContent() {
   const handleUpdateCurrency = async (iso: string) => {
     setCurrencyLoading(true);
     try {
-      const token = await getAuthToken();
-      if (!token) return;
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/profile/currency`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currencyIso: iso }),
-      });
+      await api.updateCurrency(iso);
       const bal = await api.balance().catch(() => null);
       if (bal) setBalance(bal);
 

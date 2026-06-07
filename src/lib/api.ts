@@ -77,7 +77,6 @@ export interface AlwaysSignalLossState {
   currentMartingaleStep: number;
   originalOrderId: string;
   totalLoss: number;
-  currentTrend: 'call' | 'put';
 }
 
 export interface ScheduleStatus {
@@ -89,6 +88,7 @@ export interface ScheduleStatus {
   skippedOrders?: number;
   activeOrders?: number;
   sessionPnL?: number;
+  orders?: ScheduleOrder[];
   // Always Signal
   alwaysSignalActive?: boolean;
   alwaysSignalStep?: number;
@@ -170,7 +170,10 @@ export interface FastradeStatus {
   currentTrend?: string | null;
   martingaleStep?: number;
   isMartingaleActive?: boolean;
+  martingaleTotalLoss?: number;
   sessionPnL?: number;
+  stopLoss?: number;
+  stopProfit?: number;
   totalTrades?: number;
   totalWins?: number;
   totalLosses?: number;
@@ -178,6 +181,8 @@ export interface FastradeStatus {
   wsConnected?: boolean;
   phase?: string;
   activeTrend?: string | null;
+  alwaysSignalActive?: boolean;
+  alwaysSignalStep?: number;
 }
 
 export interface FastradeLog {
@@ -207,6 +212,7 @@ export interface StartFastradePayload {
     baseAmount: number;
     multiplierValue: number;
     multiplierType: 'FIXED' | 'PERCENTAGE';
+    isAlwaysSignal: boolean;
   };
   isDemoAccount: boolean;
   currency: string;
@@ -370,6 +376,8 @@ export interface UpdateIndicatorConfigPayload {
 // ─────────────────────────────────────────────
 // TYPES — Momentum
 // ─────────────────────────────────────────────
+export type MomentumType = 'CANDLE_SABIT' | 'DOJI_TERJEPIT' | 'DOJI_PEMBATALAN' | 'BB_SAR_BREAK';
+
 export interface MomentumConfig {
   asset: { ric: string; name: string } | null;
   isDemoAccount: boolean;
@@ -457,6 +465,7 @@ export interface ModeProfitSummary {
   trades: number;
   wins: number;
   losses: number;
+  draws: number;
 }
 
 export interface AssetProfitSummary {
@@ -466,47 +475,132 @@ export interface AssetProfitSummary {
   trades: number;
 }
 
+export interface DataSourceMeta {
+  supabaseTrades: number;
+  stockityOnlyTrades: number;
+  stockityApiError: boolean;
+  stockityCredentialsFound: boolean;
+}
+
 export interface TodayProfitSummary {
   date: string;          // YYYY-MM-DD
   totalPnL: number;
   totalTrades: number;
   totalWins: number;
   totalLosses: number;
+  totalDraws?: number;
   winRate: number;
   byMode: Record<string, ModeProfitSummary>;
   byAsset: Record<string, AssetProfitSummary>;
+  dataSources?: DataSourceMeta;
 }
 
 // ─────────────────────────────────────────────
-// TYPES — Combined Bot Status
+// TYPES — Profile Currencies
 // ─────────────────────────────────────────────
-export interface CombinedBotStatus {
-  isRunning: boolean;
-  isLocked: boolean;
-  blockedModes: string[];
-  schedule?: {
-    orders: ScheduleOrder[];
-    logs: ExecutionLog[];
+export interface StockityCurrency {
+  iso: string;
+  name?: string;
+  symbol?: string;
+  [key: string]: unknown;
+}
+
+// ─────────────────────────────────────────────
+// TYPES — Schedule Tracking
+// ─────────────────────────────────────────────
+export interface TrackingOrder {
+  id: string;
+  time: string;
+  trend: 'call' | 'put';
+  timeInMillis: number;
+  isExecuted: boolean;
+  isSkipped: boolean;
+  skipReason?: string;
+  result?: string;
+  trackingStatus: string;
+  profit?: number;
+  amount?: number;
+  executedAt?: number;
+  completedAt?: number;
+  currentMartingaleStep: number;
+  martingaleState?: {
+    isActive: boolean;
+    currentStep: number;
+    maxSteps: number;
+    isCompleted: boolean;
+    totalLoss: number;
+    totalRecovered: number;
   };
-  fastrade?: FastradeStatus & { logs?: FastradeLog[] };
-  aisignal?: AISignalStatus & { pendingOrders?: AISignalOrder[] };
-  indicator?: IndicatorStatus;
-  momentum?: MomentumStatus;
 }
 
-export interface StartBotPayload {
-  mode: string;
-  assetRic: string;
+export interface TrackingSummary {
+  total: number;
+  pending: number;
+  monitoring: number;
+  martingaleActive: number;
+  completed: number;
+  win: number;
+  lose: number;
+  draw: number;
+  failed: number;
+  skipped: number;
+}
+
+export interface TrackingResponse {
+  userId?: string;
+  botState: string;
+  orders: TrackingOrder[];
+  summary: TrackingSummary;
+  activeMartingale: unknown | null;
+  sessionPnL: number;
+  timestamp: number;
+}
+
+// ─────────────────────────────────────────────
+// TYPES — AI Signal Log
+// ─────────────────────────────────────────────
+export interface AISignalLog {
+  id: string;
+  orderId: string;
+  assetRic?: string;
+  assetName?: string;
+  trend: string;
   amount: number;
-  duration?: number;
-  accountType?: 'demo' | 'real';
-  martingale?: {
-    enabled: boolean;
-    maxStep: number;
-    multiplier: number;
-    alwaysSignal?: boolean;
+  executionTime?: number;
+  martingaleStep: number;
+  dealId?: string;
+  result?: string;
+  profit?: number;
+  sessionPnL?: number;
+  executedAt: number;
+  note?: string;
+  isDemoAccount?: boolean;
+}
+
+// ─────────────────────────────────────────────
+// TYPES — Indicator Presets
+// ─────────────────────────────────────────────
+export interface IndicatorPresets {
+  indicatorTypes: string[];
+  defaultSettings: {
+    sma: { type: string; period: number; sensitivity: number };
+    ema: { type: string; period: number; sensitivity: number };
+    rsi: { type: string; period: number; rsiOverbought: number; rsiOversold: number; sensitivity: number };
   };
-  timeframe?: string;
+  sensitivityLevels: Record<string, number>;
+}
+
+// ─────────────────────────────────────────────
+// TYPES — Momentum Info
+// ─────────────────────────────────────────────
+export interface MomentumInfo {
+  momentumTypes: string[];
+  descriptions: Record<string, string>;
+  antiOverTrading: {
+    signalCooldownMs: number;
+    priceMoveThreshold: number;
+    maxSignalsPerHour: number;
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -519,7 +613,7 @@ export const api = {
       'POST', '/auth/login', { email, password }
     ),
   logout: () => req<void>('POST', '/auth/logout'),
-  me: () => req<{ userId: string; email: string }>('GET', '/auth/me'),
+  me: () => req<{ userId: string; email: string; deviceId: string; currency: string; currencyIso: string }>('GET', '/auth/me'),
 
   // ── Profile ───────────────────────────────
   balance: () => req<ProfileBalance>('GET', '/profile/balance'),
@@ -557,6 +651,13 @@ export const api = {
     quickAmounts: number[];
   }>('GET', '/profile/currency-config'),
 
+  /** GET /profile/currencies — daftar semua mata uang yang tersedia */
+  getCurrencies: () => req<StockityCurrency[]>('GET', '/profile/currencies'),
+
+  /** PUT /profile/currency — ubah mata uang aktif user */
+  updateCurrency: (currencyIso: string) =>
+    req<void>('PUT', '/profile/currency', { currencyIso }),
+
   // ── Assets ───────────────────────────────
   getAssets: () => req<StockityAsset[]>('GET', '/schedule/assets'),
 
@@ -589,36 +690,33 @@ export const api = {
    * trackingStatus (WIN/LOSE/SKIPPED/MONITORING/PENDING/FAILED) meski order
    * sudah dihapus dari active list oleh backend.
    */
-  scheduleTracking: () =>
+  scheduleTracking: () => req<TrackingResponse>('GET', '/schedule/tracking'),
+
+  /** GET /schedule/tracking/today — tracking hari ini (waktu Jakarta) */
+  scheduleTrackingToday: () => req<TrackingResponse>('GET', '/schedule/tracking/today'),
+
+  /** GET /schedule/tracking/active — hanya order yang masih aktif (PENDING/MONITORING/MARTINGALE) */
+  scheduleTrackingActive: () =>
+    req<{ userId?: string; orders: TrackingOrder[]; count: number; timestamp: number }>(
+      'GET', '/schedule/tracking/active'
+    ),
+
+  /** GET /schedule/tracking/summary — ringkasan tracking tanpa detail order */
+  scheduleTrackingSummary: () =>
     req<{
+      userId?: string;
       botState: string;
-      orders: Array<{
-        id: string;
-        time: string;
-        trend: 'call' | 'put';
-        timeInMillis: number;
-        isExecuted: boolean;
-        isSkipped: boolean;
-        skipReason?: string;
-        result?: string;
-        trackingStatus: string;  // 'PENDING'|'MONITORING'|'WIN'|'LOSE'|'DRAW'|'FAILED'|'SKIPPED'|'MARTINGALE_STEP_N'
-        profit?: number;
-        amount?: number;
-        executedAt?: number;
-        completedAt?: number;
-        currentMartingaleStep: number;
-        martingaleState?: {
-          isActive: boolean;
-          currentStep: number;
-          maxSteps: number;
-          isCompleted: boolean;
-          totalLoss: number;
-          totalRecovered: number;
-        };
-      }>;
+      summary: TrackingSummary;
+      activeMartingale: unknown | null;
       sessionPnL: number;
       timestamp: number;
-    }>('GET', '/schedule/tracking'),
+    }>('GET', '/schedule/tracking/summary'),
+
+  /** GET /schedule/tracking/order/:id — detail tracking satu order */
+  scheduleTrackingOrder: (orderId: string) =>
+    req<{ userId?: string; order: TrackingOrder; timestamp: number } | { error: string }>(
+      'GET', `/schedule/tracking/order/${orderId}`
+    ),
 
   // ── Fastrade (FTT + CTC) ──────────────────
   fastradeStart:  (data: StartFastradePayload) =>
@@ -642,6 +740,21 @@ export const api = {
   aiSignalReceive:      (trend: string, executionTime: number, originalMessage?: string) =>
     req<{ message: string }>('POST', '/aisignal/signal', { trend, executionTime, originalMessage: originalMessage ?? '' }),
 
+  /** GET /aisignal/logs — riwayat eksekusi AI Signal */
+  aiSignalLogs: (limit = 100) => req<AISignalLog[]>('GET', `/aisignal/logs?limit=${limit}`),
+
+  /** GET /aisignal/info — deskripsi fitur dan endpoint AI Signal */
+  aiSignalInfo: () => req<{
+    description: string;
+    features: string[];
+    martingaleModes: Record<string, string>;
+    endpoints: Record<string, string>;
+  }>('GET', '/aisignal/info'),
+
+  /** POST /aisignal/test-signal — inject sinyal test (untuk testing/debugging) */
+  aiSignalTestSignal: (trend: string, delayMs?: number) =>
+    req<{ message: string }>('POST', '/aisignal/test-signal', { trend, delayMs }),
+
   // ── Indicator ────────────────────────────
   indicatorGetConfig:    () => req<IndicatorConfig>('GET', '/indicator/config'),
   indicatorUpdateConfig: (data: UpdateIndicatorConfigPayload) =>
@@ -657,12 +770,26 @@ export const api = {
   indicatorStatus:       () => req<IndicatorStatus>('GET', '/indicator/status'),
   indicatorLogs:         (limit = 100) => req<IndicatorLog[]>('GET', `/indicator/logs?limit=${limit}`),
 
+  /** GET /indicator/presets — tipe indikator dan default settings yang tersedia */
+  indicatorPresets: () => req<IndicatorPresets>('GET', '/indicator/presets'),
+
   // ── Momentum ─────────────────────────────
   momentumGetConfig:    () => req<MomentumConfig>('GET', '/momentum/config'),
   momentumUpdateConfig: (data: UpdateMomentumConfigPayload) =>
     req<MomentumConfig>('PUT', '/momentum/config', data),
   momentumSetAsset:     (ric: string, name: string) =>
     req<MomentumConfig>('PUT', '/momentum/config/asset', { ric, name }),
+  momentumSetMartingale: (data: {
+    isEnabled?: boolean;
+    maxSteps?: number;
+    baseAmount?: number;
+    multiplierValue?: number;
+    multiplierType?: 'FIXED' | 'PERCENTAGE';
+    isAlwaysSignal?: boolean;
+    stopLoss?: number;
+    stopProfit?: number;
+  }) => req<MomentumConfig>('PUT', '/momentum/config/martingale', data),
+
   momentumSetAccount:   (isDemoAccount: boolean) =>
     req<MomentumConfig>('PUT', '/momentum/config/account', { isDemoAccount }),
   momentumStart:        () => req<{ message: string }>('POST', '/momentum/start'),
@@ -670,10 +797,8 @@ export const api = {
   momentumStatus:       () => req<MomentumStatus>('GET', '/momentum/status'),
   momentumLogs:         (limit = 100) => req<MomentumLog[]>('GET', `/momentum/logs?limit=${limit}`),
 
-  // ── Combined Bot Control ──────────────────
-  getStatus: () => req<CombinedBotStatus>('GET', '/bot/status'),
-  startBot:  (payload: StartBotPayload) => req<{ message: string }>('POST', '/bot/start', payload),
-  stopBot:   (mode: string) => req<{ message: string }>('POST', '/bot/stop', { mode }),
+  /** GET /momentum/info — deskripsi pola momentum dan anti-overtrading config */
+  momentumInfo: () => req<MomentumInfo>('GET', '/momentum/info'),
 
   // ── Today Profit ─────────────────────────
   /** GET /today-profit?date=YYYY-MM-DD&accountType=real|demo|both */
@@ -697,4 +822,13 @@ export const api = {
     req<{ success: boolean; data: TodayProfitSummary[] }>(
       'GET', `/today-profit/history?startDate=${startDate}&endDate=${endDate}`
     ).then(r => r.data),
+
+  /** GET /today-profit/by-mode/:mode — detail profit untuk mode trading tertentu */
+  profitByMode: (mode: string, date?: string, accountType: 'real' | 'demo' | 'both' = 'real') => {
+    const params = new URLSearchParams({ accountType });
+    if (date) params.set('date', date);
+    return req<{ success: boolean; data: { mode: string; date: string } & Partial<TodayProfitSummary> }>(
+      'GET', `/today-profit/by-mode/${encodeURIComponent(mode)}?${params.toString()}`
+    ).then(r => r.data);
+  },
 };

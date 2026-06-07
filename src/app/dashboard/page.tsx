@@ -4555,7 +4555,7 @@ export default function DashboardPage() {
       if(tradingMode==='schedule'){
         await api.updateConfig({
           asset:{ric:selectedRic,name:selectedAsset?.name??selectedRic,profitRate:selectedAsset?.profitRate,iconUrl:selectedAsset?.iconUrl},
-          martingale:{isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED',isAlwaysSignal:false},
+          martingale:{isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED',isAlwaysSignal:martingale.alwaysSignal??false},
           isDemoAccount:isDemo,currency:CURR_UNIT,currencyIso:CURR_UNIT,duration,
           stopLoss:stopLoss?stopLoss*100:undefined,stopProfit:stopProfit?stopProfit*100:undefined,
         });
@@ -4564,7 +4564,7 @@ export default function DashboardPage() {
         await api.fastradeStart({
           mode:tradingMode==='ctc'?'CTC':'FTT',
           asset:{ric:selectedRic,name:selectedAsset?.name??selectedRic,profitRate:selectedAsset?.profitRate,iconUrl:selectedAsset?.iconUrl},
-          martingale:{isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED'},
+          martingale:{isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED',isAlwaysSignal:martingale.alwaysSignal??false},
           isDemoAccount:isDemo,currency:CURR_UNIT,currencyIso:CURR_UNIT,
           stopLoss:stopLoss?stopLoss*100:undefined,stopProfit:stopProfit?stopProfit*100:undefined,
         });
@@ -4579,19 +4579,23 @@ export default function DashboardPage() {
       } else if(tradingMode==='indicator'){
         await api.indicatorSetAsset(selectedRic, selectedAsset?.name??selectedRic);
         await api.indicatorSetAccount(isDemo);
-        await api.indicatorSetMartingale({isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED',stopLoss:stopLoss?stopLoss*100:0,stopProfit:stopProfit?stopProfit*100:0});
-        await api.indicatorUpdateConfig({type:indicatorType,period:indicatorPeriod,sensitivity:indicatorSensitivity,rsiOverbought,rsiOversold,amount:amount*100,stopLoss:stopLoss?stopLoss*100:undefined,stopProfit:stopProfit?stopProfit*100:undefined});
+        await api.indicatorSetMartingale({isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,multiplierValue:martingale.multiplier,multiplierType:'FIXED',isAlwaysSignal:martingale.alwaysSignal??false,stopLoss:stopLoss?stopLoss*100:0,stopProfit:stopProfit?stopProfit*100:0});
+        await api.indicatorUpdateConfig({type:indicatorType,period:indicatorPeriod,sensitivity:indicatorSensitivity,rsiOverbought,rsiOversold,amount:amount*100});
         await api.indicatorStart();
       } else if(tradingMode==='momentum'){
         await api.momentumSetAsset(selectedRic, selectedAsset?.name??selectedRic);
         await api.momentumSetAccount(isDemo);
+        await api.momentumSetMartingale({
+          isEnabled:martingale.enabled,maxSteps:martingale.maxStep,baseAmount:amount*100,
+          multiplierValue:martingale.multiplier,multiplierType:'FIXED',
+          isAlwaysSignal:martingale.alwaysSignal??false,
+          stopLoss:stopLoss?stopLoss*100:0,stopProfit:stopProfit?stopProfit*100:0,
+        });
         await api.momentumUpdateConfig({
           candleSabitEnabled:true,
           dojiTerjepitEnabled:true,
           dojiPembatalanEnabled:true,
           bbSarBreakEnabled:true,
-          baseAmount:amount*100,multiplierValue:martingale.multiplier,maxSteps:martingale.maxStep,
-          stopLoss:stopLoss?stopLoss*100:0,stopProfit:stopProfit?stopProfit*100:0,
         });
         await api.momentumStart();
       }

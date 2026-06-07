@@ -615,6 +615,72 @@ const LOGIN_STYLES = `
   }
   .tutorial-btn:hover { border-color: rgba(76,175,80,0.40); color: var(--accent-light); }
   .tutorial-btn:active { opacity: 0.75; }
+
+  /* Dot grid overlay */
+  .lr-page::before { content:''; position:fixed; inset:0; pointer-events:none; z-index:0; background-image:radial-gradient(rgba(76,175,80,0.05) 1px,transparent 1px); background-size:28px 28px; }
+
+  /* Third orb */
+  .o3 { width:clamp(160px,25vw,300px); height:clamp(160px,25vw,300px); top:40%; right:-7%; background:radial-gradient(circle,rgba(76,175,80,0.08) 0%,transparent 65%); filter:blur(70px); animation:drift 28s ease-in-out infinite alternate; }
+
+  /* Desktop split layout */
+  .login-split { position:relative; z-index:2; width:100%; max-width:420px; opacity:0; transform:translateY(16px) scale(.988); animation:rise .65s cubic-bezier(.22,1,.36,1) .06s forwards; }
+  @media (min-width:600px) { .login-split { max-width:460px; } }
+  @media (min-width:1024px) { .login-split { max-width:900px; display:flex; border-radius:28px; overflow:hidden; box-shadow:0 40px 100px rgba(0,0,0,.65),0 0 0 1px rgba(76,175,80,.10); } }
+
+  /* Brand panel (desktop left column) */
+  .brand-panel { display:none; }
+  @media (min-width:1024px) {
+    .brand-panel { display:flex; flex-direction:column; justify-content:space-between; width:360px; flex-shrink:0; padding:40px 36px; background:linear-gradient(155deg,#071a0d 0%,#0b2614 45%,#060f08 100%); border-right:1px solid rgba(76,175,80,.12); position:relative; overflow:hidden; }
+    .brand-panel::before { content:''; position:absolute; inset:0; pointer-events:none; background-image:radial-gradient(rgba(76,175,80,.04) 1px,transparent 1px); background-size:22px 22px; }
+    .brand-panel::after { content:''; position:absolute; pointer-events:none; top:-40%; left:-30%; width:80%; height:80%; background:radial-gradient(circle,rgba(76,175,80,.18) 0%,transparent 65%); filter:blur(60px); }
+    .logo-desktop { display:none !important; }
+  }
+  .bp-top { position:relative; z-index:1; }
+  .bp-logo { display:flex; align-items:center; gap:12px; margin-bottom:32px; }
+  .bp-logo-name { font-size:16px; font-weight:700; color:#fff; letter-spacing:-.4px; }
+  .bp-headline { font-size:30px; font-weight:800; color:#fff; letter-spacing:-1px; line-height:1.2; margin-bottom:12px; }
+  .bp-headline em { font-style:normal; color:var(--accent-light); }
+  .bp-desc { font-size:13.5px; color:rgba(255,255,255,.45); line-height:1.65; margin-bottom:28px; }
+  .bp-features { display:flex; flex-direction:column; gap:12px; }
+  .bp-feature { display:flex; align-items:center; gap:12px; }
+  .bp-icon { width:34px; height:34px; border-radius:10px; flex-shrink:0; background:rgba(76,175,80,.12); border:1px solid rgba(76,175,80,.20); display:flex; align-items:center; justify-content:center; color:var(--accent-light); }
+  .bp-feat-text { font-size:13px; color:rgba(255,255,255,.60); font-weight:500; line-height:1.4; }
+  .bp-feat-text strong { color:#fff; font-weight:700; }
+  .bp-bottom { position:relative; z-index:1; }
+  .bp-stats { display:flex; gap:10px; margin-top:28px; }
+  .bp-stat { flex:1; background:rgba(76,175,80,.07); border:1px solid rgba(76,175,80,.13); border-radius:14px; padding:12px 14px; }
+  .bp-stat-val { font-size:22px; font-weight:800; color:var(--accent-light); letter-spacing:-.5px; line-height:1; margin-bottom:4px; }
+  .bp-stat-lbl { font-size:10px; color:rgba(255,255,255,.35); font-weight:500; text-transform:uppercase; letter-spacing:.06em; }
+
+  /* Form panel (right column on desktop, full width on mobile) */
+  .form-panel { flex:1; display:flex; flex-direction:column; }
+  @media (min-width:1024px) { .form-panel { background:rgba(8,10,18,.97); padding:44px 40px; justify-content:center; } }
+
+  /* Mobile brand (hidden on desktop) */
+  .mob-brand { text-align:center; margin-bottom:20px; }
+  @media (min-width:1024px) { .mob-brand { display:none; } }
+  .mob-logo { display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:4px; }
+  .mob-title { font-size:clamp(22px,6vw,28px); font-weight:800; letter-spacing:-.8px; color:#fff; margin-bottom:5px; }
+  .mob-title span { color:var(--accent-light); }
+  .mob-sub { font-size:clamp(12px,3.5vw,14px); color:var(--text-2); }
+
+  /* Desktop form header */
+  .form-hdr { display:none; margin-bottom:26px; }
+  @media (min-width:1024px) { .form-hdr { display:block; } }
+  .form-hdr-title { font-size:26px; font-weight:800; color:#fff; letter-spacing:-.7px; margin-bottom:5px; }
+  .form-hdr-sub { font-size:13.5px; color:var(--text-2); }
+
+  /* Focus: icon inherits accent color */
+  .fg-row.active .fg-icon { color:var(--accent-light); }
+
+  /* Button shimmer sweep */
+  .btn::after { content:''; position:absolute; top:0; left:-100%; width:60%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent); pointer-events:none; transition:left .55s ease; }
+  .btn:hover:not(:disabled)::after { left:160%; }
+
+  /* Page footer */
+  .page-footer { text-align:center; font-size:11.5px; color:var(--text-3); padding:14px 0 4px; position:relative; z-index:2; }
+  .page-footer a { color:var(--text-3); font-weight:500; text-decoration:none; transition:color .14s; }
+  .page-footer a:hover { color:var(--text-2); }
 `;
 
 // ── Loading step labels (shown below the sign-in button while loading) ─────
@@ -1074,23 +1140,65 @@ function LoginPageContent() {
 
           <div className="orb o1" />
           <div className="orb o2" />
+          <div className="orb o3" />
 
-          <div className="card">
-            <div className="brand">
-              {/* Logo Mobile */}
-              <div className="logo-mobile">
-                <Image src="/logo.png" alt="STC AutoTrade" width={96} height={96} style={{ height: 'clamp(72px, 22vw, 96px)', width: 'auto', borderRadius: 22 }} />
+          <div className="login-split">
+            {/* ── Brand Panel (desktop only) ── */}
+            <div className="brand-panel">
+              <div className="bp-top">
+                <div className="bp-logo">
+                  <Image src="/logo.png" alt="STC AutoTrade" width={44} height={44} style={{ borderRadius: 14, boxShadow: '0 4px 20px rgba(76,175,80,0.30)' }} />
+                  <span className="bp-logo-name">STC AutoTrade</span>
+                </div>
+                <div className="bp-headline">Trading Bot<br/><em>Cerdas &amp; Otomatis</em></div>
+                <p className="bp-desc">Platform trading otomatis terhubung langsung ke Stockity. Multi-mode, real-time, aktif 24/7.</p>
+                <div className="bp-features">
+                  <div className="bp-feature">
+                    <div className="bp-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <span className="bp-feat-text"><strong>5 Mode Trading</strong> — Schedule, Fastrade, AI Signal, Indicator, Momentum</span>
+                  </div>
+                  <div className="bp-feature">
+                    <div className="bp-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <span className="bp-feat-text"><strong>Martingale System</strong> — Stop-loss &amp; stop-profit otomatis</span>
+                  </div>
+                  <div className="bp-feature">
+                    <div className="bp-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </div>
+                    <span className="bp-feat-text"><strong>Real-time Monitoring</strong> — Pantau profit &amp; loss langsung</span>
+                  </div>
+                </div>
               </div>
-              {/* Title with green AutoTrade */}
-              <div className="brand-title">
-                <span className="brand-title-stc">STC&nbsp;</span>
-                <span className="brand-title-auto">AutoTrade</span>
+              <div className="bp-bottom">
+                <div className="bp-stats">
+                  <div className="bp-stat"><div className="bp-stat-val">5+</div><div className="bp-stat-lbl">Mode Trading</div></div>
+                  <div className="bp-stat"><div className="bp-stat-val">24/7</div><div className="bp-stat-lbl">Auto Trade</div></div>
+                  <div className="bp-stat"><div className="bp-stat-val">Live</div><div className="bp-stat-lbl">Real-time</div></div>
+                </div>
               </div>
-              <p className="brand-sub">{t('login.subtitle')}</p>
             </div>
+
+            {/* ── Form Panel ── */}
+            <div className="form-panel">
+              {/* Mobile brand (hidden on desktop) */}
+              <div className="mob-brand">
+                <div className="mob-logo">
+                  <Image src="/logo.png" alt="STC AutoTrade" width={90} height={90} style={{ height: 'clamp(72px, 20vw, 90px)', width: 'auto', borderRadius: 'clamp(18px, 5vw, 24px)', boxShadow: '0 8px 32px rgba(76,175,80,0.25)' }} />
+                </div>
+                <div className="mob-title">STC <span>AutoTrade</span></div>
+                <p className="mob-sub">{t('login.subtitle')}</p>
+              </div>
 
             <div className="panel">
               <div tabIndex={0} aria-hidden="true" style={{position:"absolute",opacity:0,width:0,height:0,overflow:"hidden",pointerEvents:"none"}}/>
+              <div className="form-hdr">
+                <div className="form-hdr-title">{t('login.signIn')}</div>
+                <p className="form-hdr-sub">{t('login.subtitle')}</p>
+              </div>
               <form onSubmit={handleLogin} noValidate>
 
                 {/* EMAIL field */}
@@ -1244,11 +1352,12 @@ function LoginPageContent() {
                 <span style={{ color: 'var(--accent-light)', fontWeight: 700 }}>{t('login.tutorial.btnAction')}</span>
               </button>
             </div>
-          </div>
+            </div>{/* /form-panel */}
+          </div>{/* /login-split */}
 
-          <div style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--text-3)', padding: '14px 0 4px' }}>
+          <div className="page-footer">
             © 2026 STC AutoTrade ·{' '}
-            <a href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-3)', fontWeight: 500, cursor: 'pointer', transition: 'opacity 0.14s' }}>{t('login.terms')}</a>
+            <a href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer">{t('login.terms')}</a>
           </div>
 
         </div>
