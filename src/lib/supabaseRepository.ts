@@ -6,6 +6,15 @@
 //   Bug 5: exportWhitelistAsJson & exportWhitelistAsCsv → trigger browser download langsung
 
 import { supabase } from './supabase';
+import { api } from './api';
+
+// ─────────────────────────────────────────────
+// C2: Operasi TULIS & cek-role admin kini lewat backend (service_role) — bukan
+// lagi anon key dari browser (diblokir RLS). Operasi BACA tabel yang masih
+// anon-readable (whitelist_users, app_config) tetap langsung ke Supabase
+// untuk mendukung realtime + alur publik (login/register) tanpa app-JWT.
+// Signature fungsi DIPERTAHANKAN agar pemanggil (admin/login/register) tak berubah.
+// ─────────────────────────────────────────────
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -88,25 +97,9 @@ export async function getAllWhitelistUsers(
   _superAdmin?: boolean,
   _pageSize?: number,
 ): Promise<WhitelistUser[]> {
-  let query = supabase
-    .from('whitelist_users')
-    .select('*')
-    .eq('is_primary', false)   // ✅ Sembunyikan user yang registrasi via primary URL
-    .order('added_at', { ascending: false });
-
-  // Admin biasa hanya bisa lihat user yang dia sendiri tambahkan
-  if (_superAdmin === false && _email) {
-    query = query.eq('added_by', _email);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('[Supabase] getAllWhitelistUsers error:', error);
-    throw new Error('Gagal memuat whitelist: ' + error.message);
-  }
-
-  return (data ?? []).map((row: any) => normalizeWhitelistUser(row));
+  // C2: backend (admin-guarded) yang menentukan scope (super → semua, admin → miliknya)
+  const rows = await api.admin.listWhitelist();
+  return (rows ?? []).map((row: any) => normalizeWhitelistUser(row));
 }
 
 export async function addWhitelistUser(
@@ -117,79 +110,70 @@ export async function addWhitelistUser(
   // ✅ FIX Bug 3: gunakan snake_case agar sesuai kolom Supabase
   let extra: Record<string, unknown> = {};
 
+  let name: string | undefined;
+  let userId: string | undefined;
+  let deviceId: string | undefined;
+
   if (typeof emailOrUser === 'string') {
     normalizedEmail = emailOrUser.toLowerCase().trim();
   } else {
     normalizedEmail = emailOrUser.email.toLowerCase().trim();
-    extra = {
-      name:      emailOrUser.name      ?? null,
-      user_id:   emailOrUser.userId    ?? null,   // ✅ camelCase → snake_case
-      device_id: emailOrUser.deviceId  ?? null,   // ✅ camelCase → snake_case
-    };
+    name     = emailOrUser.name     ?? undefined;
+    userId   = emailOrUser.userId   ?? undefined;
+    deviceId = emailOrUser.deviceId ?? undefined;
   }
 
-  const { error } = await supabase.from('whitelist_users').insert({
-    email:      normalizedEmail,
-    is_active:  true,
-    is_primary: (emailOrUser as any)?.isPrimary ?? false,
-    added_at:   new Date().toISOString(),
-    added_by:   addedBy ?? 'system',
-    ...extra,
+  // C2: admin menambah user → backend (service_role). Registrasi self-add pakai
+  // addWhitelistUserViaToken() (tervalidasi token), bukan fungsi ini.
+  void extra;
+  await api.admin.addWhitelist({
+    email:     normalizedEmail,
+    name,
+    userId,
+    deviceId,
+    isPrimary: (emailOrUser as any)?.isPrimary ?? false,
+    addedBy:   addedBy ?? 'system',
   });
+}
 
-  if (error) {
-    console.error('[Supabase] addWhitelistUser error:', error);
-    throw new Error('Gagal menambahkan ke whitelist: ' + error.message);
-  }
+/**
+ * C2: Registrasi whitelist untuk DIRI SENDIRI (alur register manual & webview).
+ * Backend memvalidasi Stockity token → menulis whitelist via service_role.
+ * Email & userId diambil backend dari token (otoritatif), bukan dari client.
+ */
+export async function addWhitelistUserViaToken(
+  authToken: string,
+  deviceId: string,
+  payload: { name?: string; isPrimary?: boolean; addedBy?: string } = {},
+): Promise<{ email: string; userId: string; isActive: boolean; exists: boolean }> {
+  return api.registerWhitelist({ authToken, deviceId, ...payload });
 }
 
 export async function updateWhitelistUser(
   oldEmailOrUser: string | WhitelistUser,
   newEmail?: string,
 ): Promise<void> {
-  let oldEmail: string;
-  let updateData: Record<string, unknown> = {};
+  const payload: {
+    oldEmail: string; email?: string; name?: string; userId?: string;
+    deviceId?: string; isActive?: boolean; lastLogin?: number | null;
+  } = { oldEmail: '' };
 
   if (typeof oldEmailOrUser === 'string') {
-    oldEmail = oldEmailOrUser;
-    if (newEmail) updateData.email = newEmail.toLowerCase().trim();
+    payload.oldEmail = oldEmailOrUser;
+    if (newEmail) payload.email = newEmail.toLowerCase().trim();
   } else {
-    // Called with full user object from admin page
-    oldEmail = oldEmailOrUser.email;
-
-    // Basic fields
-    if (oldEmailOrUser.name      !== undefined) updateData.name      = oldEmailOrUser.name;
-    if (oldEmailOrUser.userId    !== undefined) updateData.user_id   = oldEmailOrUser.userId;   // ✅ snake_case
-    if (oldEmailOrUser.deviceId  !== undefined) updateData.device_id = oldEmailOrUser.deviceId; // ✅ snake_case
-    if (oldEmailOrUser.email     !== undefined) updateData.email     = oldEmailOrUser.email.toLowerCase().trim();
-
-    // ✅ FIX Bug 4: is_active dari checkbox "Nonaktifkan User"
-    if (oldEmailOrUser.isActive !== undefined) {
-      updateData.is_active = oldEmailOrUser.isActive;
-    } else if (oldEmailOrUser.is_active !== undefined) {
-      updateData.is_active = oldEmailOrUser.is_active;
-    }
-
-    // ✅ FIX Bug 4: last_login dari checkbox "Reset Recent Login"
-    // lastLogin === 0 berarti di-reset → set null di DB
-    // lastLogin > 0  berarti nilai asli → convert ke ISO string
-    if (oldEmailOrUser.lastLogin !== undefined) {
-      updateData.last_login =
-        oldEmailOrUser.lastLogin === 0
-          ? null
-          : new Date(oldEmailOrUser.lastLogin).toISOString();
-    }
+    payload.oldEmail = oldEmailOrUser.email;
+    if (oldEmailOrUser.name     !== undefined) payload.name     = oldEmailOrUser.name;
+    if (oldEmailOrUser.userId   !== undefined) payload.userId   = oldEmailOrUser.userId;
+    if (oldEmailOrUser.deviceId !== undefined) payload.deviceId = oldEmailOrUser.deviceId;
+    if (oldEmailOrUser.email    !== undefined) payload.email    = oldEmailOrUser.email.toLowerCase().trim();
+    if (oldEmailOrUser.isActive !== undefined) payload.isActive = oldEmailOrUser.isActive;
+    else if (oldEmailOrUser.is_active !== undefined) payload.isActive = oldEmailOrUser.is_active;
+    if (oldEmailOrUser.lastLogin !== undefined) payload.lastLogin = oldEmailOrUser.lastLogin;
   }
 
-  const { error } = await supabase
-    .from('whitelist_users')
-    .update(updateData)
-    .eq('email', oldEmail.toLowerCase().trim());
-
-  if (error) {
-    console.error('[Supabase] updateWhitelistUser error:', error);
-    throw new Error('Gagal mengupdate whitelist user: ' + error.message);
-  }
+  // C2: tulis via backend (service_role)
+  await api.admin.updateWhitelist(payload);
 }
 
 export async function toggleWhitelistUserStatus(
@@ -209,37 +193,12 @@ export async function toggleWhitelistUserStatus(
     active = !current;
   }
 
-  const { error } = await supabase
-    .from('whitelist_users')
-    .update({ is_active: active })
-    .eq('email', email.toLowerCase().trim());
-
-  if (error) {
-    console.error('[Supabase] toggleWhitelistUserStatus error:', error);
-    throw new Error('Gagal mengupdate status whitelist: ' + error.message);
-  }
+  await api.admin.toggleWhitelist(email.toLowerCase().trim(), active);
 }
 
 export async function deleteWhitelistUser(emailOrId: string): Promise<void> {
-  const normalized = emailOrId.toLowerCase().trim();
-
-  // Try by email first, fallback to id
-  const { error: emailErr } = await supabase
-    .from('whitelist_users')
-    .delete()
-    .eq('email', normalized);
-
-  if (emailErr) {
-    const { error: idErr } = await supabase
-      .from('whitelist_users')
-      .delete()
-      .eq('id', emailOrId);
-
-    if (idErr) {
-      console.error('[Supabase] deleteWhitelistUser error:', idErr);
-      throw new Error('Gagal menghapus dari whitelist: ' + idErr.message);
-    }
-  }
+  // Backend mencoba hapus by email lalu fallback by id (service_role)
+  await api.admin.deleteWhitelist(emailOrId);
 }
 
 export async function importWhitelistUsers(
@@ -248,49 +207,12 @@ export async function importWhitelistUsers(
 ): Promise<ImportResult> {
   if (emailsOrUsers.length === 0) return { success: 0, skipped: 0 };
 
-  let success = 0;
-  let skipped = 0;
+  // Normalisasi ke array objek; backend (service_role) yang insert + hitung skip.
+  const rows = (emailsOrUsers as any[]).map((u) =>
+    typeof u === 'string' ? { email: u } : u,
+  );
 
-  const isStringArray = typeof emailsOrUsers[0] === 'string';
-
-  if (isStringArray) {
-    const rows = (emailsOrUsers as string[]).map(e => ({
-      email:     e.toLowerCase().trim(),
-      is_active: true,
-      added_at:  new Date().toISOString(),
-      added_by:  addedBy ?? 'system',
-    }));
-
-    const { error } = await supabase.from('whitelist_users').insert(rows);
-    if (error) {
-      console.error('[Supabase] importWhitelistUsers error:', error);
-      throw new Error('Gagal import whitelist: ' + error.message);
-    }
-    success = rows.length;
-  } else {
-    // Array of user objects from JSON import
-    const rows = (emailsOrUsers as any[]).map(u => {
-      const email = ((u.email ?? '') as string).toLowerCase().trim();
-      return {
-        email,
-        is_active:  u.isActive   ?? u.is_active   ?? true,
-        added_at:   u.createdAt  ? new Date(u.createdAt).toISOString()  : new Date().toISOString(),
-        added_by:   addedBy      ?? u.addedBy      ?? u.added_by        ?? 'system',
-        name:       u.name       ?? null,
-        user_id:    u.userId     ?? u.user_id      ?? null,  // ✅ snake_case
-        device_id:  u.deviceId   ?? u.device_id    ?? null,  // ✅ snake_case
-        last_login: u.lastLogin  ? new Date(u.lastLogin).toISOString() : null,
-      };
-    }).filter(r => r.email);
-
-    for (const row of rows) {
-      const { error } = await supabase.from('whitelist_users').insert(row);
-      if (error) skipped++;
-      else success++;
-    }
-  }
-
-  return { success, skipped };
+  return api.admin.importWhitelist(rows, addedBy);
 }
 
 // ✅ FIX Bug 5: langsung trigger browser download — tidak lagi return string
@@ -356,15 +278,10 @@ export async function getWhitelistUserByUserId(userId: string): Promise<Whitelis
   return data ? normalizeWhitelistUser(data) : null;
 }
 
-export async function updateLastLogin(email: string): Promise<void> {
-  const { error } = await supabase
-    .from('whitelist_users')
-    .update({ last_login: new Date().toISOString() })
-    .eq('email', email.toLowerCase().trim());
-
-  if (error) {
-    console.error('[Supabase] updateLastLogin error:', error);
-  }
+export async function updateLastLogin(_email: string): Promise<void> {
+  // C2: no-op. last_login kini di-update server-side saat /auth/login (manual)
+  // dan saat /auth/register-whitelist (registrasi). Penulisan whitelist_users
+  // dari browser diblokir RLS (anon). Dipertahankan demi kompatibilitas signature.
 }
 
 export async function isWhitelisted(email: string): Promise<boolean> {
@@ -401,15 +318,7 @@ export async function checkWhitelist(email: string): Promise<boolean> {
 // ─────────────────────────────────────────────
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
-  const { data, error } = await supabase
-    .from('admin_users')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('[Supabase] getAdminUsers error:', error);
-    throw new Error('Gagal memuat admin: ' + error.message);
-  }
+  const data = await api.admin.listAdmins();
 
   return (data ?? []).map((row: any) => ({
     id:         row.id,
@@ -427,120 +336,32 @@ export async function addAdminUser(
   role?: string,
   _addedBy?: string,
 ): Promise<void> {
-  const normalizedEmail = email.toLowerCase().trim();
-
-  const { error } = await supabase.from('admin_users').insert({
-    email:      normalizedEmail,
-    name:       name ?? email.split('@')[0],
-    role:       role ?? 'admin',
-    is_active:  true,
-    created_at: new Date().toISOString(),
-  });
-  if (error) {
-    console.error('[Supabase] addAdminUser error:', error);
-    throw new Error('Gagal menambahkan admin: ' + error.message);
-  }
-
-  // ✅ FIX: Jika role super_admin, sync ke tabel super_admins juga
-  // checkIsSuperAdmin() membaca dari super_admins — harus selalu sinkron
-  if (role === 'super_admin') {
-    const { error: saErr } = await supabase
-      .from('super_admins')
-      .insert({ email: normalizedEmail, created_at: new Date().toISOString() });
-    // Abaikan duplicate — data sudah ada = aman
-    if (saErr && !saErr.message.includes('duplicate')) {
-      console.error('[Supabase] addSuperAdmin sync error:', saErr);
-      throw new Error('Gagal sync ke super_admins: ' + saErr.message);
-    }
-  }
+  // C2: backend (super-admin guarded) — termasuk sync super_admins
+  await api.admin.addAdmin(email.toLowerCase().trim(), name, role);
 }
 
 export async function updateAdminUser(
   id: string,
   updates: { name?: string; role?: 'admin' | 'super_admin'; is_active?: boolean },
 ): Promise<void> {
-  // ✅ FIX: Ambil email + role lama dulu untuk keperluan sync super_admins
-  const { data: existing } = await supabase
-    .from('admin_users')
-    .select('email, role')
-    .eq('id', id)
-    .maybeSingle();
-
-  const { error } = await supabase
-    .from('admin_users')
-    .update(updates)
-    .eq('id', id);
-  if (error) {
-    console.error('[Supabase] updateAdminUser error:', error);
-    throw new Error('Gagal mengupdate admin: ' + error.message);
-  }
-
-  // ✅ FIX: Sync perubahan role ke super_admins
-  if (existing?.email && updates.role !== undefined) {
-    const email = existing.email;
-
-    if (updates.role === 'super_admin') {
-      // Naik jadi super_admin → tambahkan ke super_admins
-      const { error: saErr } = await supabase
-        .from('super_admins')
-        .insert({ email, created_at: new Date().toISOString() });
-      // Abaikan duplicate — sudah ada = aman
-      if (saErr && !saErr.message.includes('duplicate')) {
-        console.error('[Supabase] updateAdminUser super_admins sync error:', saErr);
-      }
-    } else if (existing.role === 'super_admin' && updates.role === 'admin') {
-      // Turun dari super_admin ke admin biasa → hapus dari super_admins
-      await supabase.from('super_admins').delete().eq('email', email);
-    }
-  }
+  // C2: backend (super-admin guarded) — termasuk sync super_admins
+  await api.admin.updateAdmin(id, updates);
 }
 
 export async function removeAdminUser(emailOrId: string): Promise<void> {
-  const normalized = emailOrId.toLowerCase().trim();
-
-  // ✅ FIX: Ambil email sebelum hapus, untuk sync ke super_admins
-  const { data: existing } = await supabase
-    .from('admin_users')
-    .select('email')
-    .or(`email.eq.${normalized},id.eq.${emailOrId}`)
-    .maybeSingle();
-
-  const { error: emailErr } = await supabase
-    .from('admin_users')
-    .delete()
-    .eq('email', normalized);
-
-  if (emailErr) {
-    const { error: idErr } = await supabase
-      .from('admin_users')
-      .delete()
-      .eq('id', emailOrId);
-
-    if (idErr) {
-      console.error('[Supabase] removeAdminUser error:', idErr);
-      throw new Error('Gagal menghapus admin: ' + idErr.message);
-    }
-  }
-
-  // ✅ FIX: Hapus dari super_admins juga agar checkIsSuperAdmin() tidak stale
-  if (existing?.email) {
-    await supabase.from('super_admins').delete().eq('email', existing.email);
-  }
+  // C2: backend (super-admin guarded) — termasuk sync super_admins
+  await api.admin.removeAdmin(emailOrId);
 }
 
-export async function checkIsAdmin(email: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('admin_users')
-    .select('email')
-    .eq('email', email.toLowerCase().trim())
-    .eq('is_active', true)
-    .maybeSingle();
-
-  if (error) {
-    console.error('[Supabase] checkIsAdmin error:', error);
+export async function checkIsAdmin(_email?: string): Promise<boolean> {
+  // C2: cek role user SAAT INI dari JWT (bukan email arbitrer). admin_users
+  // tak lagi dapat dibaca anon, jadi pengecekan dilakukan backend.
+  try {
+    const { isAdmin } = await api.admin.me();
+    return isAdmin;
+  } catch {
     return false;
   }
-  return !!data;
 }
 
 // ─────────────────────────────────────────────
@@ -548,65 +369,36 @@ export async function checkIsAdmin(email: string): Promise<boolean> {
 // ─────────────────────────────────────────────
 
 export async function getAllSuperAdmins(): Promise<{ id?: string; email: string; created_at?: string }[]> {
-  const { data, error } = await supabase
-    .from('super_admins')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('[Supabase] getAllSuperAdmins error:', error);
-    throw new Error('Gagal memuat super admin: ' + error.message);
-  }
+  const data = await api.admin.listSuperAdmins();
   return (data ?? []) as { id?: string; email: string; created_at?: string }[];
 }
 
 export async function addSuperAdmin(email: string): Promise<void> {
-  const { error } = await supabase.from('super_admins').insert({
-    email:      email.toLowerCase().trim(),
-    created_at: new Date().toISOString(),
-  });
-  if (error) {
-    console.error('[Supabase] addSuperAdmin error:', error);
-    throw new Error('Gagal menambahkan super admin: ' + error.message);
-  }
+  await api.admin.addSuperAdmin(email.toLowerCase().trim());
 }
 
 export async function deleteSuperAdmin(email: string): Promise<void> {
-  const { error } = await supabase
-    .from('super_admins')
-    .delete()
-    .eq('email', email.toLowerCase().trim());
-
-  if (error) {
-    console.error('[Supabase] deleteSuperAdmin error:', error);
-    throw new Error('Gagal menghapus super admin: ' + error.message);
-  }
+  await api.admin.deleteSuperAdmin(email.toLowerCase().trim());
 }
 
-export async function checkIsSuperAdmin(email: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('super_admins')
-    .select('email')
-    .eq('email', email.toLowerCase().trim())
-    .maybeSingle();
-
-  if (error) {
-    console.error('[Supabase] checkIsSuperAdmin error:', error);
+export async function checkIsSuperAdmin(_email?: string): Promise<boolean> {
+  // C2: cek role user SAAT INI dari JWT via backend
+  try {
+    const { isSuperAdmin } = await api.admin.me();
+    return isSuperAdmin;
+  } catch {
     return false;
   }
-  return !!data;
 }
 
 /** Ambil email super admin pertama — dipakai sebagai addedBy saat primary registration */
 export async function getSuperAdminEmail(): Promise<string> {
-  const { data, error } = await supabase
-    .from('super_admins')
-    .select('email')
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data?.email) return 'super_admin';
-  return data.email;
+  try {
+    const list = await api.admin.listSuperAdmins();
+    const first = (list ?? [])[0]?.email;
+    if (first) return first;
+  } catch { /* non-admin / error → fallback */ }
+  return 'super_admin';
 }
 
 // ─────────────────────────────────────────────
@@ -676,19 +468,8 @@ export async function updateRegistrationConfig(
     merged = { ...current, ...(configOrField as Partial<RegistrationConfig>) };
   }
 
-  const { error } = await supabase.from('app_config').upsert(
-    {
-      key:        'registration',
-      value:      JSON.stringify(merged),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'key' },
-  );
-
-  if (error) {
-    console.error('[Supabase] updateRegistrationConfig error:', error);
-    throw new Error('Gagal mengupdate config: ' + error.message);
-  }
+  // C2: tulis app_config via backend (service_role)
+  await api.admin.upsertConfig('registration', JSON.stringify(merged));
 }
 
 
@@ -696,52 +477,8 @@ export async function getUserStatistics(
   _email?: string,
   _superAdmin?: boolean,
 ): Promise<{ total: number; active: number; inactive: number; recent: number; recentAdded: number }> {
-  const threshold24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-  const base = () => {
-    let q = supabase
-      .from('whitelist_users')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_primary', false);   // ✅ TAMBAHKAN INI — konsisten dengan getAllWhitelistUsers()
-
-    if (_superAdmin === false && _email) {
-      q = q.eq('added_by', _email);
-    }
-    return q;
-  };
-
-
-  // Jalankan semua count query secara paralel untuk efisiensi
-  const [
-    { count: total },
-    { count: active },
-    { count: inactive },
-    { count: recent },
-    { count: recentAdded },
-  ] = await Promise.all([
-    // Total semua user (dibatasi scope admin)
-    base(),
-
-    // User yang aktif
-    base().eq('is_active', true),
-
-    // User yang tidak aktif
-    base().eq('is_active', false),
-
-    // User yang login dalam 24 jam terakhir
-    base().gte('last_login', threshold24h),
-
-    // User yang didaftarkan oleh system (self-registration) dalam 24 jam terakhir
-    base().eq('added_by', 'system').gte('added_at', threshold24h),
-  ]);
-
-  return {
-    total:       total       ?? 0,
-    active:      active      ?? 0,
-    inactive:    inactive    ?? 0,
-    recent:      recent      ?? 0,
-    recentAdded: recentAdded ?? 0,
-  };
+  // C2: dihitung backend (admin-guarded, scope super/non-super ditentukan server)
+  return api.admin.stats();
 }
 
 export async function getAllUsersForStats(
@@ -785,14 +522,7 @@ export async function getWebSocketUrl(): Promise<string | null> {
 }
 
 export async function updateWebSocketUrl(url: string): Promise<void> {
-  const { error } = await supabase.from('app_config').upsert(
-    { key: 'ws_url', value: url, updated_at: new Date().toISOString() },
-    { onConflict: 'key' },
-  );
-  if (error) {
-    console.error('[Supabase] updateWebSocketUrl error:', error);
-    throw new Error('Gagal mengupdate WS URL: ' + error.message);
-  }
+  await api.admin.upsertConfig('ws_url', url);
 }
 
 export async function getRemoteConfig(): Promise<Record<string, unknown>> {

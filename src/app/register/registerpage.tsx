@@ -18,7 +18,7 @@ import {
   getWhitelistUserByEmail,
   getWhitelistUserByUserId,
   updateLastLogin,
-  addWhitelistUser,
+  addWhitelistUserViaToken,
   getRegistrationConfig,
 } from '@/lib/supabaseRepository';
 import { stcWebView } from '@/plugins/StcWebViewPlugin';
@@ -114,19 +114,11 @@ async function saveUserToWhitelistAndLogin(
 
   const addedBy = isPrimaryMode ? 'zack010951@gmail.com' : 'system';
 
-  await addWhitelistUser({
-    email:             userProfile.email,
-    name:              getFullName(userProfile),
-    userId,
-    deviceId:          isPrimaryMode ? userId : deviceId,
-    isPrimary:         isPrimaryMode,   // ✅ primary mode → disembunyikan di whitelist admin
-    isActive:          true,
-    createdAt:         Date.now(),
-    lastLogin:         Date.now(),
+  // C2: tulis whitelist via backend (validasi Stockity token) — bukan anon
+  await addWhitelistUserViaToken(authToken, isPrimaryMode ? userId : deviceId, {
+    name:      getFullName(userProfile),
+    isPrimary: isPrimaryMode,
     addedBy,
-    addedAt:           Date.now(),
-    fcmToken:          '',
-    fcmTokenUpdatedAt: 0,
   });
 
   return { success: true, userId, email: userProfile.email };
@@ -420,19 +412,11 @@ function WebRegisterModal({
 
       setStep('Mendaftarkan ke sistem STC…');
       const addedBy = isPrimaryMode ? 'zack010951@gmail.com' : 'system';
-      await addWhitelistUser({
-        email:             resolvedEmail,
-        name:              resolvedEmail,
-        userId:            resolvedUserId,
-        deviceId:          isPrimaryMode ? resolvedUserId : resolvedDevice2,
-        isPrimary:         isPrimaryMode,   // ✅ primary mode → disembunyikan di whitelist admin
-        isActive:          true,
-        createdAt:         Date.now(),
-        lastLogin:         Date.now(),
+      // C2: tulis whitelist via backend (validasi Stockity token) — bukan anon
+      await addWhitelistUserViaToken(stockityToken, isPrimaryMode ? resolvedUserId : resolvedDevice2, {
+        name:      resolvedEmail,
+        isPrimary: isPrimaryMode,
         addedBy,
-        addedAt:           Date.now(),
-        fcmToken:          '',
-        fcmTokenUpdatedAt: 0,
       });
 
       setStep('Berhasil! Mengarahkan…');

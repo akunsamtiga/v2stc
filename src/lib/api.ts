@@ -43,7 +43,9 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
     //    request lain juga gagal 401 → cascade total. Biarkan ClientLayout
     //    yang handle logout via event 'stc:unauthorized'.
     emitUnauthorized();
-    throw new Error('Kata sandi salah.');
+    // 401 di sini = JWT/sesi tidak valid atau kedaluwarsa (BUKAN salah password —
+    // login lewat jalur berbeda). Pesan disesuaikan agar tidak menyesatkan user.
+    throw new Error('Sesi berakhir. Silakan login ulang.');
   }
 
   let data: unknown;
@@ -830,5 +832,29 @@ export const api = {
     return req<{ success: boolean; data: { mode: string; date: string } & Partial<TodayProfitSummary> }>(
       'GET', `/today-profit/by-mode/${encodeURIComponent(mode)}?${params.toString()}`
     ).then(r => r.data);
+  },
+
+  // ── Registrasi whitelist tervalidasi token Stockity (C2, publik) ────────────
+  registerWhitelist: (body: { authToken: string; deviceId?: string; name?: string; isPrimary?: boolean; addedBy?: string }) =>
+    req<{ email: string; userId: string; isActive: boolean; exists: boolean }>('POST', '/auth/register-whitelist', body),
+
+  // ── Admin (C2 — semua operasi privileged via backend service_role) ──────────
+  admin: {
+    me:              () => req<{ isAdmin: boolean; isSuperAdmin: boolean }>('GET', '/admin/me'),
+    listWhitelist:   () => req<any[]>('GET', '/admin/whitelist'),
+    stats:           () => req<{ total: number; active: number; inactive: number; recent: number; recentAdded: number }>('GET', '/admin/stats'),
+    addWhitelist:    (b: { email: string; name?: string; userId?: string; deviceId?: string; isPrimary?: boolean; addedBy?: string }) => req<void>('POST', '/admin/whitelist', b),
+    updateWhitelist: (b: { oldEmail: string; email?: string; name?: string; userId?: string; deviceId?: string; isActive?: boolean; lastLogin?: number | null }) => req<void>('PATCH', '/admin/whitelist', b),
+    toggleWhitelist: (email: string, isActive: boolean) => req<void>('POST', '/admin/whitelist/toggle', { email, isActive }),
+    deleteWhitelist: (id: string) => req<void>('DELETE', `/admin/whitelist?id=${encodeURIComponent(id)}`),
+    importWhitelist: (rows: any[], addedBy?: string) => req<{ success: number; skipped: number }>('POST', '/admin/whitelist/import', { rows, addedBy }),
+    listAdmins:      () => req<any[]>('GET', '/admin/admins'),
+    addAdmin:        (email: string, name?: string, role?: string) => req<void>('POST', '/admin/admins', { email, name, role }),
+    updateAdmin:     (id: string, updates: { name?: string; role?: 'admin' | 'super_admin'; is_active?: boolean }) => req<void>('PATCH', `/admin/admins/${encodeURIComponent(id)}`, updates),
+    removeAdmin:     (id: string) => req<void>('DELETE', `/admin/admins?id=${encodeURIComponent(id)}`),
+    listSuperAdmins: () => req<any[]>('GET', '/admin/super-admins'),
+    addSuperAdmin:   (email: string) => req<void>('POST', '/admin/super-admins', { email }),
+    deleteSuperAdmin:(email: string) => req<void>('DELETE', `/admin/super-admins?email=${encodeURIComponent(email)}`),
+    upsertConfig:    (key: string, value: unknown) => req<void>('PUT', '/admin/config', { key, value }),
   },
 };
