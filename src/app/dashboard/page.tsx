@@ -47,36 +47,36 @@ function getColors(isDark: boolean) {
   // successColor=#059669  errorColor=#DC2626  warningColor=#D97706
   // borderColor=#D6DADF
   return {
-    // Surfaces — navy-black palette for dark mode
-    bg:    isDark ? '#070b10' : '#EAECEF',
-    card:  isDark ? '#0e1621' : '#FFFFFF',
-    card2: isDark ? '#141f2e' : '#F0F2F5',
-    // Borders
-    bdr:   isDark ? 'rgba(76,175,80,0.18)' : '#9CA3AF',
-    bdrAct:'rgba(76,175,80,0.70)',
+    // Surfaces
+    bg:    isDark ? '#111111' : '#EAECEF',
+    card:  isDark ? '#272727' : '#FFFFFF',
+    card2: isDark ? '#303030' : '#F0F2F5',
+    // Borders — green border yang kuat seperti semula
+    bdr:   isDark ? 'rgba(70, 184, 104, 0.65)' : '#9CA3AF',
+    bdrAct:'rgba(16,185,129,0.80)',
     // Primary accent
     cyan:  isDark ? '#22D3A0' : '#047857',
-    cyand: isDark ? 'rgba(34,211,160,0.18)' : 'rgba(4,120,87,0.10)',
+    cyand: isDark ? 'rgba(34,211,160,0.20)' : 'rgba(4,120,87,0.10)',
     // Error / loss
     coral: isDark ? '#F87171' : '#B91C1C',
-    cord:  isDark ? 'rgba(248,113,113,0.15)' : 'rgba(185,28,28,0.10)',
+    cord:  isDark ? 'rgba(248,113,113,0.18)' : 'rgba(185,28,28,0.10)',
     // Warning / martingale
     amber: isDark ? '#FCD34D' : '#B45309',
-    ambd:  isDark ? 'rgba(252,211,77,0.15)'  : 'rgba(180,83,9,0.10)',
+    ambd:  isDark ? 'rgba(252,211,77,0.18)'  : 'rgba(180,83,9,0.10)',
     // Misc accent colors
     violet: isDark ? '#D37EFF' : '#7C3AED',
-    vltd:  isDark ? 'rgba(211,126,255,0.15)' : 'rgba(124,58,237,0.10)',
+    vltd:  isDark ? 'rgba(211,126,255,0.16)' : 'rgba(124,58,237,0.10)',
     sky:   isDark ? '#4ADE80' : '#15803D',
-    skyd:  isDark ? 'rgba(74,222,128,0.15)'  : 'rgba(21,128,61,0.10)',
+    skyd:  isDark ? 'rgba(74,222,128,0.16)'  : 'rgba(21,128,61,0.10)',
     orange:'#FF6B35',
-    orgd:  isDark ? 'rgba(255,107,53,0.15)'  : 'rgba(255,107,53,0.10)',
+    orgd:  isDark ? 'rgba(255,107,53,0.16)'  : 'rgba(255,107,53,0.10)',
     pink:  isDark ? '#FF375F' : '#BE185D',
-    pinkd: isDark ? 'rgba(255,55,95,0.15)'   : 'rgba(190,24,93,0.10)',
+    pinkd: isDark ? 'rgba(255,55,95,0.16)'   : 'rgba(190,24,93,0.10)',
     // Text
-    text:  isDark ? '#E8F0FE' : '#0D1117',
-    sub:   isDark ? '#7E96B8' : '#2D3748',
-    muted: isDark ? 'rgba(126,150,184,0.65)' : '#4A5568',
-    faint: isDark ? 'rgba(34,211,160,0.06)'  : 'rgba(4,120,87,0.06)',
+    text:  isDark ? '#F0F4FF' : '#0D1117',
+    sub:   isDark ? '#9BAAC4' : '#2D3748',
+    muted: isDark ? 'rgba(155,170,196,0.70)' : '#4A5568',
+    faint: isDark ? 'rgba(34,211,160,0.08)'  : 'rgba(4,120,87,0.06)',
   };
 }
 
@@ -4688,18 +4688,18 @@ export default function DashboardPage() {
     }
     .ds-card {
       background: ${isDarkMode ? C.card : '#ffffff'};
-      border: 1px solid ${isDarkMode ? 'rgba(76,175,80,0.16)' : '#D1D5DB'};
+      border: 1.5px solid ${isDarkMode ? 'rgba(52,211,153,0.25)' : '#9CA3AF'};
       border-radius: 20px;
       box-shadow: ${isDarkMode
-        ? '0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35)'
-        : '0 1px 3px rgba(0,0,0,0.06)'};
+        ? '0 4px 24px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(52,211,153,0.08), 0 1px 0 rgba(255,255,255,0.06) inset'
+        : 'none'};
       transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
     }
     @media (max-width: 767px) {
       .ds-card, .ds-card:hover {
-        border: 1px solid ${isDarkMode ? 'rgba(76,175,80,0.18)' : '#D1D5DB'} !important;
+        border: 1.5px solid ${isDarkMode ? 'rgba(52,211,153,0.30)' : '#9CA3AF'} !important;
         box-shadow: ${isDarkMode
-          ? '0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)'
+          ? '0 1px 0 rgba(255,255,255,0.06) inset, 0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.20)'
           : '0 1px 3px rgba(0,0,0,0.06)'
         } !important;
         transform: none !important;
@@ -4723,7 +4723,7 @@ export default function DashboardPage() {
       border-color: ${isDarkMode ? 'rgba(34,211,160,0.55)' : 'rgba(5,150,105,0.55)'};
       box-shadow: 0 0 0 3px ${isDarkMode ? 'rgba(34,211,160,0.08)' : 'rgba(5,150,105,0.08)'};
     }
-    .ds-input::placeholder { color: ${isDarkMode ? 'rgba(232,240,254,0.25)' : 'rgba(60,60,67,0.45)'}; }
+    .ds-input::placeholder { color: ${isDarkMode ? 'rgba(155,170,196,0.50)' : 'rgba(60,60,67,0.45)'}; }
     .schedule-item { transition: background 0.15s; border-radius: 10px; }
     .schedule-item:hover { background: ${isDarkMode ? 'rgba(34,211,160,0.06)' : 'rgba(5,150,105,0.06)'} !important; }
     /* ✅ FIX SCROLL: semua elemen animasi promoted ke GPU layer agar tidak
@@ -4973,8 +4973,8 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'14px 18px',borderRadius:20,
                 background:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isDarkMode?'rgba(76,175,80,0.16)':'#D1D5DB'}`,
-                boxShadow:isDarkMode?'0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55)':'none',
+                border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
+                boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
                 cursor:!isActiveMode?'pointer':'default',
                 transition:'all 0.2s ease',
               }}>
@@ -5003,8 +5003,8 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'14px 18px',borderRadius:20,
                 background:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isDarkMode?'rgba(76,175,80,0.16)':'#D1D5DB'}`,
-                boxShadow:isDarkMode?'0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55)':'none',
+                border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
+                boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
               }}>
                 {(()=>{
                   const rawAmt = isDemo?(balance?.demo_balance??balance?.balance??0):(balance?.real_balance??balance?.balance??0);
@@ -5035,8 +5035,8 @@ export default function DashboardPage() {
                 display:'flex',alignItems:'center',gap:12,
                 padding:'14px 18px',borderRadius:20,
                 background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}30`:isDarkMode?'rgba(76,175,80,0.16)':'#D1D5DB'}`,
-                boxShadow:isDarkMode?'0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55)':'none',
+                border:`1.5px solid ${isActiveMode?`${modeAccent(tradingMode)}40`:isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
+                boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
                 transition:'all 0.3s ease',
               }}>
                 <div style={{
