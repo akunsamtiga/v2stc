@@ -4723,7 +4723,7 @@ export default function DashboardPage() {
       border-color: ${isDarkMode ? 'rgba(34,211,160,0.55)' : 'rgba(5,150,105,0.55)'};
       box-shadow: 0 0 0 3px ${isDarkMode ? 'rgba(34,211,160,0.08)' : 'rgba(5,150,105,0.08)'};
     }
-    .ds-input::placeholder { color: ${isDarkMode ? 'rgba(155,170,196,0.50)' : 'rgba(60,60,67,0.45)'}; }
+    .ds-input::placeholder { color: ${isDarkMode ? 'rgba(155,170,196,0.50)' : 'rgba(60,60,67,0.45)'} !important; }
     .schedule-item { transition: background 0.15s; border-radius: 10px; }
     .schedule-item:hover { background: ${isDarkMode ? 'rgba(34,211,160,0.06)' : 'rgba(5,150,105,0.06)'} !important; }
     /* ✅ FIX SCROLL: semua elemen animasi promoted ke GPU layer agar tidak

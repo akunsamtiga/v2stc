@@ -203,7 +203,8 @@ input, textarea, select { font-size: max(16px, 1em); }
   border-color: var(--bdr-act) !important;
   box-shadow: 0 0 0 3px var(--blue-glow) !important;
 }
-.ds-input::placeholder { color: var(--muted) !important; }
+.ds-input::placeholder { color: rgba(155, 170, 196, 0.55) !important; }
+[data-theme="light"] .ds-input::placeholder { color: rgba(60, 60, 67, 0.45) !important; }
 .ds-input:disabled { opacity: 0.35; cursor: not-allowed; }
 
 select.ds-input {
