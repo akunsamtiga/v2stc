@@ -4970,38 +4970,31 @@ export default function DashboardPage() {
               <div
                 onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}
                 style={{
-                display:'flex',alignItems:'center',gap:12,
-                padding:'14px 18px',borderRadius:20,
+                padding:'18px 20px',borderRadius:20,
                 background:isDarkMode?C.card2:C.card,
                 border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
                 boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
                 cursor:!isActiveMode?'pointer':'default',
                 transition:'all 0.2s ease',
               }}>
-                <div style={{
-                  width:38,height:38,borderRadius:10,flexShrink:0,overflow:'hidden',
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                  background:`${modeAccent(tradingMode)}12`,
-                  border:`1px solid ${modeAccent(tradingMode)}22`,
-                }}>
-                  {selectedAsset?.iconUrl
-                    ? <img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:6}}/>
-                    : <span style={{fontSize:12,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'+'}</span>
-                  }
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                  <span style={{fontSize:11,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.asset')}</span>
+                  <div style={{width:34,height:34,borderRadius:10,overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`}}>
+                    {selectedAsset?.iconUrl
+                      ? <img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:5}}/>
+                      : <span style={{fontSize:12,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'+'}</span>
+                    }
+                  </div>
                 </div>
-                <div style={{minWidth:0,flex:1}}>
-                  <p style={{fontSize:10,fontWeight:500,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>{T('dashboard.asset')}</p>
-                  <p style={{fontSize:14,fontWeight:700,color:C.text,lineHeight:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-  {selectedAsset?.name ?? <span style={{color:C.muted,fontWeight:400,fontSize:12}}>{T('dashboard.notSelected')}</span>}
-                  </p>
-                  {selectedAsset&&<p style={{fontSize:10,color:C.muted,marginTop:2}}>{selectedAsset.profitRate}% profit rate</p>}
-                </div>
+                <p style={{fontSize:20,fontWeight:700,color:C.text,lineHeight:1.1,marginBottom:5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  {selectedAsset?.name ?? <span style={{color:C.muted,fontWeight:400,fontSize:13}}>{T('dashboard.notSelected')}</span>}
+                </p>
+                <p style={{fontSize:11,color:C.muted}}>{selectedAsset?`${selectedAsset.profitRate}% profit rate`:'Tap to select asset'}</p>
               </div>
 
               {/* Balance */}
               <div style={{
-                display:'flex',alignItems:'center',gap:12,
-                padding:'14px 18px',borderRadius:20,
+                padding:'18px 20px',borderRadius:20,
                 background:isDarkMode?C.card2:C.card,
                 border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
                 boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
@@ -5012,19 +5005,19 @@ export default function DashboardPage() {
                   const col = isDemo?C.amber:C.cyan;
                   return (
                     <>
-                      <div style={{width:38,height:38,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
-                        <span style={{fontSize:16}}>💳</span>
-                      </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:3}}>
-                          <p style={{fontSize:10,fontWeight:500,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.balance')}</p>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <span style={{fontSize:11,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.balance')}</span>
                           <span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:99,color:col,background:`${col}10`,border:`1px solid ${col}25`}}>{isDemo?T('common.demo'):T('common.real')}</span>
                         </div>
-                        {isLoading?<div style={{height:18,width:90,borderRadius:4,background:C.faint}}/>
-                          :<p style={{fontSize:15,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em'}}>{FMT(amt)}</p>
-                        }
-                        <p style={{fontSize:10,color:C.muted,marginTop:2}}>{balance?.currency??'IDR'}</p>
+                        <div style={{width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
+                          <Wallet style={{width:16,height:16,color:col}}/>
+                        </div>
                       </div>
+                      {isLoading?<div style={{height:24,width:130,borderRadius:4,background:C.faint,marginBottom:5}}/>
+                        :<p style={{fontSize:20,fontWeight:700,color:col,lineHeight:1.1,letterSpacing:'-0.02em',marginBottom:5}}>{FMT(amt)}</p>
+                      }
+                      <p style={{fontSize:11,color:C.muted}}>{balance?.currency??'IDR'}</p>
                     </>
                   );
                 })()}
@@ -5032,41 +5025,35 @@ export default function DashboardPage() {
 
               {/* Mode + Status */}
               <div style={{
-                display:'flex',alignItems:'center',gap:12,
-                padding:'14px 18px',borderRadius:20,
+                padding:'18px 20px',borderRadius:20,
                 background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?C.card2:C.card,
                 border:`1.5px solid ${isActiveMode?`${modeAccent(tradingMode)}40`:isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
                 boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
                 transition:'all 0.3s ease',
               }}>
-                <div style={{
-                  width:38,height:38,borderRadius:10,flexShrink:0,
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                  background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`,
-                  position:'relative',
-                }}>
-                  <span style={{color:modeAccent(tradingMode)}}>
-                    {{schedule:<Calendar style={{width:17,height:17}}/>,fastrade:<Zap style={{width:17,height:17}}/>,ctc:<Copy style={{width:17,height:17}}/>,aisignal:<Radio style={{width:17,height:17}}/>,indicator:<BarChart style={{width:17,height:17}}/>,momentum:<Waves style={{width:17,height:17}}/>}[tradingMode]}
-                  </span>
-                  {isActiveMode&&<span style={{position:'absolute',top:-3,right:-3,width:8,height:8,borderRadius:'50%',background:modeAccent(tradingMode),boxShadow:`0 0 6px ${modeAccent(tradingMode)}`,animation:'ping 1.6s ease-in-out infinite'}}/>}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                  <span style={{fontSize:11,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.mode')}</span>
+                  <div style={{width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`,position:'relative'}}>
+                    <span style={{color:modeAccent(tradingMode)}}>
+                      {{schedule:<Calendar style={{width:16,height:16}}/>,fastrade:<Zap style={{width:16,height:16}}/>,ctc:<Copy style={{width:16,height:16}}/>,aisignal:<Radio style={{width:16,height:16}}/>,indicator:<BarChart style={{width:16,height:16}}/>,momentum:<Waves style={{width:16,height:16}}/>}[tradingMode]}
+                    </span>
+                    {isActiveMode&&<span style={{position:'absolute',top:-3,right:-3,width:8,height:8,borderRadius:'50%',background:modeAccent(tradingMode),boxShadow:`0 0 6px ${modeAccent(tradingMode)}`,animation:'ping 1.6s ease-in-out infinite'}}/>}
+                  </div>
                 </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <p style={{fontSize:10,fontWeight:500,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>{T('dashboard.mode')}</p>
-                  <p style={{fontSize:14,fontWeight:700,color:isActiveMode?modeAccent(tradingMode):C.text,lineHeight:1}}>
-                    {{schedule:'Signal Mode',fastrade:'Fastrade FTT Mode',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'}[tradingMode]}
-                  </p>
-                  <p style={{fontSize:10,marginTop:2,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
-                    {isActiveMode?'● '+T('dashboard.running'):'○ '+T('common.standby')}
-                  </p>
-                </div>
+                <p style={{fontSize:20,fontWeight:700,color:isActiveMode?modeAccent(tradingMode):C.text,lineHeight:1.1,marginBottom:5}}>
+                  {{schedule:'Signal',fastrade:'Fastrade FTT',ctc:'Fastrade CTC',aisignal:'AI Signal',indicator:'Indicator',momentum:'Momentum'}[tradingMode]}
+                </p>
+                <p style={{fontSize:11,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
+                  {isActiveMode?'● '+T('dashboard.running'):'○ '+T('common.standby')}
+                </p>
               </div>
 
               {/* Today P&L */}
               <div style={{
-                display:'flex',alignItems:'center',gap:12,
-                padding:'12px 16px',borderRadius:14,
+                padding:'18px 20px',borderRadius:20,
                 background:isDarkMode?C.card2:C.card,
                 border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
+                boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
               }}>
                 {(()=>{
                   const pnl = todayProfitData?.totalPnL ?? profitToday;
@@ -5075,23 +5062,23 @@ export default function DashboardPage() {
                   const wr = todayProfitData?.winRate;
                   return (
                     <>
-                      <div style={{width:38,height:38,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
-                        {isPos?<TrendingUp style={{width:17,height:17,color:col}}/>:<TrendingDown style={{width:17,height:17,color:col}}/>}
-                      </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
-                          <p style={{fontSize:10,fontWeight:500,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.profitToday')}</p>
-                          {wr!=null&&<span style={{fontSize:9,fontWeight:700,color:wr>=50?C.cyan:C.coral}}>{wr.toFixed(0)}% WR</span>}
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <span style={{fontSize:11,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.profitToday')}</span>
+                          {wr!=null&&<span style={{fontSize:8,fontWeight:700,color:wr>=50?C.cyan:C.coral,background:`${wr>=50?C.cyan:C.coral}10`,padding:'1px 5px',borderRadius:99,border:`1px solid ${wr>=50?C.cyan:C.coral}25`}}>{wr.toFixed(0)}% WR</span>}
                         </div>
-                        {isLoading?<div style={{height:18,width:90,borderRadius:4,background:C.faint}}/>
-                          :<p style={{fontSize:15,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',fontFamily:'monospace'}}>
-                            {isPos?'+':'-'}{FMT(Math.abs(pnl/100))}
-                          </p>
-                        }
-                        <p style={{fontSize:10,color:C.muted,marginTop:2}}>
-                          {todayProfitData?`${todayProfitData.totalTrades} trade · ${todayProfitData.totalWins}W ${todayProfitData.totalLosses}L`:T('dashboard.profitToday')}
-                        </p>
+                        <div style={{width:34,height:34,borderRadius:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
+                          {isPos?<TrendingUp style={{width:16,height:16,color:col}}/>:<TrendingDown style={{width:16,height:16,color:col}}/>}
+                        </div>
                       </div>
+                      {isLoading?<div style={{height:24,width:130,borderRadius:4,background:C.faint,marginBottom:5}}/>
+                        :<p style={{fontSize:20,fontWeight:700,color:col,lineHeight:1.1,letterSpacing:'-0.02em',fontFamily:'monospace',marginBottom:5}}>
+                          {isPos?'+':'-'}{FMT(Math.abs(pnl/100))}
+                        </p>
+                      }
+                      <p style={{fontSize:11,color:C.muted}}>
+                        {todayProfitData?`${todayProfitData.totalTrades} trade · ${todayProfitData.totalWins}W ${todayProfitData.totalLosses}L`:T('dashboard.profitToday')}
+                      </p>
                     </>
                   );
                 })()}
@@ -5106,21 +5093,22 @@ export default function DashboardPage() {
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
                 {/* Chart */}
                 <div style={{
-                  borderRadius:16,overflow:'hidden',
+                  borderRadius:20,overflow:'hidden',
                   background:isDarkMode?C.card2:C.card,
                   border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
+                  boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
                   padding:4,
                 }}>
-                  {/* Clock header */}
+                  {/* STC2-style card header */}
                   <div style={{
                     display:'flex',alignItems:'center',justifyContent:'space-between',
-                    padding:'10px 14px 8px',
-                    borderBottom:`1px solid ${isDarkMode?C.bdr:'#9CA3AF'}`,
+                    padding:'14px 18px 12px',
+                    borderBottom:`1px solid ${isDarkMode?C.bdr:'rgba(0,0,0,0.06)'}`,
                   }}>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <Activity style={{width:13,height:13,color:C.coral}}/>
-                      <span style={{fontSize:10,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.1em',color:C.muted}}>{T('dashboard.localTime')}</span>
-                      <span style={{width:5,height:5,borderRadius:'50%',background:C.coral,boxShadow:`0 0 5px ${C.coral}80`,animation:'ping 1.6s ease-in-out infinite'}}/>
+                      <Activity style={{width:14,height:14,color:isActiveMode?modeAccent(tradingMode):C.cyan}}/>
+                      <span style={{fontSize:13,fontWeight:700,color:C.text}}>Live Chart</span>
+                      <span style={{width:6,height:6,borderRadius:'50%',background:isActiveMode?modeAccent(tradingMode):C.coral,boxShadow:`0 0 6px ${isActiveMode?modeAccent(tradingMode):C.coral}90`,animation:'ping 1.6s ease-in-out infinite'}}/>
                     </div>
                     <RealtimeClockDesktop/>
                   </div>
@@ -5185,17 +5173,18 @@ export default function DashboardPage() {
                     ];
                     return statCards.map((s,i)=>(
                       <div key={i} style={{
-                        padding:'12px 14px',borderRadius:12,
+                        padding:'16px 18px',borderRadius:20,
                         background:isDarkMode?C.card2:C.card,
                         border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
+                        boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',
                       }}>
-                        <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
-                          <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
-                          <span style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted}}>{s.label}</span>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                          <span style={{fontSize:10,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted}}>{s.label}</span>
+                          <span style={{color:s.col,opacity:0.8}}>{s.icon}</span>
                         </div>
                         {s.value==null
-                          ? <div style={{height:16,width:'70%',borderRadius:4,background:C.faint}}/>
-                          : <p style={{fontSize:15,fontWeight:700,color:s.col,fontFamily:'monospace',letterSpacing:'-0.01em',lineHeight:1}}>{s.value}</p>
+                          ? <div style={{height:18,width:'70%',borderRadius:4,background:C.faint}}/>
+                          : <p style={{fontSize:18,fontWeight:700,color:s.col,fontFamily:'monospace',letterSpacing:'-0.01em',lineHeight:1}}>{s.value}</p>
                         }
                       </div>
                     ));
@@ -5223,20 +5212,20 @@ export default function DashboardPage() {
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
 
               {/* Asset */}
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
-                <div style={{width:34,height:34,borderRadius:9,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`}}>
-                  {selectedAsset?.iconUrl
-                    ?<img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:5}}/>
-                    :<span style={{fontSize:11,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'+'}</span>
-                  }
+              <div style={{padding:'14px 16px',borderRadius:16,background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',cursor:!isActiveMode?'pointer':'default'}} onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                  <span style={{fontSize:10,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.asset')}</span>
+                  <div style={{width:30,height:30,borderRadius:9,flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`}}>
+                    {selectedAsset?.iconUrl
+                      ?<img src={selectedAsset.iconUrl} alt={selectedRic} crossOrigin="anonymous" style={{width:'100%',height:'100%',objectFit:'contain',padding:4}}/>
+                      :<span style={{fontSize:10,fontWeight:700,color:modeAccent(tradingMode)}}>{selectedRic?selectedRic.slice(0,3).toUpperCase():'+'}</span>
+                    }
+                  </div>
                 </div>
-                <div style={{minWidth:0,flex:1}}>
-                  <p style={{fontSize:9,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>{T('dashboard.asset')}</p>
-                  <p style={{fontSize:13,fontWeight:700,color:C.text,lineHeight:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                    {selectedAsset?.name??<span style={{color:C.muted,fontWeight:400,fontSize:11}}>{T('dashboard.notSelected')}</span>}
-                  </p>
-                  {selectedAsset&&<p style={{fontSize:9,color:C.muted,marginTop:2}}>{selectedAsset.profitRate}% profit</p>}
-                </div>
+                <p style={{fontSize:16,fontWeight:700,color:C.text,lineHeight:1.1,marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  {selectedAsset?.name??<span style={{color:C.muted,fontWeight:400,fontSize:11}}>{T('dashboard.notSelected')}</span>}
+                </p>
+                <p style={{fontSize:10,color:C.muted}}>{selectedAsset?`${selectedAsset.profitRate}% profit`:''}</p>
               </div>
 
               {/* Balance */}
@@ -5245,41 +5234,41 @@ export default function DashboardPage() {
                 const amt=rawAmt/100;
                 const col=isDemo?C.amber:C.cyan;
                 return (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`}}>
-                    <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
-                      <Wallet style={{width:15,height:15,color:col}}/>
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:3}}>
-                        <p style={{fontSize:9,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.balance')}</p>
+                  <div style={{padding:'14px 16px',borderRadius:16,background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                      <div style={{display:'flex',alignItems:'center',gap:5}}>
+                        <span style={{fontSize:10,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.balance')}</span>
                         <span style={{fontSize:7,fontWeight:700,padding:'1px 4px',borderRadius:99,color:col,background:`${col}10`,border:`1px solid ${col}25`}}>{isDemo?T('common.demo'):T('common.real')}</span>
                       </div>
-                      {isLoading?<div style={{height:15,width:80,borderRadius:4,background:C.faint}}/>
-                        :<p style={{fontSize:14,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{FMT(amt)}</p>
-                      }
-                      <p style={{fontSize:9,color:C.muted,marginTop:2}}>{balance?.currency??'IDR'}</p>
+                      <div style={{width:30,height:30,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
+                        <Wallet style={{width:14,height:14,color:col}}/>
+                      </div>
                     </div>
+                    {isLoading?<div style={{height:18,width:90,borderRadius:4,background:C.faint,marginBottom:4}}/>
+                      :<p style={{fontSize:16,fontWeight:700,color:col,lineHeight:1.1,letterSpacing:'-0.01em',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{FMT(amt)}</p>
+                    }
+                    <p style={{fontSize:10,color:C.muted}}>{balance?.currency??'IDR'}</p>
                   </div>
                 );
               })()}
 
               {/* Mode + Status */}
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?C.card2:C.card,border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}25`:isDarkMode?C.bdr:'#9CA3AF'}`,transition:'all 0.3s ease'}}>
-                <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`,position:'relative'}}>
-                  <span style={{color:modeAccent(tradingMode)}}>
-                    {{schedule:<Calendar style={{width:15,height:15}}/>,fastrade:<Zap style={{width:15,height:15}}/>,ctc:<Copy style={{width:15,height:15}}/>,aisignal:<Radio style={{width:15,height:15}}/>,indicator:<BarChart style={{width:15,height:15}}/>,momentum:<Waves style={{width:15,height:15}}/>}[tradingMode]}
-                  </span>
-                  {isActiveMode&&<span style={{position:'absolute',top:-3,right:-3,width:7,height:7,borderRadius:'50%',background:modeAccent(tradingMode),boxShadow:`0 0 5px ${modeAccent(tradingMode)}`,animation:'ping 1.6s ease-in-out infinite'}}/>}
+              <div style={{padding:'14px 16px',borderRadius:16,background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?C.card2:C.card,border:`1.5px solid ${isActiveMode?`${modeAccent(tradingMode)}40`:isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',transition:'all 0.3s ease'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                  <span style={{fontSize:10,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.mode')}</span>
+                  <div style={{width:30,height:30,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${modeAccent(tradingMode)}12`,border:`1px solid ${modeAccent(tradingMode)}22`,position:'relative'}}>
+                    <span style={{color:modeAccent(tradingMode)}}>
+                      {{schedule:<Calendar style={{width:14,height:14}}/>,fastrade:<Zap style={{width:14,height:14}}/>,ctc:<Copy style={{width:14,height:14}}/>,aisignal:<Radio style={{width:14,height:14}}/>,indicator:<BarChart style={{width:14,height:14}}/>,momentum:<Waves style={{width:14,height:14}}/>}[tradingMode]}
+                    </span>
+                    {isActiveMode&&<span style={{position:'absolute',top:-3,right:-3,width:7,height:7,borderRadius:'50%',background:modeAccent(tradingMode),boxShadow:`0 0 5px ${modeAccent(tradingMode)}`,animation:'ping 1.6s ease-in-out infinite'}}/>}
+                  </div>
                 </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <p style={{fontSize:9,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>{T('dashboard.mode')}</p>
-                  <p style={{fontSize:13,fontWeight:700,color:isActiveMode?modeAccent(tradingMode):C.text,lineHeight:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                    {{schedule:'Signal Mode',fastrade:'Fastrade FTT Mode',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'}[tradingMode]}
-                  </p>
-                  <p style={{fontSize:9,marginTop:2,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
-                    {isActiveMode?'● '+T('dashboard.running'):'○ '+T('common.standby')}
-                  </p>
-                </div>
+                <p style={{fontSize:16,fontWeight:700,color:isActiveMode?modeAccent(tradingMode):C.text,lineHeight:1.1,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                  {{schedule:'Signal',fastrade:'Fastrade FTT',ctc:'Fastrade CTC',aisignal:'AI Signal',indicator:'Indicator',momentum:'Momentum'}[tradingMode]}
+                </p>
+                <p style={{fontSize:10,color:isActiveMode?modeAccent(tradingMode):C.muted}}>
+                  {isActiveMode?'● '+T('dashboard.running'):'○ '+T('common.standby')}
+                </p>
               </div>
 
               {/* Today P&L */}
@@ -5289,24 +5278,24 @@ export default function DashboardPage() {
                 const col=isPos?C.cyan:C.coral;
                 const wr=todayProfitData?.winRate;
                 return (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:14,background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`}}>
-                    <div style={{width:34,height:34,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
-                      {isPos?<TrendingUp style={{width:15,height:15,color:col}}/>:<TrendingDown style={{width:15,height:15,color:col}}/>}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
-                        <p style={{fontSize:9,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.profitToday')}</p>
-                        {wr!=null&&<span style={{fontSize:8,fontWeight:700,color:wr>=50?C.cyan:C.coral}}>{wr.toFixed(0)}% WR</span>}
+                  <div style={{padding:'14px 16px',borderRadius:16,background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                      <div style={{display:'flex',alignItems:'center',gap:5}}>
+                        <span style={{fontSize:10,fontWeight:600,color:C.muted,textTransform:'uppercase',letterSpacing:'0.08em'}}>{T('dashboard.profitToday')}</span>
+                        {wr!=null&&<span style={{fontSize:8,fontWeight:700,color:wr>=50?C.cyan:C.coral,background:`${wr>=50?C.cyan:C.coral}10`,padding:'1px 4px',borderRadius:99,border:`1px solid ${wr>=50?C.cyan:C.coral}25`}}>{wr.toFixed(0)}% WR</span>}
                       </div>
-                      {isLoading?<div style={{height:15,width:80,borderRadius:4,background:C.faint}}/>
-                        :<p style={{fontSize:14,fontWeight:700,color:col,lineHeight:1,letterSpacing:'-0.01em',fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                          {isPos?'+':'−'}{FMT(Math.abs(pnl/100))}
-                        </p>
-                      }
-                      <p style={{fontSize:9,color:C.muted,marginTop:2}}>
-                        {todayProfitData?`${todayProfitData.totalTrades} trade · ${todayProfitData.totalWins}W ${todayProfitData.totalLosses}L`:T('dashboard.profitToday')}
-                      </p>
+                      <div style={{width:30,height:30,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:`${col}10`,border:`1px solid ${col}20`}}>
+                        {isPos?<TrendingUp style={{width:14,height:14,color:col}}/>:<TrendingDown style={{width:14,height:14,color:col}}/>}
+                      </div>
                     </div>
+                    {isLoading?<div style={{height:18,width:90,borderRadius:4,background:C.faint,marginBottom:4}}/>
+                      :<p style={{fontSize:16,fontWeight:700,color:col,lineHeight:1.1,letterSpacing:'-0.01em',fontFamily:'monospace',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {isPos?'+':'−'}{FMT(Math.abs(pnl/100))}
+                      </p>
+                    }
+                    <p style={{fontSize:10,color:C.muted}}>
+                      {todayProfitData?`${todayProfitData.totalTrades} trade · ${todayProfitData.totalWins}W ${todayProfitData.totalLosses}L`:T('dashboard.profitToday')}
+                    </p>
                   </div>
                 );
               })()}
@@ -5318,26 +5307,15 @@ export default function DashboardPage() {
               {/* LEFT: Chart hero + session stat strip */}
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
 
-                {/* Chart card — clock header compact, tidak melebar */}
-                <div style={{borderRadius:16,overflow:'hidden',background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode ? 'rgba(52,211,153,0.25)' : '#9CA3AF'}`,padding:4}}>
-                  {/* Clock header — compact, left-aligned, tidak space-between */}
-                  <div style={{
-                    display:'flex',alignItems:'center',gap:10,
-                    padding:'9px 14px 9px',
-                    borderBottom:`1px solid ${isDarkMode?C.bdr:'#9CA3AF'}`,
-                  }}>
-                    {/* Kiri: label + dot */}
-                    <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
-                      <Activity style={{width:11,height:11,color:isActiveMode?modeAccent(tradingMode):C.coral}}/>
-                      <span style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.10em',color:C.muted}}>{T('dashboard.localTime')}</span>
+                {/* Chart card */}
+                <div style={{borderRadius:20,overflow:'hidden',background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none',padding:4}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px 10px',borderBottom:`1px solid ${isDarkMode?C.bdr:'rgba(0,0,0,0.06)'}`}}>
+                    <div style={{display:'flex',alignItems:'center',gap:7}}>
+                      <Activity style={{width:13,height:13,color:isActiveMode?modeAccent(tradingMode):C.cyan}}/>
+                      <span style={{fontSize:12,fontWeight:700,color:C.text}}>Live Chart</span>
                       <span style={{width:5,height:5,borderRadius:'50%',flexShrink:0,background:isActiveMode?modeAccent(tradingMode):C.coral,boxShadow:`0 0 5px ${isActiveMode?modeAccent(tradingMode):C.coral}90`,animation:'ping 1.6s ease-in-out infinite'}}/>
                     </div>
-                    {/* Divider vertikal */}
-                    <div style={{width:1,height:20,background:isDarkMode?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)',flexShrink:0}}/>
-                    {/* Clock — inline, compact, tidak stretching */}
-                    <div style={{flexShrink:0}}>
-                      <RealtimeClockDesktop/>
-                    </div>
+                    <RealtimeClockDesktop/>
                   </div>
                   <ChartCard assetSymbol={selectedRic} height={280}/>
                 </div>
@@ -5366,14 +5344,14 @@ export default function DashboardPage() {
                         :{label:T('dashboard.mode'),icon:<Radio style={{width:13,height:13}}/>,value:({schedule:'Signal Mode',fastrade:'Fastrade FTT Mode',ctc:'Fastrade CTC',aisignal:'AI Signal Mode',indicator:'Analysis Strategy Mode',momentum:'Momentum Mode'} as Record<string,string>)[tradingMode],col:ac},
                     ];
                     return statCards.map((s,i)=>(
-                      <div key={i} style={{padding:'11px 13px',borderRadius:12,background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`}}>
-                        <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:6}}>
-                          <span style={{color:s.col,opacity:0.7}}>{s.icon}</span>
-                          <span style={{fontSize:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</span>
+                      <div key={i} style={{padding:'13px 15px',borderRadius:16,background:isDarkMode?C.card2:C.card,border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,boxShadow:isDarkMode?'0 4px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06) inset':'none'}}>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                          <span style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',color:C.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</span>
+                          <span style={{color:s.col,opacity:0.8,flexShrink:0}}>{s.icon}</span>
                         </div>
                         {s.value==null
-                          ?<div style={{height:14,width:'70%',borderRadius:4,background:C.faint}}/>
-                          :<p style={{fontSize:14,fontWeight:700,color:s.col,fontFamily:'monospace',letterSpacing:'-0.01em',lineHeight:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.value}</p>
+                          ?<div style={{height:15,width:'70%',borderRadius:4,background:C.faint}}/>
+                          :<p style={{fontSize:15,fontWeight:700,color:s.col,fontFamily:'monospace',letterSpacing:'-0.01em',lineHeight:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.value}</p>
                         }
                       </div>
                     ));
