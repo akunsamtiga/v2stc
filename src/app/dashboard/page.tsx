@@ -47,36 +47,36 @@ function getColors(isDark: boolean) {
   // successColor=#059669  errorColor=#DC2626  warningColor=#D97706
   // borderColor=#D6DADF
   return {
-    // Surfaces
-    bg:    isDark ? '#111111' : '#EAECEF',   // light: lebih terang agar zona waktu bg tidak terlalu gelap
-    card:  isDark ? '#272727' : '#FFFFFF',
-    card2: isDark ? '#303030' : '#F0F2F5',   // light: lebih terang dari bg tapi beda dari card
+    // Surfaces — navy-black palette for dark mode
+    bg:    isDark ? '#070b10' : '#EAECEF',
+    card:  isDark ? '#0e1621' : '#FFFFFF',
+    card2: isDark ? '#141f2e' : '#F0F2F5',
     // Borders
-    bdr:   isDark ? 'rgba(70, 184, 104, 0.65)' : '#9CA3AF',
-    bdrAct:'rgba(16,185,129,0.80)',
+    bdr:   isDark ? 'rgba(76,175,80,0.18)' : '#9CA3AF',
+    bdrAct:'rgba(76,175,80,0.70)',
     // Primary accent
-    cyan:  isDark ? '#22D3A0' : '#047857',   // light: lebih gelap agar kontras di bg putih
-    cyand: isDark ? 'rgba(34,211,160,0.20)' : 'rgba(4,120,87,0.10)',
+    cyan:  isDark ? '#22D3A0' : '#047857',
+    cyand: isDark ? 'rgba(34,211,160,0.18)' : 'rgba(4,120,87,0.10)',
     // Error / loss
-    coral: isDark ? '#F87171' : '#B91C1C',   // light: lebih gelap
-    cord:  isDark ? 'rgba(248,113,113,0.18)' : 'rgba(185,28,28,0.10)',
+    coral: isDark ? '#F87171' : '#B91C1C',
+    cord:  isDark ? 'rgba(248,113,113,0.15)' : 'rgba(185,28,28,0.10)',
     // Warning / martingale
-    amber: isDark ? '#FCD34D' : '#B45309',   // light: lebih gelap agar terbaca
-    ambd:  isDark ? 'rgba(252,211,77,0.18)'  : 'rgba(180,83,9,0.10)',
+    amber: isDark ? '#FCD34D' : '#B45309',
+    ambd:  isDark ? 'rgba(252,211,77,0.15)'  : 'rgba(180,83,9,0.10)',
     // Misc accent colors
     violet: isDark ? '#D37EFF' : '#7C3AED',
-    vltd:  isDark ? 'rgba(211,126,255,0.16)' : 'rgba(124,58,237,0.10)',
+    vltd:  isDark ? 'rgba(211,126,255,0.15)' : 'rgba(124,58,237,0.10)',
     sky:   isDark ? '#4ADE80' : '#15803D',
-    skyd:  isDark ? 'rgba(74,222,128,0.16)'  : 'rgba(21,128,61,0.10)',
+    skyd:  isDark ? 'rgba(74,222,128,0.15)'  : 'rgba(21,128,61,0.10)',
     orange:'#FF6B35',
-    orgd:  isDark ? 'rgba(255,107,53,0.16)'  : 'rgba(255,107,53,0.10)',
+    orgd:  isDark ? 'rgba(255,107,53,0.15)'  : 'rgba(255,107,53,0.10)',
     pink:  isDark ? '#FF375F' : '#BE185D',
-    pinkd: isDark ? 'rgba(255,55,95,0.16)'   : 'rgba(190,24,93,0.10)',
+    pinkd: isDark ? 'rgba(255,55,95,0.15)'   : 'rgba(190,24,93,0.10)',
     // Text
-    text:  isDark ? '#F0F4FF' : '#0D1117',
-    sub:   isDark ? '#9BAAC4' : '#2D3748',   // light: lebih gelap
-    muted: isDark ? 'rgba(155,170,196,0.70)' : '#4A5568',   // light: lebih gelap agar terbaca
-    faint: isDark ? 'rgba(34,211,160,0.08)'  : 'rgba(4,120,87,0.06)',
+    text:  isDark ? '#E8F0FE' : '#0D1117',
+    sub:   isDark ? '#7E96B8' : '#2D3748',
+    muted: isDark ? 'rgba(126,150,184,0.65)' : '#4A5568',
+    faint: isDark ? 'rgba(34,211,160,0.06)'  : 'rgba(4,120,87,0.06)',
   };
 }
 
@@ -2599,7 +2599,7 @@ const ModeSessionPanel: React.FC<{
       minWidth: 0, width: '100%',
       overflow: 'hidden',
       padding: 0,
-      boxShadow: isDarkMode ? `0 2px 0 ${C.cyan}08 inset, 0 10px 32px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.25)` : 'none',
+      boxShadow: isDarkMode ? `0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35)` : 'none',
     }}>
       {/* Mode picker modal — tampilkan mode yang BERJALAN bukan hanya yang dilihat */}
       <ModePickerModal
@@ -2612,16 +2612,17 @@ const ModeSessionPanel: React.FC<{
       />
 
       {/* Mode picker button — di dalam card, sebagai header */}
-      <div style={{ position: 'relative', flexShrink: 0, padding: '10px 12px', borderBottom: `1px solid ${C.bdr}` }}>
+      <div style={{ position: 'relative', flexShrink: 0, padding: '12px 14px', borderBottom: `1px solid ${isDarkMode?'rgba(76,175,80,0.12)':C.bdr}` }}>
         <button
           type="button"
           onClick={() => setModePickerOpen(true)}
           style={{
             width: '100%', display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between', padding: '7px 10px',
-            borderRadius: 10, cursor: 'pointer',
-            background: `${ac}10`,
-            border: `1px solid ${ac}30`,
+            justifyContent: 'space-between', padding: '9px 12px',
+            borderRadius: 12, cursor: 'pointer',
+            background: `${ac}12`,
+            border: `1px solid ${ac}28`,
+            transition: 'all 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, overflow: 'hidden' }}>
@@ -4677,7 +4678,7 @@ export default function DashboardPage() {
     @keyframes profit-slide-down { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
     .profit-slide-up   { animation: profit-slide-up   0.4s cubic-bezier(0.4,0,0.2,1) both !important; }
     .profit-slide-down { animation: profit-slide-down 0.4s cubic-bezier(0.4,0,0.2,1) both !important; }
-    @keyframes win-flash   { 0%{box-shadow:0 0 0 0 rgba(41,151,255,0)} 15%{box-shadow:0 0 0 4px rgba(41,151,255,0.35)} 100%{box-shadow:0 0 0 0 rgba(41,151,255,0)} }
+    @keyframes win-flash   { 0%{box-shadow:0 0 0 0 rgba(34,211,160,0)} 15%{box-shadow:0 0 0 6px rgba(34,211,160,0.35)} 100%{box-shadow:0 0 0 0 rgba(34,211,160,0)} }
     @keyframes lose-flash  { 0%{box-shadow:0 0 0 0 rgba(255,69,58,0)} 15%{box-shadow:0 0 0 4px rgba(255,69,58,0.35)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)} }
     /* ✅ FIX SCROLL: shimmer pakai translateX (GPU-accelerated) bukan background-position (CPU paint) */
     @keyframes header-shimmer {
@@ -4687,16 +4688,18 @@ export default function DashboardPage() {
     }
     .ds-card {
       background: ${isDarkMode ? C.card : '#ffffff'};
-      border: 1.5px solid ${isDarkMode ? 'rgba(52,211,153,0.25)' : '#9CA3AF'};
-      border-radius: 14px;
-      box-shadow: ${isDarkMode ? '0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)' : 'none'};
+      border: 1px solid ${isDarkMode ? 'rgba(76,175,80,0.16)' : '#D1D5DB'};
+      border-radius: 20px;
+      box-shadow: ${isDarkMode
+        ? '0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35)'
+        : '0 1px 3px rgba(0,0,0,0.06)'};
       transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
     }
     @media (max-width: 767px) {
       .ds-card, .ds-card:hover {
-        border: 1.5px solid ${isDarkMode ? 'rgba(52,211,153,0.30)' : '#9CA3AF'} !important;
+        border: 1px solid ${isDarkMode ? 'rgba(76,175,80,0.18)' : '#D1D5DB'} !important;
         box-shadow: ${isDarkMode
-          ? '0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 32px rgba(0,0,0,0.18), 0 0 40px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.12)'
+          ? '0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 20px rgba(0,0,0,0.50), 0 1px 4px rgba(0,0,0,0.30)'
           : '0 1px 3px rgba(0,0,0,0.06)'
         } !important;
         transform: none !important;
@@ -4704,22 +4707,25 @@ export default function DashboardPage() {
     }
     .ds-input {
       width: 100%;
-      padding: 9px 12px;
-      border-radius: 8px;
+      padding: 10px 13px;
+      border-radius: 10px;
       font-size: 13px;
-      background: ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(16,185,129,0.04)'};
-      border: 1.5px solid ${isDarkMode ? 'rgba(52,211,153,0.20)' : '#9CA3AF'};
-      color: ${isDarkMode ? '#ffffff' : '#1C1C1E'};
+      background: ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(16,185,129,0.04)'};
+      border: 1px solid ${isDarkMode ? 'rgba(76,175,80,0.18)' : '#9CA3AF'};
+      color: ${isDarkMode ? '#E8F0FE' : '#1C1C1E'};
       outline: none;
       font-family: inherit;
-      transition: border-color 0.15s, background 0.3s, color 0.3s;
+      transition: border-color 0.2s, background 0.3s, color 0.3s, box-shadow 0.2s;
       resize: vertical;
       box-sizing: border-box;
     }
-    .ds-input:focus { border-color: ${isDarkMode ? 'rgba(34,211,160,0.60)' : 'rgba(5,150,105,0.55)'}; }
-    .ds-input::placeholder { color: ${isDarkMode ? 'rgba(255,255,255,0.35)' : 'rgba(60,60,67,0.45)'}; }
-    .schedule-item { transition: background 0.15s; }
-    .schedule-item:hover { background: ${isDarkMode ? 'rgba(34,211,160,0.07)' : 'rgba(5,150,105,0.07)'} !important; }
+    .ds-input:focus {
+      border-color: ${isDarkMode ? 'rgba(34,211,160,0.55)' : 'rgba(5,150,105,0.55)'};
+      box-shadow: 0 0 0 3px ${isDarkMode ? 'rgba(34,211,160,0.08)' : 'rgba(5,150,105,0.08)'};
+    }
+    .ds-input::placeholder { color: ${isDarkMode ? 'rgba(232,240,254,0.25)' : 'rgba(60,60,67,0.45)'}; }
+    .schedule-item { transition: background 0.15s; border-radius: 10px; }
+    .schedule-item:hover { background: ${isDarkMode ? 'rgba(34,211,160,0.06)' : 'rgba(5,150,105,0.06)'} !important; }
     /* ✅ FIX SCROLL: semua elemen animasi promoted ke GPU layer agar tidak
        trigger repaint pada scroll layer utama */
     [style*="animation: ping"], [style*="animation:ping"],
@@ -4965,12 +4971,12 @@ export default function DashboardPage() {
                 onClick={!isActiveMode?()=>setAssetPickerOpen(true):undefined}
                 style={{
                 display:'flex',alignItems:'center',gap:12,
-                padding:'12px 16px',borderRadius:14,
+                padding:'14px 18px',borderRadius:20,
                 background:isDarkMode?C.card2:C.card,
-                border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
-                backdropFilter:'blur(8px)',
+                border:`1px solid ${isDarkMode?'rgba(76,175,80,0.16)':'#D1D5DB'}`,
+                boxShadow:isDarkMode?'0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55)':'none',
                 cursor:!isActiveMode?'pointer':'default',
-                transition:'opacity 0.15s',
+                transition:'all 0.2s ease',
               }}>
                 <div style={{
                   width:38,height:38,borderRadius:10,flexShrink:0,overflow:'hidden',
@@ -4995,9 +5001,10 @@ export default function DashboardPage() {
               {/* Balance */}
               <div style={{
                 display:'flex',alignItems:'center',gap:12,
-                padding:'12px 16px',borderRadius:14,
+                padding:'14px 18px',borderRadius:20,
                 background:isDarkMode?C.card2:C.card,
-                border:`1.5px solid ${isDarkMode?'rgba(52,211,153,0.25)':'#9CA3AF'}`,
+                border:`1px solid ${isDarkMode?'rgba(76,175,80,0.16)':'#D1D5DB'}`,
+                boxShadow:isDarkMode?'0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55)':'none',
               }}>
                 {(()=>{
                   const rawAmt = isDemo?(balance?.demo_balance??balance?.balance??0):(balance?.real_balance??balance?.balance??0);
@@ -5026,9 +5033,10 @@ export default function DashboardPage() {
               {/* Mode + Status */}
               <div style={{
                 display:'flex',alignItems:'center',gap:12,
-                padding:'12px 16px',borderRadius:14,
+                padding:'14px 18px',borderRadius:20,
                 background:isActiveMode?`${modeAccent(tradingMode)}08`:isDarkMode?C.card2:C.card,
-                border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}25`:isDarkMode?C.bdr:'#9CA3AF'}`,
+                border:`1px solid ${isActiveMode?`${modeAccent(tradingMode)}30`:isDarkMode?'rgba(76,175,80,0.16)':'#D1D5DB'}`,
+                boxShadow:isDarkMode?'0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.55)':'none',
                 transition:'all 0.3s ease',
               }}>
                 <div style={{

@@ -338,13 +338,7 @@ const LOGIN_STYLES = `
   }
   @keyframes rot { to { transform: rotate(360deg); } }
 
-  .step-hint {
-    text-align: center; font-size: 11.5px;
-    color: var(--text-3); margin-top: 8px;
-    min-height: 16px; transition: opacity 0.2s;
-  }
-
-  /* ── Encrypted badge ────────────────────────────────────────────────── */
+/* ── Encrypted badge ────────────────────────────────────────────────── */
   .badge {
     display: inline-flex; align-items: center; gap: 6px;
     margin-top: 14px; padding: 6px 13px; border-radius: 99px;
@@ -1342,12 +1336,6 @@ function LoginPageContent() {
                   )}
                 </button>
 
-                <p className="step-hint" style={{ opacity: loading ? 1 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  {loading && loginStep !== 'idle' && (
-                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', border: '1.5px solid rgba(76,175,80,0.30)', borderTopColor: 'var(--accent-light)', animation: 'rot 0.7s linear infinite', flexShrink: 0 }} />
-                  )}
-                  {stepHintLabel()}
-                </p>
               </form>
 
               <div style={{ textAlign: 'center', marginTop: 16 }}>
