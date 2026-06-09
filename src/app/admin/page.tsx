@@ -197,10 +197,11 @@ const StatCard = ({
 // ─── User Card ────────────────────────────────────────────────────────────────
 const UserCard: React.FC<{
   user: WhitelistUser;
+  showOwner?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onToggle: () => void;
-}> = ({ user, onEdit, onDelete, onToggle }) => {
+}> = ({ user, showOwner, onEdit, onDelete, onToggle }) => {
   const active = isUserActive(user);
   const initials = (user.name ?? user.email).slice(0, 2).toUpperCase();
 
@@ -264,6 +265,11 @@ const UserCard: React.FC<{
           {user.lastLogin && user.lastLogin > 0 && (
             <p className="text-[11px] text-slate-400">
               Login: <span className="text-slate-600">{fmtDate(user.lastLogin, true)}</span>
+            </p>
+          )}
+          {showOwner && (
+            <p className="text-[11px] text-slate-400">
+              Oleh: <span className="font-medium text-violet-600">{(user.addedBy ?? user.added_by) || '—'}</span>
             </p>
           )}
         </div>
@@ -970,13 +976,15 @@ export default function AdminPage() {
       const [statsData, usersData, adminsData, configData] = await Promise.all([
         getUserStatistics(email, superAdmin),
         getAllWhitelistUsers(email, superAdmin),  // ✅ returns full WhitelistUser with isActive, userId, deviceId
-        getAdminUsers(),
-        getRegistrationConfig(),
+        // ✅ Admin list & config hanya untuk super-admin (endpoint backend SuperAdminGuard).
+        //    Admin biasa skip — hindari 403 yang menggagalkan loadData.
+        superAdmin ? getAdminUsers() : Promise.resolve([] as AdminUser[]),
+        superAdmin ? getRegistrationConfig() : Promise.resolve(null),
       ]);
       setStats(statsData);
       setAllUsers(usersData);                     // ✅ all users with full shape
       setAdmins(adminsData);
-      setRegConfig(configData);
+      if (configData) setRegConfig(configData);
     } catch (e: any) {
       setError(`Gagal memuat data: ${e.message}`);
     } finally {
@@ -1264,6 +1272,7 @@ export default function AdminPage() {
                   <UserCard
                     key={u.id ?? u.email}
                     user={u}
+                    showOwner={isSuperAdmin}
                     onEdit={() => setEditUser(u)}
                     onDelete={() => setDeleteUser(u)}
                     onToggle={() => handleToggle(u)}
