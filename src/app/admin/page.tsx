@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { storage, isSessionValid } from '@/lib/storage';
+import { api, type ChatMessage } from '@/lib/api';
 import {
   checkIsAdmin, checkIsSuperAdmin, getUserStatistics, getAllWhitelistUsers,
   addWhitelistUser, updateWhitelistUser, deleteWhitelistUser,
@@ -68,6 +69,8 @@ const Icon = {
   warn: (cls = 'w-4 h-4') => <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   clock: (cls = 'w-4 h-4') => <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
   userPlus: (cls = 'w-4 h-4') => <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>,
+  chat: (cls = 'w-4 h-4') => <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  send: (cls = 'w-4 h-4') => <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
 };
 
 // ─── Spinner ──────────────────────────────────────────────────────────────────
@@ -905,6 +908,153 @@ const StatsDetailDialog: React.FC<{
   );
 };
 
+// ─── Chat Antar Admin ─────────────────────────────────────────────────────────
+const ChatPanel: React.FC<{ currentEmail: string; isSuperAdmin: boolean; onClose: () => void }> = ({ currentEmail, isSuperAdmin, onClose }) => {
+  const [msgs, setMsgs] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const lastIdRef = useRef(0);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = (smooth = true) =>
+    bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+
+  const merge = useCallback((incoming: ChatMessage[]) => {
+    if (!incoming.length) return;
+    setMsgs(prev => {
+      const seen = new Set(prev.map(m => m.id));
+      const add = incoming.filter(m => !seen.has(m.id));
+      if (!add.length) return prev;
+      const next = [...prev, ...add].sort((a, b) => a.id - b.id);
+      lastIdRef.current = Math.max(lastIdRef.current, ...next.map(m => m.id));
+      return next;
+    });
+  }, []);
+
+  // Lock body scroll + Escape close
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); };
+  }, [onClose]);
+
+  // Initial load
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const data = await api.admin.chatList();
+        if (!alive) return;
+        setMsgs(data);
+        lastIdRef.current = data.length ? Math.max(...data.map(m => m.id)) : 0;
+      } catch (e: any) { if (alive) setErr(e?.message ?? 'Gagal memuat chat'); }
+      finally { if (alive) { setLoading(false); setTimeout(() => scrollToBottom(false), 60); } }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // Poll tiap 3 detik
+  useEffect(() => {
+    const t = setInterval(async () => {
+      try {
+        const data = await api.admin.chatList(lastIdRef.current);
+        if (data.length) { merge(data); setTimeout(() => scrollToBottom(), 60); }
+      } catch { /* diam saja saat polling */ }
+    }, 3000);
+    return () => clearInterval(t);
+  }, [merge]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || sending) return;
+    setSending(true); setErr(null);
+    try {
+      const m = await api.admin.chatSend(text);
+      merge([m]); setInput('');
+      setTimeout(() => scrollToBottom(), 60);
+    } catch (e: any) { setErr(e?.message ?? 'Gagal mengirim'); }
+    finally { setSending(false); }
+  };
+
+  const del = async (id: number) => {
+    try { await api.admin.chatDelete(id); setMsgs(prev => prev.filter(m => m.id !== id)); }
+    catch (e: any) { setErr(e?.message ?? 'Gagal menghapus'); }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-lg bg-white rounded-t-3xl flex flex-col overflow-hidden"
+        style={{ height: '82dvh', animation: 'adminSlideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center"><span className="text-violet-600">{Icon.chat('w-4 h-4')}</span></div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-slate-800 leading-tight">Chat Admin</p>
+            <p className="text-xs text-slate-400">Obrolan antar admin & super-admin</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"><span className="text-slate-500">{Icon.x('w-4 h-4')}</span></button>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 bg-slate-50">
+          {loading ? (
+            <div className="flex justify-center py-10"><Spinner cls="w-5 h-5 border-2 text-violet-400" /></div>
+          ) : msgs.length === 0 ? (
+            <p className="text-center text-xs text-slate-400 py-10">Belum ada pesan. Mulai obrolan! 👋</p>
+          ) : msgs.map(m => {
+            const mine = (m.sender_email ?? '').toLowerCase() === currentEmail.toLowerCase();
+            return (
+              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                <div className="max-w-[80%] group">
+                  {!mine && <p className="text-[10px] font-bold text-violet-600 mb-0.5 px-1">{m.sender_name || m.sender_email.split('@')[0]}</p>}
+                  <div className={`rounded-2xl px-3.5 py-2 text-sm shadow-sm ${mine ? 'bg-violet-500 text-white rounded-br-md' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-md'}`}>
+                    <p className="whitespace-pre-wrap break-words leading-snug">{m.content}</p>
+                  </div>
+                  <div className={`flex items-center gap-2 mt-0.5 px-1 ${mine ? 'justify-end' : ''}`}>
+                    <span className="text-[9px] text-slate-400">{new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                    {(mine || isSuperAdmin) && (
+                      <button onClick={() => del(m.id)} className="text-[9px] text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">hapus</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Error */}
+        {err && <p className="text-[11px] text-red-500 px-4 py-1 bg-red-50 flex-shrink-0">{err}</p>}
+
+        {/* Input */}
+        <div className="px-3 py-3 border-t border-slate-100 flex items-end gap-2 flex-shrink-0"
+          style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+            rows={1}
+            maxLength={2000}
+            placeholder="Tulis pesan…"
+            className="flex-1 resize-none rounded-2xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:border-violet-400 max-h-28"
+          />
+          <button onClick={send} disabled={sending || !input.trim()}
+            className="w-10 h-10 rounded-full bg-violet-500 hover:bg-violet-600 text-white flex items-center justify-center disabled:opacity-40 transition-colors flex-shrink-0">
+            {sending ? <Spinner cls="w-4 h-4 border-2" /> : Icon.send('w-4 h-4')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN ADMIN PAGE
 // ═════════════════════════════════════════════════════════════════════════════
@@ -938,6 +1088,7 @@ export default function AdminPage() {
   const [deleteUser,    setDeleteUser]    = useState<WhitelistUser | null>(null);
   const [importOpen,    setImportOpen]    = useState(false);
   const [adminMgmt,     setAdminMgmt]     = useState(false);
+  const [chatOpen,      setChatOpen]      = useState(false);
   const [statsFilter,   setStatsFilter]   = useState<StatsFilter | null>(null);
   const [regUrlOpen,    setRegUrlOpen]    = useState(false);
   const [waUrlOpen,     setWaUrlOpen]     = useState(false);
@@ -1310,6 +1461,19 @@ export default function AdminPage() {
           </button>
         </div>
       )}
+
+      {/* ── FAB CHAT ─────────────────────────────────────────────────────── */}
+      {authReady && (
+        <button
+          onClick={() => setChatOpen(true)}
+          aria-label="Chat admin"
+          className="fixed right-4 z-50 w-14 h-14 rounded-full bg-violet-500 hover:bg-violet-600 text-white shadow-lg shadow-violet-500/30 flex items-center justify-center transition-colors"
+          style={{ bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+        >
+          {Icon.chat('w-6 h-6')}
+        </button>
+      )}
+      {chatOpen && <ChatPanel currentEmail={currentEmail} isSuperAdmin={isSuperAdmin} onClose={() => setChatOpen(false)} />}
 
       {/* ── DIALOGS ──────────────────────────────────────────────────────── */}
       {addOpen    && <UserDialog mode="add" isSuperAdmin={isSuperAdmin} onClose={() => setAddOpen(false)} onSave={handleAdd} loading={isActing} />}

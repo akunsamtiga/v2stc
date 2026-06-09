@@ -608,6 +608,14 @@ export interface MomentumInfo {
 // ─────────────────────────────────────────────
 // API OBJECT
 // ─────────────────────────────────────────────
+export interface ChatMessage {
+  id: number;
+  sender_email: string;
+  sender_name: string | null;
+  content: string;
+  created_at: string;
+}
+
 export const api = {
   // ── Auth ──────────────────────────────────
   login: (email: string, password: string) =>
@@ -856,5 +864,9 @@ export const api = {
     addSuperAdmin:   (email: string) => req<void>('POST', '/admin/super-admins', { email }),
     deleteSuperAdmin:(email: string) => req<void>('DELETE', `/admin/super-admins?email=${encodeURIComponent(email)}`),
     upsertConfig:    (key: string, value: unknown) => req<void>('PUT', '/admin/config', { key, value }),
+    // ── Chat antar admin/super-admin ──
+    chatList:        (after?: number) => req<ChatMessage[]>('GET', `/admin/chat${after ? `?after=${after}` : ''}`),
+    chatSend:        (content: string) => req<ChatMessage>('POST', '/admin/chat', { content }),
+    chatDelete:      (id: number) => req<void>('DELETE', `/admin/chat/${id}`),
   },
 };
