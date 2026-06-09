@@ -624,6 +624,29 @@ export interface ChatContact {
   is_active: boolean;
 }
 
+export interface ReactivationRequest {
+  id: number;
+  admin_email: string;
+  admin_name: string | null;
+  days: number;
+  user_count: number;
+  amount_usd: number;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+}
+
+export interface AdminStanding {
+  expires_at: string | null;
+  is_active: boolean;
+  isSuperAdmin: boolean;
+  userCount: number;
+  pricePerUser: number;
+  amountUsd: number;
+  pendingRequest: ReactivationRequest | null;
+}
+
 export const api = {
   // ── Auth ──────────────────────────────────
   login: (email: string, password: string) =>
@@ -879,5 +902,11 @@ export const api = {
     chatDelete:      (id: number) => req<void>('DELETE', `/admin/chat/${id}`),
     // ── Masa aktif (super-admin) ──
     setPeriod:       (email: string, days: number) => req<{ email: string; expires_at: string | null }>('POST', '/admin/period', { email, days }),
+    // ── Standing & reaktivasi ──
+    standing:        () => req<AdminStanding>('GET', '/admin/standing'),
+    reactivationRequest: (days: number) => req<ReactivationRequest>('POST', '/admin/reactivation/request', { days }),
+    reactivationList:    () => req<ReactivationRequest[]>('GET', '/admin/reactivation/requests'),
+    reactivationApprove: (id: number) => req<{ admin_email: string; days: number }>('POST', '/admin/reactivation/approve', { id }),
+    reactivationReject:  (id: number) => req<void>('POST', '/admin/reactivation/reject', { id }),
   },
 };

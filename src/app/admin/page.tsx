@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { storage, isSessionValid } from '@/lib/storage';
-import { api, type ChatMessage, type ChatContact } from '@/lib/api';
+import { api, type ChatMessage, type ChatContact, type AdminStanding, type ReactivationRequest } from '@/lib/api';
 import {
   checkIsAdmin, checkIsSuperAdmin, getUserStatistics, getAllWhitelistUsers,
   addWhitelistUser, updateWhitelistUser, deleteWhitelistUser,
@@ -1117,6 +1117,158 @@ const ChatPanel: React.FC<{ currentEmail: string; isSuperAdmin: boolean; onClose
   );
 };
 
+// ─── Banner Masa Aktif + Reaktivasi (admin biasa) ─────────────────────────────
+const StandingBanner: React.FC<{ onOpenChat: () => void }> = ({ onOpenChat }) => {
+  const [s, setS] = useState<AdminStanding | null>(null);
+  const [open, setOpen] = useState(false);
+  const [days, setDays] = useState<7 | 14 | 30>(7);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => { try { setS(await api.admin.standing()); } catch { /* abaikan */ } }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (!s || s.isSuperAdmin) return null;   // banner hanya untuk admin biasa
+
+  const ex = fmtExpiry(s.expires_at);
+  const expired = !!s.expires_at && new Date(s.expires_at).getTime() <= Date.now();
+  const pending = s.pendingRequest;
+  const amount = (s.userCount * s.pricePerUser).toFixed(2);
+  const tone = expired ? 'red' : ex.cls.includes('amber') ? 'amber' : 'emerald';
+
+  const submit = async () => {
+    setBusy(true); setErr(null);
+    try { await api.admin.reactivationRequest(days); await load(); setOpen(false); }
+    catch (e: any) { setErr(e?.message ?? 'Gagal mengajukan'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <>
+      <div className={`rounded-2xl border p-4 anim-fade ${tone === 'red' ? 'bg-red-50 border-red-200' : tone === 'amber' ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${tone === 'red' ? 'bg-red-100 text-red-600' : tone === 'amber' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>{Icon.clock('w-4 h-4')}</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-slate-800">{expired ? 'Masa aktif habis' : `Masa aktif: ${ex.text} lagi`}</p>
+            <p className="text-xs text-slate-500">{s.expires_at ? `Aktif s/d ${new Date(s.expires_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'Permanen'} · {s.userCount} user · reaktivasi ${amount}</p>
+          </div>
+        </div>
+        {pending ? (
+          <div className="mt-3 rounded-xl bg-white/70 border border-slate-200 p-3">
+            <p className="text-xs font-semibold text-slate-700">Permintaan {pending.days} hari menunggu persetujuan</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Total <b>${Number(pending.amount_usd).toFixed(2)}</b> ({pending.user_count} user). Bayar via DM ke super-admin, lalu super-admin akan menyetujui.</p>
+            <button onClick={onOpenChat} className="mt-2 w-full py-2 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">{Icon.chat('w-3.5 h-3.5')} Chat Super-Admin untuk Bayar</button>
+          </div>
+        ) : (
+          <button onClick={() => setOpen(true)} className={`mt-3 w-full py-2 rounded-lg text-white text-xs font-semibold transition-colors ${tone === 'red' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}>
+            {expired ? 'Ajukan Reaktivasi' : 'Perpanjang Masa Aktif'}
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <Modal onClose={() => setOpen(false)}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0"><span className="text-emerald-600">{Icon.clock('w-5 h-5')}</span></div>
+            <div className="flex-1"><h3 className="text-lg font-bold text-slate-800">Reaktivasi Akun</h3><p className="text-xs text-slate-400">Pilih paket masa aktif</p></div>
+          </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-3">
+            <p className="text-xs text-slate-500">Biaya = jumlah user yang Anda tambahkan × ${s.pricePerUser}</p>
+            <p className="text-2xl font-black text-slate-800 mt-1">${amount}</p>
+            <p className="text-[11px] text-slate-400">{s.userCount} user × ${s.pricePerUser}</p>
+          </div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Paket Durasi</p>
+          <div className="flex gap-2 mb-4">
+            {([7, 14, 30] as const).map(d => (
+              <button key={d} onClick={() => setDays(d)} className={`flex-1 py-3 rounded-xl text-sm font-bold border-2 transition-colors ${days === d ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>{d} hari</button>
+            ))}
+          </div>
+          {err && <p className="text-xs text-red-500 mb-2">{err}</p>}
+          <button onClick={submit} disabled={busy} className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+            {busy && <Spinner cls="w-4 h-4 border-2" />} Ajukan Reaktivasi {days} Hari
+          </button>
+          <p className="text-[11px] text-slate-400 text-center mt-2">Setelah diajukan, bayar via DM ke super-admin. Akun aktif kembali setelah super-admin menyetujui.</p>
+        </Modal>
+      )}
+    </>
+  );
+};
+
+// ─── Dialog Permintaan Reaktivasi (super-admin) ───────────────────────────────
+const ReactivationRequestsDialog: React.FC<{ onClose: () => void; onChanged: () => void }> = ({ onClose, onChanged }) => {
+  const [list, setList] = useState<ReactivationRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setList(await api.admin.reactivationList()); } catch (e: any) { setErr(e?.message ?? 'Gagal memuat'); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const doAct = async (id: number, approve: boolean) => {
+    setBusyId(id); setErr(null);
+    try { approve ? await api.admin.reactivationApprove(id) : await api.admin.reactivationReject(id); await load(); onChanged(); }
+    catch (e: any) { setErr(e?.message ?? 'Gagal memproses'); }
+    finally { setBusyId(null); }
+  };
+
+  const pending = list.filter(r => r.status === 'pending');
+  const history = list.filter(r => r.status !== 'pending').slice(0, 20);
+
+  return (
+    <Modal onClose={onClose} wide>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0"><span className="text-violet-600">{Icon.clock('w-5 h-5')}</span></div>
+        <div className="flex-1"><h3 className="text-lg font-bold text-slate-800">Permintaan Reaktivasi</h3><p className="text-xs text-slate-400">{pending.length} menunggu persetujuan</p></div>
+        <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><span className="text-slate-500">{Icon.x('w-4 h-4')}</span></button>
+      </div>
+      {err && <p className="text-xs text-red-500 mb-2">{err}</p>}
+      {loading ? (
+        <div className="flex justify-center py-10"><Spinner cls="w-5 h-5 border-2 text-violet-400" /></div>
+      ) : (
+        <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto">
+          {pending.length === 0 && <p className="text-center text-xs text-slate-400 py-6">Tidak ada permintaan menunggu.</p>}
+          {pending.map(r => (
+            <div key={r.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{r.admin_name || r.admin_email.split('@')[0]}</p>
+                  <p className="text-xs text-slate-500 truncate">{r.admin_email}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-black text-slate-800">${Number(r.amount_usd).toFixed(2)}</p>
+                  <p className="text-[10px] text-slate-400">{r.days} hari · {r.user_count} user</p>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-2.5">
+                <button onClick={() => doAct(r.id, false)} disabled={busyId === r.id} className="flex-1 py-2 rounded-lg border border-slate-200 text-slate-500 text-xs font-semibold hover:bg-slate-100 disabled:opacity-50 transition-colors">Tolak</button>
+                <button onClick={() => doAct(r.id, true)} disabled={busyId === r.id} className="flex-1 py-2 rounded-lg bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors">
+                  {busyId === r.id ? <Spinner cls="w-3.5 h-3.5 border-2" /> : Icon.check('w-3.5 h-3.5')} Accept (sudah dibayar)
+                </button>
+              </div>
+            </div>
+          ))}
+          {history.length > 0 && (
+            <>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3 mb-1">Riwayat</p>
+              {history.map(r => (
+                <div key={r.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 text-xs">
+                  <span className="flex-1 truncate text-slate-600">{r.admin_email}</span>
+                  <span className="text-slate-400">{r.days}h · ${Number(r.amount_usd).toFixed(2)}</span>
+                  <span className={`font-bold ${r.status === 'approved' ? 'text-emerald-600' : 'text-red-500'}`}>{r.status === 'approved' ? 'disetujui' : 'ditolak'}</span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+};
+
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN ADMIN PAGE
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1151,6 +1303,7 @@ export default function AdminPage() {
   const [importOpen,    setImportOpen]    = useState(false);
   const [adminMgmt,     setAdminMgmt]     = useState(false);
   const [chatOpen,      setChatOpen]      = useState(false);
+  const [reactReqOpen,  setReactReqOpen]  = useState(false);
   const [statsFilter,   setStatsFilter]   = useState<StatsFilter | null>(null);
   const [regUrlOpen,    setRegUrlOpen]    = useState(false);
   const [waUrlOpen,     setWaUrlOpen]     = useState(false);
@@ -1321,20 +1474,29 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Super admin action: manage admins */}
+        {/* Super admin actions: manage admins + reactivation requests */}
         {isSuperAdmin && (
-          <div className="px-4 pb-3">
+          <div className="px-4 pb-3 flex gap-2">
             <button
               onClick={() => setAdminMgmt(true)}
-              className="w-full py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors"
+              className="flex-1 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors"
             >
               {Icon.shield('w-4 h-4')} Kelola Admin
+            </button>
+            <button
+              onClick={() => setReactReqOpen(true)}
+              className="flex-1 py-2 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-violet-100 transition-colors"
+            >
+              {Icon.clock('w-4 h-4')} Reaktivasi
             </button>
           </div>
         )}
       </div>
 
       <div className="px-4 pt-4 space-y-4">
+
+        {/* ── BANNER MASA AKTIF (admin biasa) ────────────────────────────── */}
+        <StandingBanner onOpenChat={() => setChatOpen(true)} />
 
         {/* ── STATS ROW ─────────────────────────────────────────────────── */}
         <div className="flex gap-2 anim-fade">
@@ -1548,6 +1710,7 @@ export default function AdminPage() {
       {deleteUser && <DeleteDialog user={deleteUser} onClose={() => setDeleteUser(null)} onConfirm={handleDelete} loading={isActing} />}
       {importOpen && <ImportDialog onClose={() => setImportOpen(false)} onImport={handleImport} loading={isActing} />}
       {adminMgmt  && <AdminMgmtDialog admins={admins} isSuperAdmin={isSuperAdmin} currentEmail={currentEmail} onClose={() => setAdminMgmt(false)} onAdd={handleAddAdmin} onUpdate={handleUpdateAdmin} onRemove={handleRemoveAdmin} onSetPeriod={handleSetPeriod} loadingId={adminLoadId} />}
+      {reactReqOpen && <ReactivationRequestsDialog onClose={() => setReactReqOpen(false)} onChanged={() => loadData(currentEmail, isSuperAdmin)} />}
       {statsFilter && (
         <StatsDetailDialog
           filter={statsFilter} allUsers={allUsers} onClose={() => setStatsFilter(null)}
