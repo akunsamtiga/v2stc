@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { storage, isSessionValid } from '@/lib/storage';
-import { api, type ChatMessage } from '@/lib/api';
+import { api, type ChatMessage, type ChatContact } from '@/lib/api';
 import {
   checkIsAdmin, checkIsSuperAdmin, getUserStatistics, getAllWhitelistUsers,
   addWhitelistUser, updateWhitelistUser, deleteWhitelistUser,
@@ -35,6 +35,14 @@ async function copyText(text: string) {
     document.execCommand('copy');
     document.body.removeChild(el);
   }
+}
+
+function fmtExpiry(expires_at?: string | null): { text: string; cls: string } {
+  if (!expires_at) return { text: 'Permanen', cls: 'bg-slate-100 text-slate-500' };
+  const ms = new Date(expires_at).getTime() - Date.now();
+  if (ms <= 0) return { text: 'Expired', cls: 'bg-red-100 text-red-600' };
+  const days = Math.ceil(ms / 86400000);
+  return { text: days <= 1 ? '<1 hari' : `${days} hari`, cls: days <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700' };
 }
 
 function isUserActive(u: WhitelistUser): boolean {
@@ -547,8 +555,9 @@ const AdminMgmtDialog: React.FC<{
   onAdd: (email: string, name: string, role: string) => void;
   onUpdate: (id: string, updates: { name?: string; role?: 'admin' | 'super_admin'; is_active?: boolean }) => void;
   onRemove: (id: string | undefined) => void;
+  onSetPeriod: (email: string, days: number) => void;
   loadingId: string | null;
-}> = ({ admins, isSuperAdmin, currentEmail, onClose, onAdd, onUpdate, onRemove, loadingId }) => {
+}> = ({ admins, isSuperAdmin, currentEmail, onClose, onAdd, onUpdate, onRemove, onSetPeriod, loadingId }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -637,6 +646,7 @@ const AdminMgmtDialog: React.FC<{
         {filtered.map(admin => {
           const isEditing = editingId === admin.id;
           const isSelf    = admin.email === currentEmail;
+          const ex        = fmtExpiry(admin.expires_at);
 
           return (
             <div key={admin.id} className={`rounded-xl border transition-all ${isEditing ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-transparent'}`}>
@@ -658,6 +668,10 @@ const AdminMgmtDialog: React.FC<{
                   {/* Active badge */}
                   {admin.is_active === false && (
                     <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-600 flex-shrink-0">OFF</span>
+                  )}
+                  {/* Masa aktif (admin biasa) */}
+                  {admin.role !== 'super_admin' && (
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${ex.cls}`}>{ex.text}</span>
                   )}
                   {isSuperAdmin && !isSelf && (
                     <>
@@ -714,6 +728,24 @@ const AdminMgmtDialog: React.FC<{
                       <p className="text-xs text-slate-400">{editActive ? 'Admin bisa login' : 'Admin tidak bisa login'}</p>
                     </div>
                   </label>
+                  {/* Masa aktif — set durasi; lewat itu akun otomatis nonaktif */}
+                  {admin.role !== 'super_admin' && (
+                    <div className="bg-white border border-slate-200 rounded-xl px-3 py-2.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Masa Aktif</p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ex.cls}`}>{ex.text}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mb-2">{admin.expires_at ? `Aktif s/d ${new Date(admin.expires_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}` : 'Tanpa batas waktu'} · klik untuk set/perpanjang (sekaligus mengaktifkan)</p>
+                      <div className="flex gap-1.5">
+                        {[7, 30, 90].map(d => (
+                          <button key={d} onClick={() => onSetPeriod(admin.email, d)} disabled={loadingId === admin.id}
+                            className="flex-1 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50">{d} hari</button>
+                        ))}
+                        <button onClick={() => onSetPeriod(admin.email, 0)} disabled={loadingId === admin.id}
+                          className="flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-semibold hover:bg-slate-200 transition-colors disabled:opacity-50">Permanen</button>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-2 pt-1">
                     <button
                       onClick={cancelEdit}
@@ -908,12 +940,15 @@ const StatsDetailDialog: React.FC<{
   );
 };
 
-// ─── Chat Antar Admin ─────────────────────────────────────────────────────────
+// ─── Chat DM Antar Admin ──────────────────────────────────────────────────────
 const ChatPanel: React.FC<{ currentEmail: string; isSuperAdmin: boolean; onClose: () => void }> = ({ currentEmail, isSuperAdmin, onClose }) => {
+  const [contacts, setContacts] = useState<ChatContact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [active, setActive] = useState<ChatContact | null>(null);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const lastIdRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -933,49 +968,55 @@ const ChatPanel: React.FC<{ currentEmail: string; isSuperAdmin: boolean; onClose
     });
   }, []);
 
-  // Lock body scroll + Escape close
+  // Lock body scroll + Escape (kembali ke kontak dulu, baru tutup)
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { active ? setActive(null) : onClose(); } };
     document.addEventListener('keydown', onKey);
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); };
-  }, [onClose]);
+  }, [onClose, active]);
 
-  // Initial load
+  // Load kontak
   useEffect(() => {
     let alive = true;
     (async () => {
-      try {
-        const data = await api.admin.chatList();
-        if (!alive) return;
-        setMsgs(data);
-        lastIdRef.current = data.length ? Math.max(...data.map(m => m.id)) : 0;
-      } catch (e: any) { if (alive) setErr(e?.message ?? 'Gagal memuat chat'); }
-      finally { if (alive) { setLoading(false); setTimeout(() => scrollToBottom(false), 60); } }
+      try { const c = await api.admin.chatContacts(); if (alive) setContacts(c); }
+      catch (e: any) { if (alive) setErr(e?.message ?? 'Gagal memuat kontak'); }
+      finally { if (alive) setLoadingContacts(false); }
     })();
     return () => { alive = false; };
   }, []);
 
-  // Poll tiap 3 detik
+  const openChat = useCallback(async (c: ChatContact) => {
+    setActive(c); setMsgs([]); lastIdRef.current = 0; setLoadingMsgs(true); setErr(null);
+    try {
+      const data = await api.admin.chatConversation(c.email);
+      setMsgs(data);
+      lastIdRef.current = data.length ? Math.max(...data.map(m => m.id)) : 0;
+    } catch (e: any) { setErr(e?.message ?? 'Gagal memuat chat'); }
+    finally { setLoadingMsgs(false); setTimeout(() => scrollToBottom(false), 60); }
+  }, []);
+
+  // Poll percakapan aktif tiap 3 detik
   useEffect(() => {
+    if (!active) return;
     const t = setInterval(async () => {
       try {
-        const data = await api.admin.chatList(lastIdRef.current);
+        const data = await api.admin.chatConversation(active.email, lastIdRef.current);
         if (data.length) { merge(data); setTimeout(() => scrollToBottom(), 60); }
       } catch { /* diam saja saat polling */ }
     }, 3000);
     return () => clearInterval(t);
-  }, [merge]);
+  }, [active, merge]);
 
   const send = async () => {
     const text = input.trim();
-    if (!text || sending) return;
+    if (!text || sending || !active) return;
     setSending(true); setErr(null);
     try {
-      const m = await api.admin.chatSend(text);
-      merge([m]); setInput('');
-      setTimeout(() => scrollToBottom(), 60);
+      const m = await api.admin.chatSend(active.email, text);
+      merge([m]); setInput(''); setTimeout(() => scrollToBottom(), 60);
     } catch (e: any) { setErr(e?.message ?? 'Gagal mengirim'); }
     finally { setSending(false); }
   };
@@ -986,70 +1027,91 @@ const ChatPanel: React.FC<{ currentEmail: string; isSuperAdmin: boolean; onClose
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm"
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm"
+      onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="w-full max-w-lg bg-white rounded-t-3xl flex flex-col overflow-hidden"
         style={{ height: '82dvh', animation: 'adminSlideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 flex-shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center"><span className="text-violet-600">{Icon.chat('w-4 h-4')}</span></div>
+          {active ? (
+            <button onClick={() => setActive(null)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"><span className="text-slate-600">{Icon.back('w-4 h-4')}</span></button>
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center"><span className="text-violet-600">{Icon.chat('w-4 h-4')}</span></div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-slate-800 leading-tight">Chat Admin</p>
-            <p className="text-xs text-slate-400">Obrolan antar admin & super-admin</p>
+            {active ? (<>
+              <p className="font-bold text-slate-800 leading-tight truncate">{active.name || active.email.split('@')[0]}</p>
+              <p className="text-xs text-slate-400 truncate">{active.role === 'super_admin' ? 'Super Admin' : 'Admin'} · {active.email}</p>
+            </>) : (<>
+              <p className="font-bold text-slate-800 leading-tight">Chat</p>
+              <p className="text-xs text-slate-400">{isSuperAdmin ? 'Pilih admin untuk chat' : 'Pilih super-admin untuk chat'}</p>
+            </>)}
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"><span className="text-slate-500">{Icon.x('w-4 h-4')}</span></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"><span className="text-slate-500">{Icon.x('w-4 h-4')}</span></button>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 bg-slate-50">
-          {loading ? (
-            <div className="flex justify-center py-10"><Spinner cls="w-5 h-5 border-2 text-violet-400" /></div>
-          ) : msgs.length === 0 ? (
-            <p className="text-center text-xs text-slate-400 py-10">Belum ada pesan. Mulai obrolan! 👋</p>
-          ) : msgs.map(m => {
-            const mine = (m.sender_email ?? '').toLowerCase() === currentEmail.toLowerCase();
-            return (
-              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div className="max-w-[80%] group">
-                  {!mine && <p className="text-[10px] font-bold text-violet-600 mb-0.5 px-1">{m.sender_name || m.sender_email.split('@')[0]}</p>}
-                  <div className={`rounded-2xl px-3.5 py-2 text-sm shadow-sm ${mine ? 'bg-violet-500 text-white rounded-br-md' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-md'}`}>
-                    <p className="whitespace-pre-wrap break-words leading-snug">{m.content}</p>
-                  </div>
-                  <div className={`flex items-center gap-2 mt-0.5 px-1 ${mine ? 'justify-end' : ''}`}>
-                    <span className="text-[9px] text-slate-400">{new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                    {(mine || isSuperAdmin) && (
-                      <button onClick={() => del(m.id)} className="text-[9px] text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">hapus</button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Error */}
         {err && <p className="text-[11px] text-red-500 px-4 py-1 bg-red-50 flex-shrink-0">{err}</p>}
 
-        {/* Input */}
-        <div className="px-3 py-3 border-t border-slate-100 flex items-end gap-2 flex-shrink-0"
-          style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
-          <textarea
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-            rows={1}
-            maxLength={2000}
-            placeholder="Tulis pesan…"
-            className="flex-1 resize-none rounded-2xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:border-violet-400 max-h-28"
-          />
-          <button onClick={send} disabled={sending || !input.trim()}
-            className="w-10 h-10 rounded-full bg-violet-500 hover:bg-violet-600 text-white flex items-center justify-center disabled:opacity-40 transition-colors flex-shrink-0">
-            {sending ? <Spinner cls="w-4 h-4 border-2" /> : Icon.send('w-4 h-4')}
-          </button>
-        </div>
+        {!active ? (
+          /* ── KONTAK ── */
+          <div className="flex-1 overflow-y-auto">
+            {loadingContacts ? (
+              <div className="flex justify-center py-10"><Spinner cls="w-5 h-5 border-2 text-violet-400" /></div>
+            ) : contacts.length === 0 ? (
+              <p className="text-center text-xs text-slate-400 py-10">Belum ada kontak yang tersedia.</p>
+            ) : contacts.map(c => (
+              <button key={c.email} onClick={() => openChat(c)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 text-left">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 ${c.role === 'super_admin' ? 'bg-amber-500' : 'bg-violet-500'}`}>
+                  {(c.name || c.email)[0]?.toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{c.name || c.email.split('@')[0]}</p>
+                  <p className="text-xs text-slate-400 truncate">{c.email}</p>
+                </div>
+                {c.role === 'super_admin' && <span className="text-[9px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex-shrink-0">SUPER</span>}
+              </button>
+            ))}
+          </div>
+        ) : (
+          /* ── PERCAKAPAN ── */
+          <>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 bg-slate-50">
+              {loadingMsgs ? (
+                <div className="flex justify-center py-10"><Spinner cls="w-5 h-5 border-2 text-violet-400" /></div>
+              ) : msgs.length === 0 ? (
+                <p className="text-center text-xs text-slate-400 py-10">Belum ada pesan. Sapa {active.name || active.email.split('@')[0]}! 👋</p>
+              ) : msgs.map(m => {
+                const mine = (m.sender_email ?? '').toLowerCase() === currentEmail.toLowerCase();
+                return (
+                  <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                    <div className="max-w-[80%] group">
+                      <div className={`rounded-2xl px-3.5 py-2 text-sm shadow-sm ${mine ? 'bg-violet-500 text-white rounded-br-md' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-md'}`}>
+                        <p className="whitespace-pre-wrap break-words leading-snug">{m.content}</p>
+                      </div>
+                      <div className={`flex items-center gap-2 mt-0.5 px-1 ${mine ? 'justify-end' : ''}`}>
+                        <span className="text-[9px] text-slate-400">{new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                        {(mine || isSuperAdmin) && <button onClick={() => del(m.id)} className="text-[9px] text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">hapus</button>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={bottomRef} />
+            </div>
+            <div className="px-3 py-3 border-t border-slate-100 flex items-end gap-2 flex-shrink-0"
+              style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
+              <textarea value={input} onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+                rows={1} maxLength={2000} placeholder="Tulis pesan…"
+                className="flex-1 resize-none rounded-2xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:border-violet-400 max-h-28" />
+              <button onClick={send} disabled={sending || !input.trim()}
+                className="w-10 h-10 rounded-full bg-violet-500 hover:bg-violet-600 text-white flex items-center justify-center disabled:opacity-40 transition-colors flex-shrink-0">
+                {sending ? <Spinner cls="w-4 h-4 border-2" /> : Icon.send('w-4 h-4')}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1184,6 +1246,11 @@ export default function AdminPage() {
     setAdminLoadId(id);
     act(async () => { await removeAdminUser(id); }, 'Admin dihapus ✓').finally(() => setAdminLoadId(null));
   };
+  const handleSetPeriod = (email: string, days: number) =>
+    act(async () => {
+      await api.admin.setPeriod(email, days);
+      await loadData(currentEmail, isSuperAdmin);
+    }, days > 0 ? `Masa aktif diset ${days} hari ✓` : 'Diset permanen ✓');
   const handleUpdateUrl = (field: 'registrationUrl' | 'whatsappHelpUrl', val: string) =>
     act(async () => { await updateRegistrationConfig(field, val); field === 'registrationUrl' ? setRegUrlOpen(false) : setWaUrlOpen(false); }, 'URL diupdate ✓');
 
@@ -1480,7 +1547,7 @@ export default function AdminPage() {
       {editUser   && <UserDialog mode="edit" user={editUser} isSuperAdmin={isSuperAdmin} onClose={() => setEditUser(null)} onSave={handleEdit} loading={isActing} />}
       {deleteUser && <DeleteDialog user={deleteUser} onClose={() => setDeleteUser(null)} onConfirm={handleDelete} loading={isActing} />}
       {importOpen && <ImportDialog onClose={() => setImportOpen(false)} onImport={handleImport} loading={isActing} />}
-      {adminMgmt  && <AdminMgmtDialog admins={admins} isSuperAdmin={isSuperAdmin} currentEmail={currentEmail} onClose={() => setAdminMgmt(false)} onAdd={handleAddAdmin} onUpdate={handleUpdateAdmin} onRemove={handleRemoveAdmin} loadingId={adminLoadId} />}
+      {adminMgmt  && <AdminMgmtDialog admins={admins} isSuperAdmin={isSuperAdmin} currentEmail={currentEmail} onClose={() => setAdminMgmt(false)} onAdd={handleAddAdmin} onUpdate={handleUpdateAdmin} onRemove={handleRemoveAdmin} onSetPeriod={handleSetPeriod} loadingId={adminLoadId} />}
       {statsFilter && (
         <StatsDetailDialog
           filter={statsFilter} allUsers={allUsers} onClose={() => setStatsFilter(null)}

@@ -66,6 +66,8 @@ export interface AdminUser {
   role?: 'admin' | 'super_admin';
   is_active?: boolean;
   created_at?: string;
+  /** Masa aktif (ISO) dari whitelist — null = permanen */
+  expires_at?: string | null;
 }
 
 export interface RegistrationConfig {
@@ -327,6 +329,7 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
     role:       (row.role as 'admin' | 'super_admin') || 'admin',
     is_active:  row.is_active,
     created_at: row.created_at,
+    expires_at: row.expires_at ?? null,
   }));
 }
 

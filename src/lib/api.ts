@@ -612,8 +612,16 @@ export interface ChatMessage {
   id: number;
   sender_email: string;
   sender_name: string | null;
+  recipient_email?: string | null;
   content: string;
   created_at: string;
+}
+
+export interface ChatContact {
+  email: string;
+  name: string | null;
+  role: 'admin' | 'super_admin';
+  is_active: boolean;
 }
 
 export const api = {
@@ -864,9 +872,12 @@ export const api = {
     addSuperAdmin:   (email: string) => req<void>('POST', '/admin/super-admins', { email }),
     deleteSuperAdmin:(email: string) => req<void>('DELETE', `/admin/super-admins?email=${encodeURIComponent(email)}`),
     upsertConfig:    (key: string, value: unknown) => req<void>('PUT', '/admin/config', { key, value }),
-    // ── Chat antar admin/super-admin ──
-    chatList:        (after?: number) => req<ChatMessage[]>('GET', `/admin/chat${after ? `?after=${after}` : ''}`),
-    chatSend:        (content: string) => req<ChatMessage>('POST', '/admin/chat', { content }),
+    // ── Chat DM antar admin/super-admin ──
+    chatContacts:    () => req<ChatContact[]>('GET', '/admin/chat/contacts'),
+    chatConversation:(withEmail: string, after?: number) => req<ChatMessage[]>('GET', `/admin/chat?with=${encodeURIComponent(withEmail)}${after ? `&after=${after}` : ''}`),
+    chatSend:        (to: string, content: string) => req<ChatMessage>('POST', '/admin/chat', { to, content }),
     chatDelete:      (id: number) => req<void>('DELETE', `/admin/chat/${id}`),
+    // ── Masa aktif (super-admin) ──
+    setPeriod:       (email: string, days: number) => req<{ email: string; expires_at: string | null }>('POST', '/admin/period', { email, days }),
   },
 };
