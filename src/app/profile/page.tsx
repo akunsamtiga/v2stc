@@ -354,6 +354,139 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
 };
 
 // ─────────────────────────────────────────────
+// EMAIL COMPOSER (super-admin) — kirim email ke user / semua user whitelist
+// ─────────────────────────────────────────────
+const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const [target, setTarget]   = useState<'one' | 'all'>('one');
+  const [email, setEmail]     = useState('');
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [result, setResult]   = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setResult(null);
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const canSend = !!subject.trim() && !!message.trim() &&
+    (target === 'all' || email.includes('@')) && !sending;
+
+  const handleSend = async () => {
+    if (!canSend) return;
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await api.admin.sendEmail({
+        target,
+        email: target === 'one' ? email.trim() : undefined,
+        subject: subject.trim(),
+        message: message.trim(),
+      });
+      setResult({
+        ok: res.failed === 0,
+        text: `Terkirim ${res.sent}/${res.total}${res.failed ? `, gagal ${res.failed}` : ''}.`,
+      });
+      if (res.failed === 0) { setSubject(''); setMessage(''); if (target === 'one') setEmail(''); }
+    } catch (e: any) {
+      setResult({ ok: false, text: e?.message || 'Gagal mengirim email.' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, padding: '12px 14px',
+    fontSize: 14, color: '#fff', fontFamily: 'inherit', outline: 'none', marginTop: 6,
+  };
+  const labelStyle: React.CSSProperties = { fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 600 };
+
+  return (
+    <div className="pf-root" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+      <div onClick={sending ? undefined : onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', animation: 'pf-bd-in 0.2s ease' }} />
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 420, animation: 'pf-pop 0.28s cubic-bezier(0.32,0.72,0,1)' }}>
+        <div style={{ background: 'rgba(12,12,24,0.98)', border: '1px solid rgba(76,175,80,0.18)', borderRadius: 22, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.60)' }}>
+          <div style={{ padding: '20px 22px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#34c759,#30d158)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: -0.3 }}>Kirim Email</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>ke user whitelist</p>
+            </div>
+            <button onClick={sending ? undefined : onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: sending ? 'default' : 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '64vh', overflowY: 'auto' }}>
+            {/* Target toggle */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              {([['one', 'Satu user'], ['all', 'Semua user']] as const).map(([val, lbl]) => (
+                <button key={val} onClick={() => setTarget(val)} style={{
+                  flex: 1, padding: '10px', borderRadius: 11, cursor: 'pointer', fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit',
+                  border: `1px solid ${target === val ? 'rgba(76,175,80,0.5)' : 'rgba(255,255,255,0.10)'}`,
+                  background: target === val ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.04)',
+                  color: target === val ? '#5cc763' : 'rgba(255,255,255,0.6)',
+                }}>{lbl}</button>
+              ))}
+            </div>
+
+            {target === 'one' && (
+              <div>
+                <span style={labelStyle}>Email tujuan</span>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@email.com" autoCapitalize="none" style={inputStyle} />
+              </div>
+            )}
+            {target === 'all' && (
+              <p style={{ fontSize: 12.5, color: '#ff9f0a', background: 'rgba(255,159,10,0.10)', border: '1px solid rgba(255,159,10,0.20)', borderRadius: 10, padding: '10px 12px', lineHeight: 1.5 }}>
+                Email akan dikirim ke <strong>semua user whitelist</strong>. Pastikan isinya sudah benar.
+              </p>
+            )}
+
+            <div>
+              <span style={labelStyle}>Subjek</span>
+              <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Judul email" style={inputStyle} />
+            </div>
+            <div>
+              <span style={labelStyle}>Pesan</span>
+              <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan…" rows={6} style={{ ...inputStyle, resize: 'vertical', minHeight: 110, lineHeight: 1.5 }} />
+            </div>
+
+            {result && (
+              <p style={{ fontSize: 13, fontWeight: 500, padding: '10px 12px', borderRadius: 10, lineHeight: 1.5,
+                color: result.ok ? '#30d158' : '#ff453a',
+                background: result.ok ? 'rgba(48,209,88,0.10)' : 'rgba(255,69,58,0.10)',
+                border: `1px solid ${result.ok ? 'rgba(48,209,88,0.22)' : 'rgba(255,69,58,0.22)'}` }}>
+                {result.text}
+              </p>
+            )}
+          </div>
+
+          <div style={{ padding: '14px 22px 18px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <button onClick={handleSend} disabled={!canSend} style={{
+              width: '100%', height: 48, borderRadius: 13, border: 'none', cursor: canSend ? 'pointer' : 'not-allowed',
+              fontSize: 15, fontWeight: 600, fontFamily: 'inherit', color: '#fff',
+              background: canSend ? 'linear-gradient(135deg,#34c759,#2faa4d)' : 'rgba(255,255,255,0.10)',
+              opacity: canSend ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+              {sending ? 'Mengirim…' : 'Kirim Email'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
 // MAIN PAGE CONTENT
 // ─────────────────────────────────────────────
 function ProfilePageContent() {
@@ -367,6 +500,7 @@ function ProfilePageContent() {
   const [langSheetOpen, setLangSheetOpen]     = useState(false);
   const [currencyLoading, setCurrencyLoading] = useState(false);
   const [showLogout, setShowLogout]           = useState(false);
+  const [emailOpen, setEmailOpen]             = useState(false);
   const [logoutSplash, setLogoutSplash]       = useState(false);
   const [copied, setCopied]                   = useState(false);
   const [isAdminUser, setIsAdminUser]         = useState(false);
@@ -377,7 +511,7 @@ function ProfilePageContent() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setSheetOpen(false); setLangSheetOpen(false); setShowLogout(false); }
+      if (e.key === 'Escape') { setSheetOpen(false); setLangSheetOpen(false); setShowLogout(false); setEmailOpen(false); }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -716,8 +850,17 @@ function ProfilePageContent() {
                   label={t('profile.adminPanel')}
                   value={isSuperAdminUser ? 'Super Admin' : 'Admin'}
                   onClick={() => router.push('/admin')}
-                  last
+                  last={!isSuperAdminUser}
                 />
+                {isSuperAdminUser && (
+                  <TappableRow
+                    icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>}
+                    iconBg="linear-gradient(135deg,#34c759,#30d158)"
+                    label="Kirim Email"
+                    onClick={() => setEmailOpen(true)}
+                    last
+                  />
+                )}
               </Card>
             )}
             <Card>
@@ -860,8 +1003,17 @@ function ProfilePageContent() {
                   label={t('profile.adminPanel')}
                   value={isSuperAdminUser ? 'Super Admin' : 'Admin'}
                   onClick={() => router.push('/admin')}
-                  last
+                  last={!isSuperAdminUser}
                 />
+                {isSuperAdminUser && (
+                  <TappableRow
+                    icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>}
+                    iconBg="linear-gradient(135deg,#34c759,#30d158)"
+                    label="Kirim Email"
+                    onClick={() => setEmailOpen(true)}
+                    last
+                  />
+                )}
               </Card>
             </div>
           )}
@@ -907,6 +1059,7 @@ function ProfilePageContent() {
       <CurrencySheet open={sheetOpen} onClose={() => setSheetOpen(false)} currencies={currencies} current={currency} onSelect={handleUpdateCurrency} loading={currencyLoading} />
       <LanguageSheet open={langSheetOpen} onClose={() => setLangSheetOpen(false)} />
       <LogoutAlert open={showLogout} onCancel={() => setShowLogout(false)} onConfirm={handleLogout} />
+      <EmailComposer open={emailOpen} onClose={() => setEmailOpen(false)} />
     </div>
   );
 }

@@ -910,6 +910,9 @@ export const api = {
     addSuperAdmin:   (email: string) => req<void>('POST', '/admin/super-admins', { email }),
     deleteSuperAdmin:(email: string) => req<void>('DELETE', `/admin/super-admins?email=${encodeURIComponent(email)}`),
     upsertConfig:    (key: string, value: unknown) => req<void>('PUT', '/admin/config', { key, value }),
+    // ── Broadcast email (super-admin) ──
+    sendEmail:       (b: { target: 'one' | 'all'; email?: string; subject: string; message: string }) =>
+      req<{ sent: number; failed: number; total: number; errors: string[] }>('POST', '/admin/email/send', b),
     // ── Chat DM antar admin/super-admin ──
     chatContacts:    () => req<ChatContact[]>('GET', '/admin/chat/contacts'),
     chatConversation:(withEmail: string, after?: number) => req<ChatMessage[]>('GET', `/admin/chat?with=${encodeURIComponent(withEmail)}${after ? `&after=${after}` : ''}`),
