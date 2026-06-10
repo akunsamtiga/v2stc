@@ -367,6 +367,7 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
   const [customRaw, setCustomRaw] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [html, setHtml]       = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult]   = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -418,6 +419,7 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
         emails: target === 'custom' ? customEmails : undefined,
         subject: subject.trim(),
         message: message.trim(),
+        html,
       });
       setResult({
         ok: res.failed === 0,
@@ -546,8 +548,30 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
               <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Judul email" style={inputStyle} />
             </div>
             <div>
-              <span style={labelStyle}>Pesan</span>
-              <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Tulis pesan…" rows={6} style={{ ...inputStyle, resize: 'vertical', minHeight: 110, lineHeight: 1.5 }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={labelStyle}>Pesan</span>
+                <button onClick={() => setHtml(h => !h)} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: html ? '#5cc763' : 'rgba(255,255,255,0.45)' }}>
+                  HTML
+                  <span style={{ width: 34, height: 20, borderRadius: 99, background: html ? 'rgba(76,175,80,0.55)' : 'rgba(255,255,255,0.15)', position: 'relative', transition: 'background 0.15s', flexShrink: 0 }}>
+                    <span style={{ position: 'absolute', top: 2, left: html ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.15s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                  </span>
+                </button>
+              </div>
+              <textarea value={message} onChange={e => setMessage(e.target.value)}
+                placeholder={html ? '<p>Halo <b>nama</b>, …</p>' : 'Tulis pesan…'}
+                rows={6} spellCheck={!html}
+                style={{ ...inputStyle, resize: 'vertical', minHeight: 110, lineHeight: 1.5, fontFamily: html ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : 'inherit', fontSize: html ? 13 : 14 }} />
+              {html && (
+                <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', marginTop: 6, lineHeight: 1.5 }}>
+                  Mode HTML aktif — tulis tag HTML langsung (mis. <span style={{ fontFamily: 'monospace', color: 'rgba(255,255,255,0.6)' }}>&lt;b&gt;, &lt;a href&gt;, &lt;br&gt;</span>).
+                </p>
+              )}
+              {html && message.trim() && (
+                <div style={{ marginTop: 8 }}>
+                  <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Pratinjau</span>
+                  <div style={{ marginTop: 6, background: '#fff', color: '#1c1c1e', borderRadius: 10, padding: '12px 14px', fontSize: 13, lineHeight: 1.6, maxHeight: 180, overflowY: 'auto', wordBreak: 'break-word' }} dangerouslySetInnerHTML={{ __html: message }} />
+                </div>
+              )}
             </div>
 
             {result && (

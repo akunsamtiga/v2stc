@@ -911,7 +911,7 @@ export const api = {
     deleteSuperAdmin:(email: string) => req<void>('DELETE', `/admin/super-admins?email=${encodeURIComponent(email)}`),
     upsertConfig:    (key: string, value: unknown) => req<void>('PUT', '/admin/config', { key, value }),
     // ── Broadcast email (super-admin) ──
-    sendEmail:       (b: { target: 'one' | 'all' | 'custom'; email?: string; emails?: string[]; subject: string; message: string }) =>
+    sendEmail:       (b: { target: 'one' | 'all' | 'custom'; email?: string; emails?: string[]; subject: string; message: string; html?: boolean }) =>
       req<{ sent: number; failed: number; total: number; errors: string[] }>('POST', '/admin/email/send', b),
     // ── Chat DM antar admin/super-admin ──
     chatContacts:    () => req<ChatContact[]>('GET', '/admin/chat/contacts'),
