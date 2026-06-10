@@ -915,7 +915,7 @@ const translations: Record<Language, Translations> = {
       signIn: 'Masuk',
       signingIn: 'Memverifikasi...',
       noAccount: 'Belum punya akun?',
-      register: 'Daftar disini',
+      register: 'Daftar akun',
       terms: 'Ketentuan',
       privacy: 'Privasi',
       welcome: 'Selamat Datang',

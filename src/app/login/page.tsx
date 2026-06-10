@@ -199,6 +199,41 @@ const LOGIN_STYLES = `
   }
   .eye-btn:hover { color: var(--accent-light); }
 
+  /* ── Options row (ingat saya kiri · daftar akun kanan) ──────────────── */
+  .opts-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 18px;
+  }
+  .remember-row {
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; padding-left: 2px; min-width: 0;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .cb-box {
+    width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.04);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+  }
+  .cb-box.checked {
+    background: var(--accent); border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(76,175,80,0.35);
+  }
+  .cb-tick {
+    opacity: 0; transform: scale(0.5);
+    transition: opacity 0.16s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .cb-box.checked .cb-tick { opacity: 1; transform: scale(1); }
+  .cb-label { font-size: 14.5px; color: var(--text-1); font-weight: 400; letter-spacing: -0.2px; }
+  .opts-link {
+    font-family: var(--font); font-size: 14px; font-weight: 600;
+    color: var(--accent-light); cursor: pointer; letter-spacing: -0.2px;
+    text-decoration: none; transition: opacity 0.14s;
+    -webkit-tap-highlight-color: transparent; white-space: nowrap; flex-shrink: 0;
+  }
+  .opts-link:hover { opacity: 0.72; }
+
   /* ── Error banner ───────────────────────────────────────────────────── */
   .err {
     display: flex; align-items: flex-start; gap: 9px;
@@ -253,14 +288,6 @@ const LOGIN_STYLES = `
   .gbtn:active:not(:disabled) { transform:scale(0.98); }
   .gbtn:disabled { opacity:0.5; cursor:not-allowed; box-shadow:none; }
 
-  /* ── Secure caption (di bawah tombol — halus, tanpa kotak) ──────────── */
-  .secure-line {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    margin-top: 16px; color: var(--text-3);
-  }
-  .secure-line svg { color: var(--text-3); }
-  .secure-txt { font-size: 11.5px; color: var(--text-3); font-weight: 500; letter-spacing: 0.01em; }
-
   /* ── Footer links ───────────────────────────────────────────────────── */
   .foot { text-align: center; margin-top: 14px; font-size: 11.5px; color: var(--text-3); }
   .foot-lnk {
@@ -269,15 +296,6 @@ const LOGIN_STYLES = `
     padding: 0; font-family: var(--font); font-size: 13px;
   }
   .foot-lnk:hover { opacity: 0.70; }
-
-  /* ── Register link (dipisah hairline di atasnya) ────────────────────── */
-  .register-link {
-    text-align: center; margin-top: 22px; padding-top: 20px;
-    border-top: 0.5px solid rgba(255,255,255,0.08);
-    font-size: 14.5px; color: var(--text-2); letter-spacing: -0.2px;
-  }
-  .register-link a { color: var(--accent-light); font-weight: 600; text-decoration: none; transition: opacity 0.14s; }
-  .register-link a:hover { opacity: 0.70; }
 
   /* ── Language Selector ──────────────────────────────────────────────── */
   .lang-selector {
@@ -421,7 +439,11 @@ const LOGIN_STYLES = `
   .toast-close:hover { color: #fff; }
 
   /* ── Page footer ────────────────────────────────────────────────────── */
-  .page-footer { text-align:center; font-size:11.5px; color:var(--text-3); margin-top:20px; position:relative; z-index:2; }
+  .page-footer {
+    text-align:center; font-size:11.5px; color:var(--text-3); z-index:2;
+    position:absolute; left:0; right:0;
+    bottom:max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  }
   .page-footer a { color:var(--text-3); font-weight:500; text-decoration:none; transition:color .14s; }
   .page-footer a:hover { color:var(--text-2); }
 `;
@@ -434,9 +456,7 @@ function LoginPageContent() {
   const { t, language, setLanguage } = useLanguage();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  // Checkbox "Ingat saya" dihapus dari UI; perilaku ingat email/password
-  // dipertahankan default-on agar autofill saat kembali login tetap jalan.
-  const [remember] = useState(true);
+  const [remember, setRemember] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [gLoading, setGLoading] = useState(false);
   const [loginStep, setLoginStep] = useState<LoginStep>('idle');
@@ -473,7 +493,7 @@ function LoginPageContent() {
 
       const savedEmail = await storage.get('stc_remember_email');
       const savedPass  = await storage.get('stc_remember_password');
-      if (savedEmail) { setEmail(savedEmail); }
+      if (savedEmail) { setEmail(savedEmail); setRemember(true); }
       if (savedPass)  { setPassword(savedPass); }
       const sessionValid = await isSessionValid();
       if (sessionValid) router.push('/dashboard');
@@ -981,6 +1001,19 @@ function LoginPageContent() {
                 </div>
               </div>{/* /field-group */}
 
+              {/* Options row: ingat saya (kiri) · daftar akun (kanan) */}
+              <div className="opts-row">
+                <label className="remember-row" onClick={() => setRemember(r => !r)}>
+                  <div className={`cb-box ${remember ? 'checked' : ''}`}>
+                    <svg className="cb-tick" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className="cb-label">{t('login.rememberMe')}</span>
+                </label>
+                <Link href="/register" className="opts-link">{t('login.register')}</Link>
+              </div>
+
                 {/* Error */}
                 {error && (
                   <div key={errorKey} className={`err${isWhitelistError ? ' err-whitelist' : ''}`}>
@@ -1035,19 +1068,7 @@ function LoginPageContent() {
                   <span>{gLoading ? connectingLbl : googleLabel}</span>
                 </button>
 
-                {/* Secure caption */}
-                <div className="secure-line">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <span className="secure-txt">{t('common.encrypted')} &amp; {t('common.secure')}</span>
-                </div>
-
               </form>
-
-              <div className="register-link">
-                {t('login.noAccount')} <Link href="/register">{t('login.register')}</Link>
-              </div>
           </div>{/* /card */}
 
           <div className="page-footer">
