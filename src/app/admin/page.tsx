@@ -513,7 +513,7 @@ const UrlDialog: React.FC<{
   const icon    = isRef ? Icon.userPlus('w-5 h-5') : isWa ? Icon.phone('w-5 h-5') : Icon.link('w-5 h-5');
   const title   = isRef ? 'Kode Referral Stockity' : isWa ? 'WhatsApp URL' : 'Registration URL';
   const placeholder = isRef
-    ? '37051c9cbcfe'
+    ? '8620c08b51a6'
     : isWa
     ? 'https://wa.me/628...'
     : 'https://stockity.id/id?a=...#auth';
@@ -540,7 +540,7 @@ const UrlDialog: React.FC<{
       {isRef && (
         <p className="text-xs text-slate-400 mt-2 leading-relaxed">
           Kode afiliasi (cookie <span className="font-mono text-slate-500">a</span>) yang dipakai saat registrasi inline.
-          Contoh dari link <span className="font-mono text-slate-500">?a=37051c9cbcfe</span> → isi <span className="font-mono text-slate-500">37051c9cbcfe</span> saja.
+          Contoh dari link <span className="font-mono text-slate-500">?a=8620c08b51a6</span> → isi <span className="font-mono text-slate-500">8620c08b51a6</span> saja.
         </p>
       )}
       <div className="flex gap-2.5 mt-4">
