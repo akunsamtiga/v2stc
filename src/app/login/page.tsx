@@ -173,7 +173,7 @@ const LOGIN_STYLES = `
   .field-icon {
     display: flex; align-items: center; justify-content: center;
     width: 52px; flex-shrink: 0;
-    color: var(--text-3); transition: color 0.18s;
+    color: var(--accent-light); transition: color 0.18s;
   }
   .field-row.active .field-icon { color: var(--accent-light); }
   .field-sep { height: 0.5px; background: var(--hairline); margin-left: 52px; }
@@ -193,11 +193,11 @@ const LOGIN_STYLES = `
 
   .eye-btn {
     background: none; border: none; padding: 0 16px; cursor: pointer;
-    color: var(--text-3); display: flex; align-items: center;
+    color: var(--accent-light); display: flex; align-items: center;
     transition: color 0.15s; -webkit-tap-highlight-color: transparent;
     min-width: 48px; justify-content: center;
   }
-  .eye-btn:hover { color: var(--accent-light); }
+  .eye-btn:hover { color: var(--accent); }
 
   /* ── Options row (ingat saya kiri · daftar akun kanan) ──────────────── */
   .opts-row {
@@ -227,6 +227,7 @@ const LOGIN_STYLES = `
   .cb-box.checked .cb-tick { opacity: 1; transform: scale(1); }
   .cb-label { font-size: 14.5px; color: var(--text-1); font-weight: 400; letter-spacing: -0.2px; }
   .opts-link {
+    display: inline-flex; align-items: center; gap: 3px;
     font-family: var(--font); font-size: 14px; font-weight: 600;
     color: var(--accent-light); cursor: pointer; letter-spacing: -0.2px;
     text-decoration: none; transition: opacity 0.14s;
@@ -930,7 +931,7 @@ function LoginPageContent() {
               <div className="brand-logo">
                 <Image src="/logo.png" alt="STC AutoTrade" width={84} height={84} priority style={{ width: 'clamp(72px, 20vw, 84px)', height: 'auto', borderRadius: 22 }} />
               </div>
-              <h1 className="brand-title">STC <span>AutoTrade</span></h1>
+              <h1 className="brand-title">{t('login.title')}</h1>
               <p className="brand-sub">{t('login.subtitle')}</p>
             </div>
 
@@ -1011,7 +1012,12 @@ function LoginPageContent() {
                   </div>
                   <span className="cb-label">{t('login.rememberMe')}</span>
                 </label>
-                <Link href="/register" className="opts-link">{t('login.register')}</Link>
+                <Link href="/register" className="opts-link">
+                  {t('login.register')}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </Link>
               </div>
 
                 {/* Error */}

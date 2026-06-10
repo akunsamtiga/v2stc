@@ -11,14 +11,15 @@ import { useLanguage, Language } from '@/lib';
 
 // ── Microcopy khusus register (fallback ke EN bila bahasa tak tersedia) ──────
 type RegTxt = {
-  sub: string; confirm: string; confirmPh: string; agree: string;
+  title: string; sub: string; confirm: string; confirmPh: string; agree: string;
   submit: string; submitting: string; have: string; signinLink: string;
   mismatch: string; mustAgree: string; shortPass: string;
   successTitle: string; successSub: string;
 };
 const REG_TEXT: Record<string, RegTxt> = {
   id: {
-    sub: 'Buat akun Stockity baru langsung di sini',
+    title: 'Buat akun baru',
+    sub: 'Daftar untuk mulai pakai STC AutoTrade',
     confirm: 'Konfirmasi Password', confirmPh: 'Ulangi password',
     agree: 'Saya setuju dengan Ketentuan & Kebijakan Privasi',
     submit: 'Daftar', submitting: 'Mendaftar…',
@@ -29,7 +30,8 @@ const REG_TEXT: Record<string, RegTxt> = {
     successTitle: 'Akun dibuat!', successSub: 'Menyiapkan dashboard…',
   },
   en: {
-    sub: 'Create a new Stockity account right here',
+    title: 'Create your account',
+    sub: 'Sign up to start using STC AutoTrade',
     confirm: 'Confirm Password', confirmPh: 'Repeat password',
     agree: 'I agree to the Terms & Privacy Policy',
     submit: 'Sign Up', submitting: 'Signing up…',
@@ -90,7 +92,7 @@ const REGISTER_STYLES = `
     overflow:hidden; margin-bottom:16px; box-shadow:0 8px 32px rgba(0,0,0,0.40),inset 0 0.5px 0 rgba(255,255,255,0.05); }
   .rg-row { display:flex; align-items:center; position:relative; transition:background 0.18s; }
   .rg-row.active { background:rgba(76,175,80,0.07); }
-  .rg-icon { display:flex; align-items:center; justify-content:center; width:52px; flex-shrink:0; color:var(--text-3); transition:color 0.18s; }
+  .rg-icon { display:flex; align-items:center; justify-content:center; width:52px; flex-shrink:0; color:var(--accent-light); transition:color 0.18s; }
   .rg-row.active .rg-icon { color:var(--accent-light); }
   .rg-sep { height:0.5px; background:var(--hairline); margin-left:52px; }
   .rg-fi { flex:1; background:transparent; border:none; outline:none; padding:16px 14px 16px 0;
@@ -99,7 +101,7 @@ const REGISTER_STYLES = `
   .rg-fi::placeholder { color:var(--text-3); }
   .rg-fi[type="password"] { letter-spacing:2px; }
   .rg-fi[type="password"]::placeholder { letter-spacing:-0.2px; }
-  .rg-eye { background:none; border:none; padding:0 16px; cursor:pointer; color:var(--text-3);
+  .rg-eye { background:none; border:none; padding:0 16px; cursor:pointer; color:var(--accent-light);
     display:flex; align-items:center; min-width:48px; justify-content:center; transition:color 0.15s; -webkit-tap-highlight-color:transparent; }
   .rg-eye:hover { color:var(--accent-light); }
 
@@ -135,6 +137,15 @@ const REGISTER_STYLES = `
     font-size:14.5px; color:var(--text-2); letter-spacing:-0.2px; }
   .rg-bottom a { color:var(--accent-light); font-weight:600; text-decoration:none; transition:opacity 0.14s; }
   .rg-bottom a:hover { opacity:0.7; }
+
+  /* Copyright pinned ke bawah — sinkron dengan /login */
+  .rg-footer {
+    position:absolute; left:0; right:0;
+    bottom:max(16px, calc(env(safe-area-inset-bottom,0px) + 12px));
+    text-align:center; font-size:11.5px; color:var(--text-3); z-index:2;
+  }
+  .rg-footer a { color:var(--text-3); font-weight:500; text-decoration:none; transition:color .14s; }
+  .rg-footer a:hover { color:var(--text-2); }
 
   /* Success splash */
   .rg-splash { position:fixed; inset:0; z-index:200; display:flex; flex-direction:column;
@@ -266,7 +277,7 @@ function RegisterContent() {
               <div className="rg-logo">
                 <Image src="/logo.png" alt="STC AutoTrade" width={76} height={76} priority style={{ width: 'clamp(64px, 18vw, 76px)', height: 'auto', borderRadius: 20 }} />
               </div>
-              <h1 className="rg-title">STC <span>AutoTrade</span></h1>
+              <h1 className="rg-title">{txt.title}</h1>
               <p className="rg-sub">{txt.sub}</p>
             </div>
 
@@ -375,6 +386,11 @@ function RegisterContent() {
             <div className="rg-bottom">
               {txt.have} <Link href="/login">{txt.signinLink}</Link>
             </div>
+          </div>
+
+          <div className="rg-footer">
+            © 2026 STC AutoTrade ·{' '}
+            <a href="https://stockity.id/information/privacy" target="_blank" rel="noopener noreferrer">{t('login.terms')}</a>
           </div>
         </div>
       )}

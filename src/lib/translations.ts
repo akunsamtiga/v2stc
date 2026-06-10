@@ -489,8 +489,8 @@ const translations: Record<Language, Translations> = {
           show: 'Show',
     },
     login: {
-      title: 'STC AutoTrade',
-      subtitle: 'Sign in to continue',
+      title: 'Welcome back!',
+      subtitle: 'Sign in to continue to your STC account',
       email: 'Email',
       emailPlaceholder: 'name@example.com',
       password: 'Password',
@@ -904,8 +904,8 @@ const translations: Record<Language, Translations> = {
           show: 'Tampilkan',
     },
     login: {
-      title: 'STC AutoTrade',
-      subtitle: 'Masuk untuk melanjutkan',
+      title: 'Selamat datang kembali!',
+      subtitle: 'Masuk untuk melanjutkan ke akun STC Anda',
       email: 'Email',
       emailPlaceholder: 'nama@contoh.com',
       password: 'Password',
