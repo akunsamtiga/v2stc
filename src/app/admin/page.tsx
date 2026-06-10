@@ -498,7 +498,7 @@ const ImportDialog: React.FC<{ onClose: () => void; onImport: (json: string) => 
 
 // ─── URL Edit Dialog ──────────────────────────────────────────────────────────
 const UrlDialog: React.FC<{
-  field: 'registrationUrl' | 'whatsappHelpUrl' | 'stockityReferral';
+  field: 'whatsappHelpUrl' | 'stockityReferral';
   currentValue: string; onClose: () => void; onSave: (v: string) => void; loading: boolean;
 }> = ({ field, currentValue, onClose, onSave, loading }) => {
   const [val, setVal] = useState(currentValue);
@@ -1295,7 +1295,7 @@ export default function AdminPage() {
   const [allUsers,   setAllUsers]   = useState<WhitelistUser[]>([]);
   const [admins,     setAdmins]     = useState<AdminUser[]>([]);
   const [stats,      setStats]      = useState({ total: 0, active: 0, inactive: 0, recent: 0, recentAdded: 0 });
-  const [regConfig,  setRegConfig]  = useState<RegistrationConfig>({ registrationUrl: '', whatsappHelpUrl: '', updatedAt: 0 });
+  const [regConfig,  setRegConfig]  = useState<RegistrationConfig>({ whatsappHelpUrl: '', updatedAt: 0 });
 
   // UI
   const [isLoading,   setIsLoading]   = useState(true);
@@ -1316,7 +1316,6 @@ export default function AdminPage() {
   const [chatOpen,      setChatOpen]      = useState(false);
   const [reactReqOpen,  setReactReqOpen]  = useState(false);
   const [statsFilter,   setStatsFilter]   = useState<StatsFilter | null>(null);
-  const [regUrlOpen,    setRegUrlOpen]    = useState(false);
   const [waUrlOpen,     setWaUrlOpen]     = useState(false);
   const [referralOpen,  setReferralOpen]  = useState(false);
 
@@ -1416,12 +1415,11 @@ export default function AdminPage() {
       await api.admin.setPeriod(email, days);
       await loadData(currentEmail, isSuperAdmin);
     }, days > 0 ? `Masa aktif diset ${days} hari ✓` : 'Diset permanen ✓');
-  const handleUpdateUrl = (field: 'registrationUrl' | 'whatsappHelpUrl' | 'stockityReferral', val: string) =>
+  const handleUpdateUrl = (field: 'whatsappHelpUrl' | 'stockityReferral', val: string) =>
     act(async () => {
       await updateRegistrationConfig(field, val.trim());
-      if (field === 'registrationUrl')      setRegUrlOpen(false);
-      else if (field === 'whatsappHelpUrl') setWaUrlOpen(false);
-      else                                  setReferralOpen(false);
+      if (field === 'whatsappHelpUrl') setWaUrlOpen(false);
+      else                             setReferralOpen(false);
     }, field === 'stockityReferral' ? 'Kode referral diupdate ✓' : 'URL diupdate ✓');
 
   const handleExport = (fmt: 'json' | 'csv') => {
@@ -1548,18 +1546,6 @@ export default function AdminPage() {
         {/* ── CONFIG CARDS (Super Admin) ────────────────────────────────── */}
         {isSuperAdmin && (
           <div className="space-y-2 anim-fade">
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 shadow-sm">
-              <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-500">{Icon.link('w-4 h-4')}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800">Registration URL</p>
-                <p className="text-xs text-blue-500 truncate">{regConfig.registrationUrl || '—'}</p>
-              </div>
-              <button onClick={() => setRegUrlOpen(true)} className="py-1.5 px-3 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold hover:bg-blue-100 transition-colors flex-shrink-0">
-                Edit
-              </button>
-            </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 shadow-sm">
               <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
                 <span className="text-emerald-500">{Icon.phone('w-4 h-4')}</span>
@@ -1748,7 +1734,6 @@ export default function AdminPage() {
           onToggle={handleToggle}
         />
       )}
-      {regUrlOpen && <UrlDialog field="registrationUrl" currentValue={regConfig.registrationUrl ?? ''} onClose={() => setRegUrlOpen(false)} onSave={v => handleUpdateUrl('registrationUrl', v)} loading={isActing} />}
       {waUrlOpen  && <UrlDialog field="whatsappHelpUrl" currentValue={regConfig.whatsappHelpUrl ?? ''} onClose={() => setWaUrlOpen(false)} onSave={v => handleUpdateUrl('whatsappHelpUrl', v)} loading={isActing} />}
     </div>
   );
