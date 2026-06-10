@@ -1,7 +1,6 @@
 // src/app/login/page.tsx
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -50,7 +49,7 @@ const LOGIN_STYLES = `
      Selector yang dideklarasikan langsung pada element menang atas nilai
      yang diwariskan (inherited) dari body[data-theme="light"] globals.css.
      Ini menjamin tema login tetap gelap meskipun user pakai light mode.  */
-  .lr-page, .splash, .tutor-modal, .tutor-overlay {
+  .lr-page, .splash {
     --bg:           #000000;
     --surface:      rgba(28,28,30,0.72);
     --hairline:     rgba(255,255,255,0.08);
@@ -205,14 +204,6 @@ const LOGIN_STYLES = `
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; margin-bottom: 18px;
   }
-  .opts-link {
-    background: none; border: none; padding: 0 2px;
-    font-family: var(--font); font-size: 14px; font-weight: 500;
-    color: var(--accent-light); cursor: pointer; letter-spacing: -0.2px;
-    transition: opacity 0.14s; -webkit-tap-highlight-color: transparent;
-    white-space: nowrap; flex-shrink: 0;
-  }
-  .opts-link:hover { opacity: 0.72; }
 
   /* ── Remember me ────────────────────────────────────────────────────── */
   .remember-row {
@@ -308,95 +299,6 @@ const LOGIN_STYLES = `
     padding: 0; font-family: var(--font); font-size: 13px;
   }
   .foot-lnk:hover { opacity: 0.70; }
-
-  /* ── Tutorial Modal ─────────────────────────────────────────────────── */
-  .tutor-overlay {
-    position: fixed; inset: 0; z-index: 500;
-    background: rgba(0,0,0,0.65);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    display: flex; align-items: center; justify-content: center;
-    padding: max(20px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
-    animation: tutor-in 0.22s cubic-bezier(0.22,1,0.36,1);
-  }
-  @keyframes tutor-in { from { opacity: 0; } to { opacity: 1; } }
-  .tutor-modal {
-    background: rgba(10,30,15,0.97);
-    border: 1px solid rgba(76,175,80,0.20);
-    border-radius: 22px;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.60), 0 4px 16px rgba(0,0,0,0.20);
-    width: 100%; max-width: 380px; overflow: hidden;
-    animation: tutor-rise 0.28s cubic-bezier(0.22,1,0.36,1);
-  }
-  @keyframes tutor-rise {
-    from { opacity: 0; transform: translateY(18px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .tutor-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 18px 12px; border-bottom: 1px solid rgba(76,175,80,0.12);
-  }
-  .tutor-title { font-size: 15px; font-weight: 650; color: #fff; letter-spacing: -0.3px; }
-  .tutor-close {
-    width: 30px; height: 30px; border-radius: 50%;
-    background: rgba(255,255,255,0.08); border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--text-2); transition: background 0.15s; flex-shrink: 0;
-  }
-  .tutor-close:hover { background: rgba(255,255,255,0.14); }
-  .tutor-img-wrap {
-    position: relative; width: 100%; background: #07070f;
-    aspect-ratio: 9/16;
-    /* Limit height based on viewport to avoid overflow on short screens */
-    max-height: min(55vh, 480px);
-    overflow: hidden; margin-bottom: 14px;
-  }
-  .tutor-img-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .tutor-footer {
-    padding: 0 18px 18px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .tutor-next-btn {
-    background: var(--accent); border: none; cursor: pointer;
-    color: #fff; font-family: var(--font);
-    font-size: 13px; font-weight: 700; letter-spacing: -0.1px;
-    padding: 9px 20px; border-radius: 99px;
-    box-shadow: 0 2px 10px rgba(76,175,80,0.35);
-    transition: opacity 0.15s, transform 0.12s; -webkit-tap-highlight-color: transparent;
-  }
-  .tutor-next-btn:hover { opacity: 0.86; }
-  .tutor-next-btn:active { transform: scale(0.96); }
-  .tutor-next-btn:disabled { opacity: 0.28; cursor: default; }
-  .tutor-dots { display: flex; gap: 6px; align-items: center; }
-  .tutor-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: rgba(255,255,255,0.18);
-    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  .tutor-dot.active { background: var(--accent); width: 20px; border-radius: 99px; }
-  .tutor-caption { padding: 0 18px 12px; animation: caption-fade 0.25s ease; }
-  @keyframes caption-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-  .tutor-caption-step {
-    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--accent-light); margin-bottom: 4px;
-  }
-  .tutor-caption-text { font-size: 13px; color: var(--text-2); line-height: 1.5; letter-spacing: -0.1px; }
-  .tutor-caption-text strong { color: #fff; font-weight: 600; }
-
-  /* ── Prev button (optional skip) ───────────────────────────────────── */
-  .tutor-prev-btn {
-    background: none; border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
-    color: rgba(255,255,255,0.50); font-family: var(--font);
-    font-size: 13px; font-weight: 500;
-    padding: 9px 16px; border-radius: 99px;
-    transition: opacity 0.15s, border-color 0.15s;
-  }
-  .tutor-prev-btn:hover { opacity: 0.80; border-color: rgba(255,255,255,0.25); }
-
-  /* ── Step counter ───────────────────────────────────────────────────── */
-  .tutor-step-counter {
-    font-size: 11px; color: var(--text-3); letter-spacing: 0.04em;
-    font-weight: 600; text-transform: uppercase;
-  }
 
   /* ── Register link (dipisah hairline di atasnya) ────────────────────── */
   .register-link {
@@ -573,8 +475,6 @@ function LoginPageContent() {
   const [showPass, setShowPass] = useState(false);
   const [splash,   setSplash]   = useState<SplashPhase>('hidden');
   const [showLangSelector, setShowLangSelector] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [tutorialPage, setTutorialPage] = useState(0);
   const [useImg, setUseImg] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('https://wa.me/6285959860015');
   const [errorKey, setErrorKey] = useState(0); // increment to re-trigger shake
@@ -642,7 +542,7 @@ function LoginPageContent() {
   // Close lang dropdown on Escape key
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setShowLangSelector(false); setShowTutorial(false); }
+      if (e.key === 'Escape') { setShowLangSelector(false); }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -1109,7 +1009,7 @@ function LoginPageContent() {
                 </div>
               </div>{/* /field-group */}
 
-              {/* Options row: remember (kiri) · panduan (kanan) */}
+              {/* Options row: remember */}
               <div className="opts-row">
                 <label className="remember-row" onClick={() => setRemember(r => !r)}>
                   <div className={`cb-box ${remember ? 'checked' : ''}`}>
@@ -1119,13 +1019,6 @@ function LoginPageContent() {
                   </div>
                   <span className="cb-label">{t('login.rememberMe')}</span>
                 </label>
-                <button
-                  type="button"
-                  className="opts-link"
-                  onClick={() => { setTutorialPage(0); setShowTutorial(true); }}
-                >
-                  {t('login.tutorial.btnAction')}
-                </button>
               </div>
 
                 {/* Error */}
@@ -1205,73 +1098,6 @@ function LoginPageContent() {
         </div>
       )}
 
-      {/* Tutorial Modal Portal */}
-      {showTutorial && typeof document !== 'undefined' && createPortal((() => {
-        const TUTOR_STEPS = [
-          { titleKey: 'login.tutorial.step1Title' as const, textKey: 'login.tutorial.step1Text' as const },
-          { titleKey: 'login.tutorial.step2Title' as const, textKey: 'login.tutorial.step2Text' as const },
-          { titleKey: 'login.tutorial.step3Title' as const, textKey: 'login.tutorial.step3Text' as const },
-        ];
-        const cap = TUTOR_STEPS[tutorialPage];
-        return (
-          <div className="tutor-overlay" onClick={() => setShowTutorial(false)}>
-            <div className="tutor-modal" onClick={e => e.stopPropagation()}>
-              <div className="tutor-header">
-                <span className="tutor-title">{t('login.tutorial.title')}</span>
-                <button className="tutor-close" onClick={() => setShowTutorial(false)} aria-label={t('login.tutorial.close')}>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              </div>
-
-              <div className="tutor-img-wrap">
-                <Image
-                  src={`/tutor${tutorialPage + 1}.jpeg`}
-                  alt={`${t('login.tutorial.title')} ${tutorialPage + 1}`}
-                  fill
-                  style={{ objectFit: 'contain' }}
-                  priority
-                />
-              </div>
-
-              <div key={tutorialPage} className="tutor-caption">
-                <p className="tutor-caption-step">{t(cap.titleKey)}</p>
-                <p className="tutor-caption-text">{t(cap.textKey)}</p>
-              </div>
-
-              <div className="tutor-footer">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
-                  <span className="tutor-step-counter">{tutorialPage + 1} / 3</span>
-                  <div className="tutor-dots">
-                    {[0, 1, 2].map(i => (
-                      <div
-                        key={i}
-                        className={`tutor-dot${tutorialPage === i ? ' active' : ''}`}
-                        onClick={() => setTutorialPage(i)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {tutorialPage > 0 && (
-                    <button className="tutor-prev-btn" onClick={() => setTutorialPage(p => p - 1)}>
-                      ←
-                    </button>
-                  )}
-                  <button
-                    className="tutor-next-btn"
-                    onClick={() => tutorialPage < 2 ? setTutorialPage(p => p + 1) : setShowTutorial(false)}
-                  >
-                    {tutorialPage < 2 ? t('login.tutorial.next') : t('login.tutorial.done')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })(), document.body)}
     </>
   );
 }
