@@ -199,36 +199,6 @@ const LOGIN_STYLES = `
   }
   .eye-btn:hover { color: var(--accent-light); }
 
-  /* ── Options row (remember kiri · link bantuan kanan) ───────────────── */
-  .opts-row {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; margin-bottom: 18px;
-  }
-
-  /* ── Remember me ────────────────────────────────────────────────────── */
-  .remember-row {
-    display: flex; align-items: center; gap: 10px;
-    cursor: pointer; padding-left: 2px; min-width: 0;
-    -webkit-tap-highlight-color: transparent; user-select: none;
-  }
-  .cb-box {
-    width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0;
-    border: 1.5px solid rgba(255,255,255,0.22);
-    background: rgba(255,255,255,0.04);
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
-  }
-  .cb-box.checked {
-    background: var(--accent); border-color: var(--accent);
-    box-shadow: 0 2px 8px rgba(76,175,80,0.35);
-  }
-  .cb-tick {
-    opacity: 0; transform: scale(0.5);
-    transition: opacity 0.16s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  .cb-box.checked .cb-tick { opacity: 1; transform: scale(1); }
-  .cb-label { font-size: 14.5px; color: var(--text-1); font-weight: 400; letter-spacing: -0.2px; }
-
   /* ── Error banner ───────────────────────────────────────────────────── */
   .err {
     display: flex; align-items: flex-start; gap: 9px;
@@ -464,7 +434,9 @@ function LoginPageContent() {
   const { t, language, setLanguage } = useLanguage();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
+  // Checkbox "Ingat saya" dihapus dari UI; perilaku ingat email/password
+  // dipertahankan default-on agar autofill saat kembali login tetap jalan.
+  const [remember] = useState(true);
   const [loading,  setLoading]  = useState(false);
   const [gLoading, setGLoading] = useState(false);
   const [loginStep, setLoginStep] = useState<LoginStep>('idle');
@@ -501,7 +473,7 @@ function LoginPageContent() {
 
       const savedEmail = await storage.get('stc_remember_email');
       const savedPass  = await storage.get('stc_remember_password');
-      if (savedEmail) { setEmail(savedEmail); setRemember(true); }
+      if (savedEmail) { setEmail(savedEmail); }
       if (savedPass)  { setPassword(savedPass); }
       const sessionValid = await isSessionValid();
       if (sessionValid) router.push('/dashboard');
@@ -1008,18 +980,6 @@ function LoginPageContent() {
                   </button>
                 </div>
               </div>{/* /field-group */}
-
-              {/* Options row: remember */}
-              <div className="opts-row">
-                <label className="remember-row" onClick={() => setRemember(r => !r)}>
-                  <div className={`cb-box ${remember ? 'checked' : ''}`}>
-                    <svg className="cb-tick" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  <span className="cb-label">{t('login.rememberMe')}</span>
-                </label>
-              </div>
 
                 {/* Error */}
                 {error && (
