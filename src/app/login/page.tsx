@@ -12,26 +12,38 @@ import { LanguageProvider, useLanguage, AVAILABLE_LANGUAGES, COUNTRY_ENTRIES, La
 
 type SplashPhase = 'hidden' | 'welcome' | 'verified' | 'out';
 
+// URL mulai OAuth Google Stockity (langsung ke authorization → 302 ke Google).
+// Dibuka di in-app WebView (mode 'oauth') → token ditangkap dari DOM callback.
+const GOOGLE_OAUTH_URL = 'https://api.stockity.id/passport/oauth2/authorization/google-stockity';
+
+function isNativeApp(): boolean {
+  return typeof window !== 'undefined' &&
+    (window as any).Capacitor?.isNativePlatform?.() === true;
+}
+
 // ── CSS string extracted so it can be used with dangerouslySetInnerHTML ──────
+// Konsep: Apple-minimal (iOS) — latar tenang, input grouped-list, aksen hijau STC.
 const LOGIN_STYLES = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:           #07070f;
-    --surface:      rgba(12, 12, 26, 0.90);
-    --border:       rgba(100, 140, 110, 0.20);
-    --border-focus: rgba(100, 220, 100, 0.50);
+    --bg:           #000000;
+    --surface:      rgba(28,28,30,0.72);
+    --hairline:     rgba(255,255,255,0.08);
+    --border:       rgba(255,255,255,0.10);
+    --border-focus: rgba(76,175,80,0.55);
     --text-1:       #ffffff;
-    --text-2:       rgba(255,255,255,0.55);
-    --text-3:       rgba(255,255,255,0.30);
+    --text-2:       rgba(235,235,245,0.60);
+    --text-3:       rgba(235,235,245,0.30);
     --accent:       #4caf50;
-    --accent-light: #66bb6a;
+    --accent-light: #5cc763;
     --error:        #ff453a;
     --error-bg:     rgba(255,69,58,0.10);
     --success:      #30d158;
-    --r-md:         14px;
-    --r-xl:         22px;
-    --font:         -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    --r-sm:         12px;
+    --r-md:         16px;
+    --r-lg:         22px;
+    --font:         -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   }
 
   /* ── Scoped override: variabel login di-hardcode langsung ke elemen ──────
@@ -39,21 +51,23 @@ const LOGIN_STYLES = `
      yang diwariskan (inherited) dari body[data-theme="light"] globals.css.
      Ini menjamin tema login tetap gelap meskipun user pakai light mode.  */
   .lr-page, .splash, .tutor-modal, .tutor-overlay {
-    --bg:           #07070f;
-    --surface:      rgba(12, 12, 26, 0.90);
-    --border:       rgba(100, 140, 110, 0.20);
-    --border-focus: rgba(100, 220, 100, 0.50);
+    --bg:           #000000;
+    --surface:      rgba(28,28,30,0.72);
+    --hairline:     rgba(255,255,255,0.08);
+    --border:       rgba(255,255,255,0.10);
+    --border-focus: rgba(76,175,80,0.55);
     --text-1:       #ffffff;
-    --text-2:       rgba(255,255,255,0.55);
-    --text-3:       rgba(255,255,255,0.30);
+    --text-2:       rgba(235,235,245,0.60);
+    --text-3:       rgba(235,235,245,0.30);
     --accent:       #4caf50;
-    --accent-light: #66bb6a;
+    --accent-light: #5cc763;
     --error:        #ff453a;
     --error-bg:     rgba(255,69,58,0.10);
     --success:      #30d158;
-    --r-md:         14px;
-    --r-xl:         22px;
-    --font:         -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    --r-sm:         12px;
+    --r-md:         16px;
+    --r-lg:         22px;
+    --font:         -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   }
 
   /* ── Page Shell ─────────────────────────────────────────────────────── */
@@ -65,11 +79,11 @@ const LOGIN_STYLES = `
     display:         flex;
     flex-direction:  column;
     align-items:     center;
-    justify-content: flex-start;
-    padding-top:     max(16px, env(safe-area-inset-top, 0px));
-    padding-left:    16px;
-    padding-right:   16px;
-    padding-bottom:  max(72px, calc(env(safe-area-inset-bottom, 0px) + 60px));
+    justify-content: center;
+    padding-top:     max(24px, env(safe-area-inset-top, 0px));
+    padding-left:    20px;
+    padding-right:   20px;
+    padding-bottom:  max(40px, calc(env(safe-area-inset-bottom, 0px) + 28px));
     overflow-y:      auto;
     overflow-x:      hidden;
     -webkit-overflow-scrolling: touch;
@@ -77,274 +91,214 @@ const LOGIN_STYLES = `
     -webkit-font-smoothing: antialiased;
     scroll-padding-bottom: 24px;
   }
-  /* Vertically center when there's enough room */
-  @media (min-height: 680px) {
-    .lr-page { justify-content: center; }
-  }
-  /* Tablet */
-  @media (min-width: 600px) {
-    .lr-page {
-      padding-left:   24px;
-      padding-right:  24px;
-      padding-bottom: max(40px, env(safe-area-inset-bottom, 0px));
-    }
-  }
-  /* Desktop */
-  @media (min-width: 1024px) {
-    .lr-page {
-      padding-top:    0;
-      padding-bottom: 0;
-      padding-left:   0;
-      padding-right:  0;
-      justify-content: center;
-      align-items:    center;
-    }
+  /* Layar pendek: mulai dari atas agar tidak terpotong */
+  @media (max-height: 720px) {
+    .lr-page { justify-content: flex-start; padding-top: max(32px, env(safe-area-inset-top, 0px)); }
   }
 
-  /* ── Ambient Orbs ───────────────────────────────────────────────────── */
-  .orb { position: fixed; border-radius: 50%; pointer-events: none; animation: drift 20s ease-in-out infinite alternate; }
-  .o1 {
-    width: clamp(280px,70vw,520px); height: clamp(280px,70vw,520px);
-    background: radial-gradient(circle, rgba(20,80,45,0.18) 0%, transparent 65%);
-    bottom: -12%; right: -10%; filter: blur(80px);
+  /* ── Ambient (latar tenang — 2 gradient halus, tanpa sparkle/dot-grid) ─── */
+  .ambient {
+    position: fixed; border-radius: 50%; pointer-events: none;
+    z-index: 0; filter: blur(100px); opacity: 0.55;
   }
-  .o2 {
-    width: clamp(220px,55vw,420px); height: clamp(220px,55vw,420px);
-    background: radial-gradient(circle, rgba(15,30,80,0.20) 0%, transparent 65%);
-    top: -15%; left: -8%; filter: blur(70px); animation-delay: -9s;
+  .amb-1 {
+    width: clamp(360px, 82vw, 580px); height: clamp(360px, 82vw, 580px);
+    top: -24%; left: 50%;
+    background: radial-gradient(circle, rgba(76,175,80,0.16) 0%, transparent 68%);
+    animation: amb-drift-c 32s ease-in-out infinite alternate;
   }
-  @keyframes drift {
-    0%   { transform: translate(0,0) scale(1); }
-    50%  { transform: translate(3%,4%) scale(1.04); }
-    100% { transform: translate(-2%,2%) scale(0.97); }
+  .amb-2 {
+    width: clamp(300px, 70vw, 480px); height: clamp(300px, 70vw, 480px);
+    bottom: -22%; right: -16%;
+    background: radial-gradient(circle, rgba(48,209,88,0.07) 0%, transparent 68%);
+    animation: amb-drift 34s ease-in-out infinite alternate;
+  }
+  /* Centered orb: pertahankan translateX(-50%) selama animasi */
+  @keyframes amb-drift-c {
+    0%   { transform: translateX(-50%) translateY(0)    scale(1);    }
+    100% { transform: translateX(-50%) translateY(3%)   scale(1.05); }
+  }
+  @keyframes amb-drift {
+    0%   { transform: translate(0,0)   scale(1);    }
+    100% { transform: translate(-2%,2%) scale(1.05); }
   }
 
-  /* ── Card (outer wrapper) ───────────────────────────────────────────── */
+  /* ── Card (centered single column) ──────────────────────────────────── */
   .card {
     position:  relative;
     z-index:   2;
     width:     100%;
-    max-width: 390px;
+    max-width: 392px;
     opacity:   0;
-    transform: translateY(14px) scale(0.988);
-    animation: rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.08s forwards;
+    transform: translateY(12px) scale(0.99);
+    animation: rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.05s forwards;
   }
   @keyframes rise { to { opacity: 1; transform: translateY(0) scale(1); } }
-
-  /* Tablet: slightly wider card */
-  @media (min-width: 600px) {
-    .card { max-width: 440px; }
-  }
-  /* Desktop: wider + shadow frame */
-  @media (min-width: 1024px) {
-    .card {
-      max-width: 460px;
-      filter: drop-shadow(0 32px 80px rgba(0,0,0,0.55));
-    }
-  }
+  @media (min-width: 1024px) { .card { max-width: 400px; } }
 
   /* ── Brand / Logo ───────────────────────────────────────────────────── */
-  .brand { text-align: center; margin-bottom: 16px; }
-
+  .brand { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 30px; }
+  .brand-logo { display: inline-flex; margin-bottom: 20px; }
+  .brand-logo img {
+    width: clamp(68px, 19vw, 80px); height: auto;
+    border-radius: 21px;
+    box-shadow: 0 12px 34px rgba(76,175,80,0.22), 0 0 0 0.5px rgba(255,255,255,0.06);
+  }
   .brand-title {
-    display: flex; align-items: center; justify-content: center;
-    font-size: clamp(22px, 6vw, 30px);
-    font-weight: 800; letter-spacing: -0.8px; line-height: 1;
-    margin-bottom: 6px;
+    font-size: clamp(26px, 7.5vw, 31px);
+    font-weight: 700; letter-spacing: -0.8px; line-height: 1.05;
+    color: #fff; margin-bottom: 8px;
   }
-  @media (min-width: 600px) { .brand-title { font-size: 30px; } }
-
-  .brand-title-stc  { color: #ffffff; }
-  .brand-title-auto { color: var(--accent-light); }
-  .brand-sub { font-size: clamp(12px, 3.5vw, 14px); color: var(--text-2); font-weight: 400; }
-
-  /* Mobile logo (shown on narrow screens) */
-  .logo-mobile {
-    display: flex; flex-direction: column;
-    align-items: center; gap: 10px; margin-bottom: 8px;
-  }
-  .logo-mobile img {
-    /* Scales from 72px on tiny phones to 96px on normal phones */
-    height: clamp(72px, 22vw, 96px);
-    width: auto; object-fit: contain;
+  .brand-title span { color: var(--accent-light); }
+  .brand-sub {
+    font-size: 15px; color: var(--text-2); font-weight: 400;
+    letter-spacing: -0.2px; line-height: 1.45; max-width: 300px;
   }
 
-  /* Desktop logo (top-left corner) */
-  .logo-desktop {
-    display: none; position: absolute;
-    top: calc(16px + env(safe-area-inset-top, 0px));
-    left: 20px; z-index: 10; align-items: center; gap: 10px;
-  }
-  .logo-desktop img { height: 34px; width: auto; object-fit: contain; }
-  .logo-desktop-name {
-    font-size: 15px; font-weight: 700; letter-spacing: -0.3px;
-    color: rgba(255,255,255,0.85);
-  }
-
-  @media (min-width: 600px) {
-    .logo-desktop { display: flex; }
-    .logo-mobile  { display: none;  }
-    .brand        { margin-bottom: 20px; }
-  }
-
-  /* ── Panel (glassmorphism on mobile/tablet, transparent on desktop) ─── */
-  .panel {
-    background: rgba(10,12,22,0.93);
-    border: 1px solid rgba(76,175,80,0.12);
-    border-radius: var(--r-xl);
-    padding: clamp(18px, 4.5vw, 26px) clamp(16px, 4.5vw, 24px);
-    backdrop-filter: saturate(140%) blur(32px);
-    -webkit-backdrop-filter: saturate(140%) blur(32px);
-    box-shadow:
-      0 8px 48px rgba(0,0,0,0.60),
-      0 0 0 0.5px rgba(255,255,255,0.04),
-      inset 0 1px 0 rgba(255,255,255,0.05);
-  }
-  @media (min-width: 600px) { .panel { padding: 26px 24px 22px; } }
-  @media (min-width: 1024px) {
-    .panel {
-      background: transparent !important;
-      border: none !important;
-      border-radius: 0 !important;
-      padding: 0 !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      box-shadow: none !important;
-    }
-  }
-
-  /* ── Form Fields ────────────────────────────────────────────────────── */
-  .fg-wrap { margin-bottom: 13px; }
-  @media (min-width: 600px) { .fg-wrap { margin-bottom: 16px; } }
-
-  .fg-label {
-    display: block;
-    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.09em; color: rgba(255,255,255,0.40);
-    margin-bottom: 7px; padding-left: 2px;
-  }
-  .fg-row {
-    display: flex; align-items: center;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.10);
+  /* ── Form Fields — Apple grouped list ───────────────────────────────── */
+  .field-group {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
     border-radius: var(--r-md);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
     overflow: hidden;
-    transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0.5px 0 rgba(255,255,255,0.05);
   }
-  .fg-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); }
-  .fg-row.active {
-    background: rgba(76,175,80,0.06);
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(76,175,80,0.10);
+  .field-row {
+    display: flex; align-items: center; position: relative;
+    transition: background 0.18s;
   }
-  .fg-icon {
+  .field-row.active { background: rgba(76,175,80,0.07); }
+  .field-icon {
     display: flex; align-items: center; justify-content: center;
-    width: 44px; flex-shrink: 0;
-    background: rgba(0,0,0,0.20);
-    align-self: stretch;
-    border-right: 1px solid rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.28);
-    transition: color 0.18s;
+    width: 52px; flex-shrink: 0;
+    color: var(--text-3); transition: color 0.18s;
   }
-  .fg-row.active .fg-icon { color: var(--accent-light); }
-  @media (min-width: 600px) { .fg-icon { width: 48px; } }
+  .field-row.active .field-icon { color: var(--accent-light); }
+  .field-sep { height: 0.5px; background: var(--hairline); margin-left: 52px; }
 
   .fi {
     flex: 1; background: transparent; border: none; outline: none;
     /* Minimum 16px on mobile avoids iOS zoom-in */
-    padding: clamp(11px, 3vw, 13px) 12px;
+    padding: 16px 14px 16px 0;
     font-size: 16px; font-weight: 400;
     color: var(--text-1); font-family: var(--font); letter-spacing: -0.2px;
     -webkit-tap-highlight-color: transparent;
     appearance: none; -webkit-appearance: none;
   }
-  .fi::placeholder { color: var(--text-3); font-size: 15px; }
-  .fi[type="password"]              { letter-spacing: 3px; }
-  .fi[type="password"]::placeholder { letter-spacing: -0.2px; font-size: 15px; }
+  .fi::placeholder { color: var(--text-3); }
+  .fi[type="password"]              { letter-spacing: 2px; }
+  .fi[type="password"]::placeholder { letter-spacing: -0.2px; }
 
   .eye-btn {
-    background: none; border: none; padding: 0 14px; cursor: pointer;
-    color: rgba(255,255,255,0.45); display: flex; align-items: center;
+    background: none; border: none; padding: 0 16px; cursor: pointer;
+    color: var(--text-3); display: flex; align-items: center;
     transition: color 0.15s; -webkit-tap-highlight-color: transparent;
-    min-width: 44px; justify-content: center; /* better tap target */
+    min-width: 48px; justify-content: center;
   }
-  .eye-btn:hover { color: #66bb6a; }
+  .eye-btn:hover { color: var(--accent-light); }
+
+  /* ── Options row (remember kiri · link bantuan kanan) ───────────────── */
+  .opts-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 18px;
+  }
+  .opts-link {
+    background: none; border: none; padding: 0 2px;
+    font-family: var(--font); font-size: 14px; font-weight: 500;
+    color: var(--accent-light); cursor: pointer; letter-spacing: -0.2px;
+    transition: opacity 0.14s; -webkit-tap-highlight-color: transparent;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .opts-link:hover { opacity: 0.72; }
 
   /* ── Remember me ────────────────────────────────────────────────────── */
   .remember-row {
     display: flex; align-items: center; gap: 10px;
-    margin-bottom: 14px; cursor: pointer;
+    cursor: pointer; padding-left: 2px; min-width: 0;
     -webkit-tap-highlight-color: transparent; user-select: none;
   }
   .cb-box {
     width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0;
-    border: 1.5px solid rgba(76,175,80,0.35);
-    background: rgba(0,0,0,0.30);
+    border: 1.5px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.04);
     display: flex; align-items: center; justify-content: center;
     transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
   }
   .cb-box.checked {
     background: var(--accent); border-color: var(--accent);
-    box-shadow: 0 1px 8px rgba(76,175,80,0.40);
+    box-shadow: 0 2px 8px rgba(76,175,80,0.35);
   }
   .cb-tick {
     opacity: 0; transform: scale(0.5);
     transition: opacity 0.16s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
   }
   .cb-box.checked .cb-tick { opacity: 1; transform: scale(1); }
-  .cb-label { font-size: 14px; color: var(--text-1); font-weight: 400; }
+  .cb-label { font-size: 14.5px; color: var(--text-1); font-weight: 400; letter-spacing: -0.2px; }
 
   /* ── Error banner ───────────────────────────────────────────────────── */
   .err {
-    display: flex; align-items: flex-start; gap: 8px;
-    background: var(--error-bg); border: 1px solid rgba(255,69,58,0.22);
-    border-radius: 10px; padding: 10px 13px; margin-bottom: 12px;
+    display: flex; align-items: flex-start; gap: 9px;
+    background: var(--error-bg); border: 0.5px solid rgba(255,69,58,0.25);
+    border-radius: 12px; padding: 11px 14px; margin-bottom: 14px;
     animation: shake 0.36s cubic-bezier(0.36,0.07,0.19,0.97);
   }
   @keyframes shake {
     0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-4px); }
     50%    { transform:translateX(4px); } 80%{ transform:translateX(-3px); }
   }
-  .err-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--error); flex-shrink: 0; margin-top: 4px; }
-  .err-txt  { font-size: 12.5px; color: var(--error); line-height: 1.4; }
+  .err-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--error); flex-shrink: 0; margin-top: 5px; }
+  .err-txt  { font-size: 13px; color: var(--error); line-height: 1.45; }
   .err-whitelist { background: rgba(255,69,58,0.07); border-color: rgba(255,69,58,0.28); }
   .err-whitelist .err-txt { font-size: 13px; font-weight: 500; }
 
-  /* ── Submit button ──────────────────────────────────────────────────── */
+  /* ── Submit button — Apple solid ────────────────────────────────────── */
   .btn {
     width: 100%; height: 52px;
-    background: linear-gradient(165deg, #58cb5e 0%, #42a847 50%, #369e3b 100%);
-    border: none; border-radius: var(--r-md); color: #fff;
-    font-size: 15.5px; font-weight: 700; letter-spacing: -0.2px;
+    background: var(--accent);
+    border: none; border-radius: var(--r-sm); color: #fff;
+    font-size: 16px; font-weight: 600; letter-spacing: -0.2px;
     cursor: pointer; font-family: var(--font);
     display: flex; align-items: center; justify-content: center; gap: 8px;
     position: relative; overflow: hidden;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 6px 24px rgba(76,175,80,0.40), 0 2px 8px rgba(0,0,0,0.30);
-    transition: opacity 0.15s, transform 0.12s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(76,175,80,0.30);
+    transition: background 0.18s, opacity 0.15s, transform 0.12s, box-shadow 0.2s;
     -webkit-tap-highlight-color: transparent;
   }
-  .btn::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, transparent 50%);
-    pointer-events: none;
-  }
-  .btn:hover:not(:disabled)  { box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 8px 32px rgba(76,175,80,0.55); }
-  .btn:active:not(:disabled) { transform: scale(0.982); opacity: 0.88; }
-  .btn:disabled              { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+  .btn:hover:not(:disabled)  { background: var(--accent-light); box-shadow: 0 6px 22px rgba(76,175,80,0.42); }
+  .btn:active:not(:disabled) { transform: scale(0.98); opacity: 0.92; }
+  .btn:disabled              { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
   .spin {
-    width: 15px; height: 15px; border-radius: 50%;
+    width: 16px; height: 16px; border-radius: 50%;
     border: 2px solid rgba(255,255,255,0.30); border-top-color: #fff;
     animation: rot 0.7s linear infinite; flex-shrink: 0;
   }
   @keyframes rot { to { transform: rotate(360deg); } }
 
-/* ── Encrypted badge ────────────────────────────────────────────────── */
-  .badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 14px; padding: 6px 13px; border-radius: 99px;
-    background: rgba(76,175,80,0.06); border: 1px solid rgba(76,175,80,0.14);
+  /* ── Divider "atau" + tombol Google ─────────────────────────────────── */
+  .or-row { display:flex; align-items:center; gap:12px; margin:16px 0; }
+  .or-row::before, .or-row::after { content:''; flex:1; height:0.5px; background:rgba(255,255,255,0.10); }
+  .or-row span { font-size:12px; color:var(--text-3); font-weight:500; letter-spacing:0.02em; }
+  .gbtn {
+    width:100%; height:52px; display:flex; align-items:center; justify-content:center; gap:10px;
+    background:#ffffff; border:none; border-radius:var(--r-sm); color:#1f1f1f;
+    font-family:var(--font); font-size:15.5px; font-weight:600; letter-spacing:-0.2px; cursor:pointer;
+    box-shadow:0 4px 16px rgba(0,0,0,0.25); transition:opacity 0.15s, transform 0.12s;
+    -webkit-tap-highlight-color:transparent;
   }
-  .badge-txt { font-size: 11px; color: var(--accent-light); font-weight: 600; letter-spacing: 0.01em; }
+  .gbtn:hover:not(:disabled) { opacity:0.92; }
+  .gbtn:active:not(:disabled) { transform:scale(0.98); }
+  .gbtn:disabled { opacity:0.5; cursor:not-allowed; box-shadow:none; }
+
+  /* ── Secure caption (di bawah tombol — halus, tanpa kotak) ──────────── */
+  .secure-line {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 16px; color: var(--text-3);
+  }
+  .secure-line svg { color: var(--text-3); }
+  .secure-txt { font-size: 11.5px; color: var(--text-3); font-weight: 500; letter-spacing: 0.01em; }
 
   /* ── Footer links ───────────────────────────────────────────────────── */
   .foot { text-align: center; margin-top: 14px; font-size: 11.5px; color: var(--text-3); }
@@ -444,12 +398,13 @@ const LOGIN_STYLES = `
     font-weight: 600; text-transform: uppercase;
   }
 
-  /* ── Register link ──────────────────────────────────────────────────── */
+  /* ── Register link (dipisah hairline di atasnya) ────────────────────── */
   .register-link {
-    text-align: center; margin-top: 16px;
-    font-size: clamp(13px, 3.5vw, 14px); color: var(--text-2);
+    text-align: center; margin-top: 22px; padding-top: 20px;
+    border-top: 0.5px solid rgba(255,255,255,0.08);
+    font-size: 14.5px; color: var(--text-2); letter-spacing: -0.2px;
   }
-  .register-link a { color: var(--accent-light); font-weight: 700; text-decoration: none; transition: opacity 0.14s; }
+  .register-link a { color: var(--accent-light); font-weight: 600; text-decoration: none; transition: opacity 0.14s; }
   .register-link a:hover { opacity: 0.70; }
 
   /* ── Language Selector ──────────────────────────────────────────────── */
@@ -466,40 +421,43 @@ const LOGIN_STYLES = `
   }
   .lang-btn {
     display: flex; align-items: center; gap: 6px;
-    padding: 7px 12px; border-radius: 22px;
-    background: rgba(0,0,0,0.45);
-    border: 1px solid rgba(255,255,255,0.12);
+    padding: 7px 12px; border-radius: 99px;
+    background: rgba(28,28,30,0.65);
+    border: 0.5px solid rgba(255,255,255,0.10);
     cursor: pointer; font-size: 13px; font-weight: 500;
-    color: rgba(255,255,255,0.80);
-    backdrop-filter: blur(12px);
+    color: rgba(255,255,255,0.85);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
     transition: all 0.15s; max-width: 150px;
     overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
     -webkit-tap-highlight-color: transparent;
   }
-  .lang-btn:hover { background: rgba(0,0,0,0.60); border-color: rgba(255,255,255,0.20); }
+  .lang-btn:hover { background: rgba(44,44,46,0.75); border-color: rgba(255,255,255,0.18); }
   .lang-btn-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
   .lang-dropdown {
-    position: absolute; top: calc(100% + 6px); right: 0;
-    background: rgba(10,25,15,0.97);
-    border: 1px solid rgba(76,175,80,0.20);
-    border-radius: 14px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.50);
-    overflow: hidden; min-width: 180px;
+    position: absolute; top: calc(100% + 8px); right: 0;
+    background: rgba(28,28,30,0.92);
+    border: 0.5px solid rgba(255,255,255,0.10);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    overflow: hidden; min-width: 184px;
     max-height: min(300px, 60vh);
     overflow-y: auto; animation: lang-fade 0.2s ease;
   }
   @keyframes lang-fade { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
   .lang-option {
     width: 100%; display: flex; align-items: center; gap: 10px;
-    padding: 11px 14px; background: transparent;
-    border: none; border-bottom: 1px solid rgba(76,175,80,0.08);
+    padding: 12px 14px; background: transparent;
+    border: none; border-bottom: 0.5px solid rgba(255,255,255,0.06);
     cursor: pointer; text-align: left; font-size: 14px;
     color: var(--text-1);
     transition: background 0.15s; font-family: var(--font);
   }
   .lang-option:last-child { border-bottom: none; }
-  .lang-option:hover { background: rgba(76,175,80,0.10); }
-  .lang-option.active { background: rgba(76,175,80,0.14); color: var(--accent-light); font-weight: 600; }
+  .lang-option:hover { background: rgba(255,255,255,0.06); }
+  .lang-option.active { background: rgba(76,175,80,0.12); color: var(--accent-light); font-weight: 600; }
 
   /* ── Splash ─────────────────────────────────────────────────────────── */
   .splash {
@@ -509,32 +467,21 @@ const LOGIN_STYLES = `
     font-family: var(--font); -webkit-font-smoothing: antialiased;
     transition: background 1.2s ease; overflow: hidden;
   }
-  .splash-welcome  { background: linear-gradient(160deg, #0a1f0d 0%, #0d1a10 60%, #111c14 100%); }
-  .splash-verified { background: linear-gradient(160deg, #091a0c 0%, #0c1a12 100%); }
+  .splash-welcome  { background: radial-gradient(140% 120% at 50% 0%, #0c1e10 0%, #050a07 70%, #000000 100%); }
+  .splash-verified { background: radial-gradient(140% 120% at 50% 0%, #0a1d10 0%, #040906 70%, #000000 100%); }
   .splash-out { animation: sp-fade-out 0.8s ease forwards; pointer-events: none; }
   @keyframes sp-fade-out { from { opacity: 1; } to { opacity: 0; } }
   .splash-enter { opacity: 1; }
 
-  .sp-orb { position: fixed; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.6s ease; }
+  /* Latar splash tenang — 2 orb halus saja (minimal) */
+  .sp-orb { position: fixed; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.6s ease; filter: blur(100px); }
   .splash-welcome .sp-orb, .splash-verified .sp-orb, .splash-out .sp-orb { opacity: 1; }
-  .sp-orb-1 { width: 420px; height: 420px; background: radial-gradient(circle, rgba(30,160,70,0.28) 0%, transparent 70%); filter: blur(80px); top: -100px; left: -130px; animation: orb-drift-1 6s ease-in-out infinite alternate; }
-  .sp-orb-2 { width: 380px; height: 380px; background: radial-gradient(circle, rgba(48,209,88,0.22) 0%, transparent 70%); filter: blur(75px); bottom: -90px; right: -110px; animation: orb-drift-2 7s ease-in-out infinite alternate; }
-  .sp-orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(0,200,100,0.15) 0%, transparent 70%); filter: blur(85px); top: 35%; left: -90px; animation: orb-drift-3 5s ease-in-out infinite alternate; }
-  .sp-orb-4 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(76,175,80,0.20) 0%, transparent 70%); filter: blur(80px); bottom: 25%; right: -80px; animation: orb-drift-4 5.5s ease-in-out infinite alternate; }
-  @keyframes orb-drift-1 { from{transform:translate(0,0)} to{transform:translate(40px,30px)} }
-  @keyframes orb-drift-2 { from{transform:translate(0,0)} to{transform:translate(-35px,-25px)} }
-  @keyframes orb-drift-3 { from{transform:translate(0,0)} to{transform:translate(30px,20px)} }
-  @keyframes orb-drift-4 { from{transform:translate(0,0)} to{transform:translate(-28px,-20px)} }
+  .sp-orb-1 { width: 460px; height: 460px; background: radial-gradient(circle, rgba(76,175,80,0.16) 0%, transparent 68%); top: -140px; left: 50%; transform: translateX(-50%); animation: orb-drift-1 14s ease-in-out infinite alternate; }
+  .sp-orb-2 { width: 360px; height: 360px; background: radial-gradient(circle, rgba(48,209,88,0.10) 0%, transparent 68%); bottom: -120px; right: -100px; animation: orb-drift-2 16s ease-in-out infinite alternate; }
+  @keyframes orb-drift-1 { from{transform:translateX(-50%) translateY(0)} to{transform:translateX(-50%) translateY(24px)} }
+  @keyframes orb-drift-2 { from{transform:translate(0,0)} to{transform:translate(-22px,-18px)} }
   .splash-out .sp-orb { animation: orb-fade-out 0.8s ease forwards !important; }
   @keyframes orb-fade-out { from{opacity:1} to{opacity:0} }
-
-  .sp-sparkle { position: absolute; pointer-events: none; border-radius: 50%; animation: sparkle-float linear infinite; }
-  @keyframes sparkle-float {
-    0%   { transform: translateY(0) rotate(0deg);   opacity: 0; }
-    15%  { opacity: 1; }
-    85%  { opacity: 1; }
-    100% { transform: translateY(-60px) rotate(180deg); opacity: 0; }
-  }
 
   .sp-avatar-wrap { position: relative; width: 110px; height: 110px; display: flex; align-items: center; justify-content: center; margin-bottom: 28px; }
   .sp-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(76,175,80,0.25); animation: ring-pulse 2s ease-in-out infinite; }
@@ -601,104 +548,10 @@ const LOGIN_STYLES = `
   .toast-close { background: none; border: none; color: rgba(255,255,255,0.8); cursor: pointer; padding: 2px; display: flex; align-items: center; margin-left: 4px; transition: color 0.15s; }
   .toast-close:hover { color: #fff; }
 
-  /* Tutorial button */
-  .tutorial-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 18px; border-radius: 50px;
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.15);
-    cursor: pointer; font-family: var(--font);
-    font-size: 13.5px; color: rgba(255,255,255,0.70);
-    transition: all 0.15s; -webkit-tap-highlight-color: transparent;
-  }
-  .tutorial-btn:hover { border-color: rgba(76,175,80,0.40); color: var(--accent-light); }
-  .tutorial-btn:active { opacity: 0.75; }
-
-  /* Dot grid overlay */
-  .lr-page::before { content:''; position:fixed; inset:0; pointer-events:none; z-index:0; background-image:radial-gradient(rgba(76,175,80,0.05) 1px,transparent 1px); background-size:28px 28px; }
-
-  /* Third orb */
-  .o3 { width:clamp(160px,25vw,300px); height:clamp(160px,25vw,300px); top:40%; right:-7%; background:radial-gradient(circle,rgba(76,175,80,0.08) 0%,transparent 65%); filter:blur(70px); animation:drift 28s ease-in-out infinite alternate; }
-
-  /* Desktop split layout */
-  .login-split { position:relative; z-index:2; width:100%; max-width:420px; opacity:0; transform:translateY(16px) scale(.988); animation:rise .65s cubic-bezier(.22,1,.36,1) .06s forwards; }
-  @media (min-width:600px) { .login-split { max-width:460px; } }
-  @media (min-width:1024px) { .login-split { max-width:900px; display:flex; border-radius:28px; overflow:hidden; box-shadow:0 40px 100px rgba(0,0,0,.65),0 0 0 1px rgba(76,175,80,.10); } }
-
-  /* Brand panel (desktop left column) */
-  .brand-panel { display:none; }
-  @media (min-width:1024px) {
-    .brand-panel { display:flex; flex-direction:column; justify-content:space-between; width:360px; flex-shrink:0; padding:40px 36px; background:linear-gradient(155deg,#071a0d 0%,#0b2614 45%,#060f08 100%); border-right:1px solid rgba(76,175,80,.12); position:relative; overflow:hidden; }
-    .brand-panel::before { content:''; position:absolute; inset:0; pointer-events:none; background-image:radial-gradient(rgba(76,175,80,.04) 1px,transparent 1px); background-size:22px 22px; }
-    .brand-panel::after { content:''; position:absolute; pointer-events:none; top:-40%; left:-30%; width:80%; height:80%; background:radial-gradient(circle,rgba(76,175,80,.18) 0%,transparent 65%); filter:blur(60px); }
-    .logo-desktop { display:none !important; }
-  }
-  .bp-top { position:relative; z-index:1; }
-  .bp-logo { display:flex; align-items:center; gap:12px; margin-bottom:32px; }
-  .bp-logo-name { font-size:16px; font-weight:700; color:#fff; letter-spacing:-.4px; }
-  .bp-headline { font-size:30px; font-weight:800; color:#fff; letter-spacing:-1px; line-height:1.2; margin-bottom:12px; }
-  .bp-headline em { font-style:normal; color:var(--accent-light); }
-  .bp-desc { font-size:13.5px; color:rgba(255,255,255,.45); line-height:1.65; margin-bottom:28px; }
-  .bp-features { display:flex; flex-direction:column; gap:12px; }
-  .bp-feature { display:flex; align-items:center; gap:12px; }
-  .bp-icon { width:34px; height:34px; border-radius:10px; flex-shrink:0; background:rgba(76,175,80,.12); border:1px solid rgba(76,175,80,.20); display:flex; align-items:center; justify-content:center; color:var(--accent-light); }
-  .bp-feat-text { font-size:13px; color:rgba(255,255,255,.60); font-weight:500; line-height:1.4; }
-  .bp-feat-text strong { color:#fff; font-weight:700; }
-  .bp-bottom { position:relative; z-index:1; }
-  .bp-stats { display:flex; gap:10px; margin-top:28px; }
-  .bp-stat { flex:1; background:rgba(76,175,80,.07); border:1px solid rgba(76,175,80,.13); border-radius:14px; padding:12px 14px; }
-  .bp-stat-val { font-size:22px; font-weight:800; color:var(--accent-light); letter-spacing:-.5px; line-height:1; margin-bottom:4px; }
-  .bp-stat-lbl { font-size:10px; color:rgba(255,255,255,.35); font-weight:500; text-transform:uppercase; letter-spacing:.06em; }
-
-  /* Form panel (right column on desktop, full width on mobile) */
-  .form-panel { flex:1; display:flex; flex-direction:column; }
-  @media (min-width:1024px) { .form-panel { background:rgba(8,10,18,.97); padding:44px 40px; justify-content:center; } }
-
-  /* Mobile brand (hidden on desktop) */
-  .mob-brand { text-align:center; margin-bottom:20px; }
-  @media (min-width:1024px) { .mob-brand { display:none; } }
-  .mob-logo { display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:4px; }
-  .mob-title { font-size:clamp(22px,6vw,28px); font-weight:800; letter-spacing:-.8px; color:#fff; margin-bottom:5px; }
-  .mob-title span { color:var(--accent-light); }
-  .mob-sub { font-size:clamp(12px,3.5vw,14px); color:var(--text-2); }
-
-  /* Desktop form header */
-  .form-hdr { display:none; margin-bottom:26px; }
-  @media (min-width:1024px) { .form-hdr { display:block; } }
-  .form-hdr-title { font-size:26px; font-weight:800; color:#fff; letter-spacing:-.7px; margin-bottom:5px; }
-  .form-hdr-sub { font-size:13.5px; color:var(--text-2); }
-
-  /* Button shimmer sweep */
-  .btn::after { content:''; position:absolute; top:0; left:-100%; width:60%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent); pointer-events:none; transition:left .55s ease; }
-  .btn:hover:not(:disabled)::after { left:160%; }
-
-  /* Page footer */
-  .page-footer { text-align:center; font-size:11.5px; color:var(--text-3); padding:14px 0 4px; position:relative; z-index:2; }
+  /* ── Page footer ────────────────────────────────────────────────────── */
+  .page-footer { text-align:center; font-size:11.5px; color:var(--text-3); margin-top:20px; position:relative; z-index:2; }
   .page-footer a { color:var(--text-3); font-weight:500; text-decoration:none; transition:color .14s; }
   .page-footer a:hover { color:var(--text-2); }
-
-  /* ── Responsive fixes ───────────────────────────────────────────────── */
-
-  /* form-panel: explicit width for block context on mobile */
-  .form-panel { width:100%; }
-
-  /* Tablet (600-1023px): hide logo image in mob-brand (logo-desktop already shows at top-left) */
-  @media (min-width:600px) and (max-width:1023px) {
-    .mob-logo { display:none; }
-    .mob-brand { margin-top:4px; margin-bottom:18px; }
-  }
-
-  /* Desktop: min-height so split card looks proportional, overflow scroll for short viewports */
-  @media (min-width:1024px) {
-    .login-split { min-height:min(600px,88vh); }
-    .lr-page { overflow-y:auto; }
-  }
-
-  /* Mobile: prevent horizontal overflow */
-  @media (max-width:599px) {
-    .login-split { min-width:0; overflow-x:hidden; }
-    .mob-brand { margin-top:6px; }
-  }
 `;
 
 // ── Loading step labels (shown below the sign-in button while loading) ─────
@@ -711,6 +564,7 @@ function LoginPageContent() {
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading,  setLoading]  = useState(false);
+  const [gLoading, setGLoading] = useState(false);
   const [loginStep, setLoginStep] = useState<LoginStep>('idle');
   const [error,    setError]    = useState('');
   const [isWhitelistError, setIsWhitelistError] = useState(false);
@@ -741,7 +595,7 @@ function LoginPageContent() {
         try {
           const { StatusBar, Style } = await import('@capacitor/status-bar');
           await StatusBar.setStyle({ style: Style.Dark });
-          await StatusBar.setBackgroundColor({ color: '#07070f' });
+          await StatusBar.setBackgroundColor({ color: '#000000' });
         } catch { /* plugin tidak tersedia */ }
       }
 
@@ -979,6 +833,39 @@ function LoginPageContent() {
     }
   };
 
+  // ── Login via Google ───────────────────────────────────────────────────────
+  // Native: buka authorization URL di in-app WebView (mode 'oauth'); plugin
+  // menangkap authtoken dari DOM callback → backend tukar jadi sesi+JWT → splash.
+  // Web: penangkapan token diblokir kebijakan origin Stockity → arahkan ke app.
+  const handleGoogleLogin = async () => {
+    if (loading || gLoading) return;
+    setError('');
+    setIsWhitelistError(false);
+
+    if (!isNativeApp()) {
+      setError('Login Google hanya tersedia di aplikasi STC AutoTrade.');
+      setErrorKey(k => k + 1);
+      return;
+    }
+
+    setGLoading(true);
+    try {
+      const { stcWebView } = await import('@/plugins/StcWebViewPlugin');
+      const r = await stcWebView.open({ url: GOOGLE_OAUTH_URL, mode: 'oauth' });
+
+      // User menutup WebView tanpa menyelesaikan consent.
+      if (!r.success || !r.authToken) { setGLoading(false); return; }
+
+      const res = await api.sessionFromToken(r.authToken, r.deviceId);
+      setGLoading(false);
+      await runSplash(res);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login Google gagal');
+      setErrorKey(k => k + 1);
+      setGLoading(false);
+    }
+  };
+
   const stepHintLabel = (): string => {
     switch (loginStep) {
       case 'auth':      return t('login.verifyingAccount');
@@ -996,6 +883,14 @@ function LoginPageContent() {
   const getLanguageName = (code: Language): string => {
     return AVAILABLE_LANGUAGES.find(l => l.code === code)?.nativeName ?? code.toUpperCase();
   };
+
+  // Label tombol Google (i18n ringan — fallback ke EN untuk bahasa lain).
+  const orLabel       = language === 'id' ? 'atau' : language === 'es' ? 'o' : language === 'ru' ? 'или' : 'or';
+  const googleLabel   = language === 'id' ? 'Lanjut dengan Google'
+                      : language === 'es' ? 'Continuar con Google'
+                      : language === 'ru' ? 'Войти через Google'
+                      : 'Continue with Google';
+  const connectingLbl = language === 'id' ? 'Menghubungkan…' : language === 'es' ? 'Conectando…' : language === 'ru' ? 'Подключение…' : 'Connecting…';
 
   const FlagIcon = ({ lang, size = 16 }: { lang: typeof AVAILABLE_LANGUAGES[0]; size?: number }) => {
     if (useImg) {
@@ -1032,23 +927,6 @@ function LoginPageContent() {
         ].join(' ')}>
           <div className="sp-orb sp-orb-1" />
           <div className="sp-orb sp-orb-2" />
-          <div className="sp-orb sp-orb-3" />
-          <div className="sp-orb sp-orb-4" />
-
-          {splash === 'welcome' && ([
-            { size: 8,  color: '#4caf50', left: '12%', top: '22%', delay: '0s',    dur: '3.2s' },
-            { size: 6,  color: '#66bb6a', left: '80%', top: '18%', delay: '0.6s',  dur: '2.8s' },
-            { size: 10, color: '#30d158', left: '88%', top: '55%', delay: '1.1s',  dur: '3.5s' },
-            { size: 5,  color: '#81c784', left: '8%',  top: '60%', delay: '0.3s',  dur: '2.6s' },
-            { size: 7,  color: '#4caf50', left: '70%', top: '80%', delay: '0.8s',  dur: '3.0s' },
-            { size: 9,  color: '#66bb6a', left: '22%', top: '78%', delay: '1.4s',  dur: '2.9s' },
-          ].map((s, i) => (
-            <div key={i} className="sp-sparkle" style={{
-              width: s.size, height: s.size, background: s.color,
-              left: s.left, top: s.top,
-              animationDelay: s.delay, animationDuration: s.dur, opacity: 0.8,
-            }} />
-          )))}
 
           <div className="sp-avatar-wrap">
             <div className={`sp-ring ${splash !== 'welcome' ? 'sp-ring-verified' : ''}`} />
@@ -1120,12 +998,6 @@ function LoginPageContent() {
           className="lr-page"
           style={splash !== 'hidden' ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
         >
-          {/* Logo Desktop — top-left corner on tablet/desktop */}
-          <div className="logo-desktop">
-            <Image src="/logo.png" alt="STC AutoTrade" width={34} height={34} style={{ height: '34px', width: 'auto', borderRadius: 8 }} />
-            <span className="logo-desktop-name">STC AutoTrade</span>
-          </div>
-
           {/* Language Selector */}
           <div className="lang-selector" ref={langRef}>
             <button className="lang-btn" onClick={() => setShowLangSelector(!showLangSelector)}>
@@ -1156,136 +1028,89 @@ function LoginPageContent() {
             )}
           </div>
 
-          <div className="orb o1" />
-          <div className="orb o2" />
-          <div className="orb o3" />
+          {/* Latar tenang — 2 gradient halus (minimal) */}
+          <div className="ambient amb-1" />
+          <div className="ambient amb-2" />
 
-          <div className="login-split">
-            {/* ── Brand Panel (desktop only) ── */}
-            <div className="brand-panel">
-              <div className="bp-top">
-                <div className="bp-logo">
-                  <Image src="/logo.png" alt="STC AutoTrade" width={44} height={44} style={{ borderRadius: 14, boxShadow: '0 4px 20px rgba(76,175,80,0.30)' }} />
-                  <span className="bp-logo-name">STC AutoTrade</span>
-                </div>
-                <div className="bp-headline">Trading Bot<br/><em>Cerdas &amp; Otomatis</em></div>
-                <p className="bp-desc">Platform trading otomatis terhubung langsung ke Stockity. Multi-mode, real-time, aktif 24/7.</p>
-                <div className="bp-features">
-                  <div className="bp-feature">
-                    <div className="bp-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    </div>
-                    <span className="bp-feat-text"><strong>5 Mode Trading</strong> — Schedule, Fastrade, AI Signal, Indicator, Momentum</span>
-                  </div>
-                  <div className="bp-feature">
-                    <div className="bp-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    </div>
-                    <span className="bp-feat-text"><strong>Martingale System</strong> — Stop-loss &amp; stop-profit otomatis</span>
-                  </div>
-                  <div className="bp-feature">
-                    <div className="bp-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    </div>
-                    <span className="bp-feat-text"><strong>Real-time Monitoring</strong> — Pantau profit &amp; loss langsung</span>
-                  </div>
-                </div>
+          <div className="card">
+            {/* Brand */}
+            <div className="brand">
+              <div className="brand-logo">
+                <Image src="/logo.png" alt="STC AutoTrade" width={84} height={84} priority style={{ width: 'clamp(72px, 20vw, 84px)', height: 'auto', borderRadius: 22 }} />
               </div>
-              <div className="bp-bottom">
-                <div className="bp-stats">
-                  <div className="bp-stat"><div className="bp-stat-val">5+</div><div className="bp-stat-lbl">Mode Trading</div></div>
-                  <div className="bp-stat"><div className="bp-stat-val">24/7</div><div className="bp-stat-lbl">Auto Trade</div></div>
-                  <div className="bp-stat"><div className="bp-stat-val">Live</div><div className="bp-stat-lbl">Real-time</div></div>
-                </div>
-              </div>
+              <h1 className="brand-title">STC <span>AutoTrade</span></h1>
+              <p className="brand-sub">{t('login.subtitle')}</p>
             </div>
 
-            {/* ── Form Panel ── */}
-            <div className="form-panel">
-              {/* Mobile brand (hidden on desktop) */}
-              <div className="mob-brand">
-                <div className="mob-logo">
-                  <Image src="/logo.png" alt="STC AutoTrade" width={90} height={90} style={{ height: 'clamp(72px, 20vw, 90px)', width: 'auto', borderRadius: 'clamp(18px, 5vw, 24px)', boxShadow: '0 8px 32px rgba(76,175,80,0.25)' }} />
-                </div>
-                <div className="mob-title">STC <span>AutoTrade</span></div>
-                <p className="mob-sub">{t('login.subtitle')}</p>
-              </div>
+            <form onSubmit={handleLogin} noValidate>
 
-              <div className="panel">
-              <div tabIndex={0} aria-hidden="true" style={{position:"absolute",opacity:0,width:0,height:0,overflow:"hidden",pointerEvents:"none"}}/>
-              <div className="form-hdr">
-                <div className="form-hdr-title">{t('login.signIn')}</div>
-                <p className="form-hdr-sub">{t('login.subtitle')}</p>
-              </div>
-              <form onSubmit={handleLogin} noValidate>
-
-                {/* EMAIL field */}
-                <div className="fg-wrap">
-                  <label className="fg-label" htmlFor="email">{t('login.email')}</label>
-                  <div className={`fg-row ${focused === 'email' ? 'active' : ''}`}>
-                    <div className="fg-icon">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                      </svg>
-                    </div>
-                    <input
-                      ref={emailRef}
-                      id="email" type="email" className="fi"
-                      placeholder={t('login.emailPlaceholder')}
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      onFocus={() => setFocused('email')}
-                      onBlur={() => setFocused(null)}
-                      autoComplete="email" autoCapitalize="none"
-                      spellCheck={false} required
-                    />
+              {/* Grouped fields — Apple list style */}
+              <div className="field-group">
+                {/* EMAIL */}
+                <div className={`field-row ${focused === 'email' ? 'active' : ''}`}>
+                  <div className="field-icon">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
                   </div>
+                  <input
+                    ref={emailRef}
+                    id="email" type="email" className="fi"
+                    placeholder={t('login.emailPlaceholder')}
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    onFocus={() => setFocused('email')}
+                    onBlur={() => setFocused(null)}
+                    autoComplete="email" autoCapitalize="none"
+                    spellCheck={false} required
+                  />
                 </div>
 
-                {/* PASSWORD field */}
-                <div className="fg-wrap">
-                  <label className="fg-label" htmlFor="password">{t('login.password')}</label>
-                  <div className={`fg-row ${focused === 'password' ? 'active' : ''}`}>
-                    <div className="fg-icon">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
-                    </div>
-                    <input
-                      ref={passRef}
-                      id="password"
-                      type={showPass ? 'text' : 'password'}
-                      className="fi"
-                      placeholder={t('login.passwordPlaceholder')}
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      onFocus={() => setFocused('password')}
-                      onBlur={() => setFocused(null)}
-                      autoComplete="current-password"
-                      required style={{ paddingRight: 4 }}
-                    />
-                    <button type="button" className="eye-btn"
-                      onClick={() => setShowPass(p => !p)}
-                      tabIndex={-1}
-                      aria-label={showPass ? t('common.close') : t('common.show')}
-                    >
-                      {showPass ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                          <line x1="1" y1="1" x2="23" y2="23"/>
-                        </svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                        </svg>
-                      )}
-                    </button>
+                <div className="field-sep" />
+
+                {/* PASSWORD */}
+                <div className={`field-row ${focused === 'password' ? 'active' : ''}`}>
+                  <div className="field-icon">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
                   </div>
+                  <input
+                    ref={passRef}
+                    id="password"
+                    type={showPass ? 'text' : 'password'}
+                    className="fi"
+                    placeholder={t('login.passwordPlaceholder')}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    onFocus={() => setFocused('password')}
+                    onBlur={() => setFocused(null)}
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button type="button" className="eye-btn"
+                    onClick={() => setShowPass(p => !p)}
+                    tabIndex={-1}
+                    aria-label={showPass ? t('common.close') : t('common.show')}
+                  >
+                    {showPass ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
                 </div>
+              </div>{/* /field-group */}
 
-                {/* Remember me */}
+              {/* Options row: remember (kiri) · panduan (kanan) */}
+              <div className="opts-row">
                 <label className="remember-row" onClick={() => setRemember(r => !r)}>
                   <div className={`cb-box ${remember ? 'checked' : ''}`}>
                     <svg className="cb-tick" width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -1294,6 +1119,14 @@ function LoginPageContent() {
                   </div>
                   <span className="cb-label">{t('login.rememberMe')}</span>
                 </label>
+                <button
+                  type="button"
+                  className="opts-link"
+                  onClick={() => { setTutorialPage(0); setShowTutorial(true); }}
+                >
+                  {t('login.tutorial.btnAction')}
+                </button>
+              </div>
 
                 {/* Error */}
                 {error && (
@@ -1329,43 +1162,40 @@ function LoginPageContent() {
                 >
                   {loading && <div className="spin" />}
                   {loading ? t('login.signingIn') : t('login.signIn')}
-                  {!loading && (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                </button>
+
+                {/* Divider */}
+                <div className="or-row"><span>{orLabel}</span></div>
+
+                {/* Login via Google */}
+                <button type="button" className="gbtn" onClick={handleGoogleLogin} disabled={loading || gLoading}>
+                  {gLoading ? (
+                    <div className="spin" style={{ borderColor: 'rgba(0,0,0,0.25)', borderTopColor: '#1f1f1f' }} />
+                  ) : (
+                    <svg width="19" height="19" viewBox="0 0 48 48" aria-hidden="true">
+                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                     </svg>
                   )}
+                  <span>{gLoading ? connectingLbl : googleLabel}</span>
                 </button>
+
+                {/* Secure caption */}
+                <div className="secure-line">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  <span className="secure-txt">{t('common.encrypted')} &amp; {t('common.secure')}</span>
+                </div>
 
               </form>
 
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
-                <div className="badge">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-light)' }}>
-                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <span className="badge-txt">{t('common.encrypted')} &amp; {t('common.secure')}</span>
-                </div>
+              <div className="register-link">
+                {t('login.noAccount')} <Link href="/register">{t('login.register')}</Link>
               </div>
-            </div>
-
-            <div className="register-link">
-              {t('login.noAccount')} <Link href="/register">{t('login.register')}</Link>
-            </div>
-
-            <div style={{ textAlign: 'center', marginTop: 12 }}>
-              <button
-                className="tutorial-btn"
-                onClick={() => { setTutorialPage(0); setShowTutorial(true); }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-                </svg>
-                <span>{t('login.tutorial.btnLabel')}</span>
-                <span style={{ color: 'var(--accent-light)', fontWeight: 700 }}>{t('login.tutorial.btnAction')}</span>
-              </button>
-            </div>
-            </div>{/* /form-panel */}
-          </div>{/* /login-split */}
+          </div>{/* /card */}
 
           <div className="page-footer">
             © 2026 STC AutoTrade ·{' '}

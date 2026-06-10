@@ -653,6 +653,21 @@ export const api = {
     req<{ accessToken: string; userId: string; email: string; deviceId: string }>(
       'POST', '/auth/login', { email, password }
     ),
+  /**
+   * Registrasi akun Stockity langsung (inline, tanpa webview).
+   * Backend memproksi ke Stockity sign_up lalu mengembalikan sesi seperti login.
+   */
+  register: (email: string, password: string, currency = 'IDR') =>
+    req<{ accessToken: string; userId: string; email: string; deviceId: string }>(
+      'POST', '/auth/register', { email, password, currency }
+    ),
+  /**
+   * Login Google: tukar authtoken Stockity (dari in-app WebView OAuth) → sesi+JWT.
+   */
+  sessionFromToken: (authToken: string, deviceId?: string) =>
+    req<{ accessToken: string; userId: string; email: string; deviceId: string }>(
+      'POST', '/auth/session-from-token', { authToken, deviceId }
+    ),
   logout: () => req<void>('POST', '/auth/logout'),
   me: () => req<{ userId: string; email: string; deviceId: string; currency: string; currencyIso: string }>('GET', '/auth/me'),
 

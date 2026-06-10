@@ -81,6 +81,8 @@ export interface RegistrationConfig {
   registrationPrimaryUrl?: string;
   /** UI field: WhatsApp help URL */
   whatsappHelpUrl?: string;
+  /** UI field: Kode referral/afiliasi Stockity untuk register inline (cookie `a`) */
+  stockityReferral?: string;
   /** UI field: last updated timestamp (numeric ms) */
   updatedAt?: number;
 }
@@ -432,6 +434,7 @@ export async function getRegistrationConfig(): Promise<RegistrationConfig> {
     registrationUrl:         '',
     registrationPrimaryUrl:  '',
     whatsappHelpUrl:         '',
+    stockityReferral:        '',
     updatedAt:               0,
   };
 
@@ -447,6 +450,7 @@ export async function getRegistrationConfig(): Promise<RegistrationConfig> {
       registrationUrl:        v.registrationUrl        ?? '',
       registrationPrimaryUrl: v.registrationPrimaryUrl ?? '',
       whatsappHelpUrl:        v.whatsappHelpUrl  ?? '',
+      stockityReferral:       v.stockityReferral ?? '',
       updatedAt:       data.updated_at
         ? new Date(data.updated_at).getTime()
         : v.updatedAt ?? 0,

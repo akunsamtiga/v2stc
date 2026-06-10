@@ -15,13 +15,20 @@ import { registerPlugin, PluginListenerHandle } from '@capacitor/core';
 export interface StcWebViewOpenOptions {
   /** URL yang akan dibuka di in-app WebView */
   url: string;
+  /**
+   * Mode alur. 'oauth' = login Google (token ditangkap dari DOM callback,
+   * tanpa auto-click & tanpa polling cookie). Default = register.
+   */
+  mode?: 'oauth' | 'register';
 }
 
 export interface StcWebViewOpenResult {
   /** URL terakhir saat success terdeteksi */
   url:        string;
-  /** Authorization token dari cookie (kosong jika tidak ditemukan) */
+  /** Authorization token (cookie untuk register, atau dari DOM untuk OAuth) */
   authToken:  string;
+  /** User ID Stockity (hanya terisi pada mode OAuth) */
+  userId?:    string;
   /** Device ID dari cookie (kosong jika tidak ditemukan) */
   deviceId:   string;
   /** Raw cookie string — untuk debug */

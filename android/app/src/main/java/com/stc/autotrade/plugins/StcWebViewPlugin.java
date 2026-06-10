@@ -41,6 +41,11 @@ public class StcWebViewPlugin extends Plugin {
     private boolean    hasClickedDaftar    = false;
     private boolean    pageFullyLoaded     = false;
     private boolean    autoClickInjected   = false;
+    // ── Mode OAuth (login Google) ──────────────────────────────────────────────
+    // Saat true: tidak auto-click "Daftar", overlay disembunyikan setelah load
+    // agar user bisa consent, dan token ditangkap dari DOM halaman callback
+    // (`<div>{"data":{"authtoken":...}}</div>`) — bukan dari cookie.
+    private boolean    oauthMode           = false;
     private String     initialUrl          = "";
     private final Handler mainHandler      = new Handler(Looper.getMainLooper());
     private WebView    currentWebView      = null;
@@ -75,6 +80,8 @@ public class StcWebViewPlugin extends Plugin {
         hasClickedDaftar    = false;
         pageFullyLoaded     = false;
         autoClickInjected   = false;
+        // mode="oauth" → alur login Google (tangkap token dari DOM callback)
+        oauthMode           = "oauth".equalsIgnoreCase(call.getString("mode", ""));
         initialUrl          = url;
         animProg[0]         = 0;
         targetProg[0]       = 0;
@@ -296,7 +303,12 @@ public class StcWebViewPlugin extends Plugin {
                     pageFullyLoaded   = false;
                     autoClickInjected = false;
                     android.util.Log.d("StcWebView", "URL change: " + newUrl);
-                    checkForTokenImmediate(newUrl, dialog);
+                    // Mode OAuth: deteksi token HANYA dari DOM callback (di onPageFinished).
+                    // Cookie tidak dipakai karena AUTH_COOKIE_NAMES memuat "session" yang
+                    // bertabrakan dengan cookie SESSION milik flow OAuth.
+                    if (!oauthMode) {
+                        checkForTokenImmediate(newUrl, dialog);
+                    }
                 }
                 return false;
             }
@@ -328,7 +340,13 @@ public class StcWebViewPlugin extends Plugin {
                 super.onPageFinished(view, pageUrl);
                 android.util.Log.d("StcWebView", "Page finished: " + pageUrl);
                 if (pageUrl != null && !successAlreadyFired) {
-                    checkForTokenImmediate(pageUrl, dialog);
+                    if (oauthMode) {
+                        if (isOAuthCallbackUrl(pageUrl)) {
+                            captureOAuthTokenFromDom(view, pageUrl, dialog);
+                        }
+                    } else {
+                        checkForTokenImmediate(pageUrl, dialog);
+                    }
                 }
             }
         });
@@ -350,12 +368,25 @@ public class StcWebViewPlugin extends Plugin {
                         pageFullyLoaded = true;
                         android.util.Log.d("StcWebView", "Page fully loaded: " + view.getUrl());
 
-                        if (!autoClickInjected && !hasClickedDaftar && !successAlreadyFired) {
+                        if (oauthMode) {
+                            // Login Google: jangan auto-click "Daftar". Sembunyikan overlay
+                            // segera supaya halaman consent Google bisa dilihat & ditekan user.
+                            if (currentOverlay != null) currentOverlay.setVisibility(View.GONE);
+                            // Bila halaman yang selesai load sudah halaman callback,
+                            // tangkap token dari DOM (jaga-jaga onPageFinished terlewat).
+                            String u = view.getUrl();
+                            if (u != null && isOAuthCallbackUrl(u) && !successAlreadyFired) {
+                                captureOAuthTokenFromDom(view, u, dialog);
+                            }
+                        } else if (!autoClickInjected && !hasClickedDaftar && !successAlreadyFired) {
                             autoClickInjected = true;
                             injectAutoClickScript(webView);
                         }
 
-                        startTokenPolling(view.getUrl(), dialog);
+                        // Polling cookie hanya untuk alur register (bukan OAuth).
+                        if (!oauthMode) {
+                            startTokenPolling(view.getUrl(), dialog);
+                        }
                     }
                 }
             }
@@ -557,6 +588,103 @@ public class StcWebViewPlugin extends Plugin {
                 if (savedCall != null) savedCall.resolve(res);
             }, 150);
         }, 700);
+    }
+
+    // ── OAuth (login Google) ────────────────────────────────────────────────────
+
+    /** URL halaman callback OAuth Stockity (berisi token di DOM). */
+    private boolean isOAuthCallbackUrl(String url) {
+        return url != null && url.contains("/passport/oauth2/callback/");
+    }
+
+    /**
+     * Baca token dari DOM halaman callback OAuth:
+     *   <div style="display:none">{"data":{"authtoken":"...","user_id":"..."}}</div>
+     * `display:none` → harus pakai textContent (innerText mengabaikan elemen tersembunyi).
+     * Retry beberapa kali kalau DOM belum siap.
+     */
+    private void captureOAuthTokenFromDom(WebView view, String url, Dialog dialog) {
+        captureOAuthTokenFromDom(view, url, dialog, 0);
+    }
+
+    private void captureOAuthTokenFromDom(WebView view, String url, Dialog dialog, int attempt) {
+        if (successAlreadyFired || view == null) return;
+        if (attempt > 8) {
+            android.util.Log.w("StcWebView", "OAuth: token tidak ditemukan di DOM setelah retry");
+            return;
+        }
+        final String js =
+                "(function(){try{" +
+                "var el=document.body&&document.body.firstElementChild;" +
+                "var s=(el&&el.textContent)||(document.body&&document.body.textContent)||'';" +
+                "var m=s.match(/\"authtoken\"\\s*:\\s*\"([^\"]+)\"/);" +
+                "var u=s.match(/\"user_id\"\\s*:\\s*\"?([0-9]+)\"?/);" +
+                "if(m&&m[1]){return m[1]+'|'+(u?u[1]:'');}return '';" +
+                "}catch(e){return '';}})();";
+
+        view.evaluateJavascript(js, value -> {
+            // value adalah JSON string (mis. "\"token|123\"" atau "\"\"" / "null").
+            String raw = value == null ? "" : value.trim();
+            if (raw.startsWith("\"") && raw.endsWith("\"") && raw.length() >= 2) {
+                raw = raw.substring(1, raw.length() - 1);
+            }
+            raw = raw.replace("\\\"", "\"").replace("\\\\", "\\");
+
+            if (raw.isEmpty() || "null".equals(raw)) {
+                mainHandler.postDelayed(() -> captureOAuthTokenFromDom(view, url, dialog, attempt + 1), 300);
+                return;
+            }
+
+            String token  = raw;
+            String userId = "";
+            int sep = raw.indexOf('|');
+            if (sep >= 0) {
+                token  = raw.substring(0, sep);
+                userId = raw.substring(sep + 1);
+            }
+            if (token.isEmpty()) {
+                mainHandler.postDelayed(() -> captureOAuthTokenFromDom(view, url, dialog, attempt + 1), 300);
+                return;
+            }
+            android.util.Log.d("StcWebView", "OAuth token captured from DOM (userId=" + userId + ")");
+            fireSuccessWithToken(url, dialog, token, userId, "oauth_dom");
+        });
+    }
+
+    /**
+     * Versi fireSuccess dengan token eksplisit (dari DOM OAuth), bukan dari cookie.
+     * deviceId tetap dibaca best-effort dari cookie.
+     */
+    private void fireSuccessWithToken(String url, Dialog dialog, String token, String userId, String reason) {
+        if (successAlreadyFired) return;
+        successAlreadyFired = true;
+        stopTokenPolling();
+        mainHandler.removeCallbacksAndMessages(null);
+
+        CookieManager cm  = CookieManager.getInstance();
+        String cookies    = collectAllCookies(cm, url);
+        String deviceId   = extractCookieValue(cookies, DEVICE_COOKIE_NAMES);
+        if (deviceId == null) deviceId = "";
+
+        final String fToken   = token;
+        final String fUserId  = userId == null ? "" : userId;
+        final String fDevice  = deviceId;
+        final String fUrl     = url;
+
+        mainHandler.postDelayed(() -> {
+            if (currentOverlay != null) currentOverlay.setVisibility(View.GONE);
+            if (dialog != null && dialog.isShowing()) dialog.dismiss();
+
+            mainHandler.postDelayed(() -> {
+                JSObject res = new JSObject();
+                res.put("url",       fUrl);
+                res.put("authToken", fToken);
+                res.put("userId",    fUserId);
+                res.put("deviceId",  fDevice);
+                res.put("success",   true);
+                if (savedCall != null) savedCall.resolve(res);
+            }, 120);
+        }, 250);
     }
 
     private String collectAllCookies(CookieManager cm, String currentUrl) {

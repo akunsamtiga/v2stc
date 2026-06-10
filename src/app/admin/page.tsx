@@ -498,18 +498,23 @@ const ImportDialog: React.FC<{ onClose: () => void; onImport: (json: string) => 
 
 // ─── URL Edit Dialog ──────────────────────────────────────────────────────────
 const UrlDialog: React.FC<{
-  field: 'registrationUrl' | 'whatsappHelpUrl';
+  field: 'registrationUrl' | 'whatsappHelpUrl' | 'stockityReferral';
   currentValue: string; onClose: () => void; onSave: (v: string) => void; loading: boolean;
 }> = ({ field, currentValue, onClose, onSave, loading }) => {
   const [val, setVal] = useState(currentValue);
-  const isWa         = field === 'whatsappHelpUrl';
+  const isWa  = field === 'whatsappHelpUrl';
+  const isRef = field === 'stockityReferral';
 
-  const color   = isWa ? 'text-emerald-500' : 'text-blue-500';
-  const bgColor = isWa ? 'bg-emerald-100'   : 'bg-blue-100';
-  const btnBg   = isWa ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-500 hover:bg-blue-600';
-  const icon    = isWa ? Icon.phone('w-5 h-5') : Icon.link('w-5 h-5');
-  const title   = isWa ? 'WhatsApp URL' : 'Registration URL';
-  const placeholder = isWa
+  const color   = isRef ? 'text-violet-500'  : isWa ? 'text-emerald-500' : 'text-blue-500';
+  const bgColor = isRef ? 'bg-violet-100'     : isWa ? 'bg-emerald-100'   : 'bg-blue-100';
+  const btnBg   = isRef ? 'bg-violet-500 hover:bg-violet-600'
+                : isWa  ? 'bg-emerald-500 hover:bg-emerald-600'
+                :         'bg-blue-500 hover:bg-blue-600';
+  const icon    = isRef ? Icon.userPlus('w-5 h-5') : isWa ? Icon.phone('w-5 h-5') : Icon.link('w-5 h-5');
+  const title   = isRef ? 'Kode Referral Stockity' : isWa ? 'WhatsApp URL' : 'Registration URL';
+  const placeholder = isRef
+    ? '37051c9cbcfe'
+    : isWa
     ? 'https://wa.me/628...'
     : 'https://stockity.id/id?a=...#auth';
 
@@ -532,6 +537,12 @@ const UrlDialog: React.FC<{
         onChange={setVal}
         placeholder={placeholder}
       />
+      {isRef && (
+        <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+          Kode afiliasi (cookie <span className="font-mono text-slate-500">a</span>) yang dipakai saat registrasi inline.
+          Contoh dari link <span className="font-mono text-slate-500">?a=37051c9cbcfe</span> → isi <span className="font-mono text-slate-500">37051c9cbcfe</span> saja.
+        </p>
+      )}
       <div className="flex gap-2.5 mt-4">
         <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 transition-colors">
           Batal
@@ -1307,6 +1318,7 @@ export default function AdminPage() {
   const [statsFilter,   setStatsFilter]   = useState<StatsFilter | null>(null);
   const [regUrlOpen,    setRegUrlOpen]    = useState(false);
   const [waUrlOpen,     setWaUrlOpen]     = useState(false);
+  const [referralOpen,  setReferralOpen]  = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -1404,8 +1416,13 @@ export default function AdminPage() {
       await api.admin.setPeriod(email, days);
       await loadData(currentEmail, isSuperAdmin);
     }, days > 0 ? `Masa aktif diset ${days} hari ✓` : 'Diset permanen ✓');
-  const handleUpdateUrl = (field: 'registrationUrl' | 'whatsappHelpUrl', val: string) =>
-    act(async () => { await updateRegistrationConfig(field, val); field === 'registrationUrl' ? setRegUrlOpen(false) : setWaUrlOpen(false); }, 'URL diupdate ✓');
+  const handleUpdateUrl = (field: 'registrationUrl' | 'whatsappHelpUrl' | 'stockityReferral', val: string) =>
+    act(async () => {
+      await updateRegistrationConfig(field, val.trim());
+      if (field === 'registrationUrl')      setRegUrlOpen(false);
+      else if (field === 'whatsappHelpUrl') setWaUrlOpen(false);
+      else                                  setReferralOpen(false);
+    }, field === 'stockityReferral' ? 'Kode referral diupdate ✓' : 'URL diupdate ✓');
 
   const handleExport = (fmt: 'json' | 'csv') => {
     if (fmt === 'json') exportWhitelistAsJson(allUsers);
@@ -1552,6 +1569,18 @@ export default function AdminPage() {
                 <p className="text-xs text-emerald-600 truncate">{regConfig.whatsappHelpUrl || '—'}</p>
               </div>
               <button onClick={() => setWaUrlOpen(true)} className="py-1.5 px-3 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors flex-shrink-0">
+                Edit
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-violet-500">{Icon.userPlus('w-4 h-4')}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800">Kode Referral Stockity</p>
+                <p className="text-xs text-violet-500 truncate font-mono">{regConfig.stockityReferral || '—'}</p>
+              </div>
+              <button onClick={() => setReferralOpen(true)} className="py-1.5 px-3 rounded-lg bg-violet-50 text-violet-600 text-xs font-semibold hover:bg-violet-100 transition-colors flex-shrink-0">
                 Edit
               </button>
             </div>
