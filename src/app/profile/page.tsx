@@ -359,11 +359,12 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
 type WLUser = { email: string; name?: string; is_active?: boolean };
 
 const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const [target, setTarget]   = useState<'one' | 'all'>('one');
+  const [target, setTarget]   = useState<'one' | 'custom' | 'all'>('one');
   const [users, setUsers]     = useState<WLUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [query, setQuery]     = useState('');
   const [selected, setSelected] = useState<WLUser | null>(null);
+  const [customRaw, setCustomRaw] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -396,9 +397,15 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
   ).slice(0, 8);
   const typedEmailOk = q.includes('@') && !users.some(u => u.email === q);
 
+  const customEmails = Array.from(new Set(
+    customRaw.split(/[\s,;]+/).map(s => s.trim().toLowerCase()).filter(s => s.includes('@')),
+  ));
+
   const recipientEmail = selected?.email ?? '';
   const canSend = !!subject.trim() && !!message.trim() && !sending &&
-    (target === 'all' ? users.length > 0 : recipientEmail.includes('@'));
+    (target === 'all' ? users.length > 0
+      : target === 'custom' ? customEmails.length > 0
+      : recipientEmail.includes('@'));
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -408,6 +415,7 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
       const res = await api.admin.sendEmail({
         target,
         email: target === 'one' ? recipientEmail : undefined,
+        emails: target === 'custom' ? customEmails : undefined,
         subject: subject.trim(),
         message: message.trim(),
       });
@@ -415,7 +423,7 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
         ok: res.failed === 0,
         text: `Terkirim ${res.sent}/${res.total}${res.failed ? `, gagal ${res.failed}` : ''}.`,
       });
-      if (res.failed === 0) { setSubject(''); setMessage(''); }
+      if (res.failed === 0) { setSubject(''); setMessage(''); if (target === 'custom') setCustomRaw(''); }
     } catch (e: any) {
       setResult({ ok: false, text: e?.message || 'Gagal mengirim email.' });
     } finally {
@@ -447,7 +455,7 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: -0.3 }}>Kirim Email</p>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{target === 'all' ? `ke ${users.length} user whitelist` : selected ? `ke ${selected.name || selected.email}` : 'pilih penerima'}</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{target === 'all' ? `ke ${users.length} user whitelist` : target === 'custom' ? `ke ${customEmails.length} email custom` : selected ? `ke ${selected.name || selected.email}` : 'pilih penerima'}</p>
             </div>
             <button onClick={sending ? undefined : onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: sending ? 'default' : 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -456,10 +464,10 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
 
           <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '66vh', overflowY: 'auto' }}>
             {/* Target toggle */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              {([['one', 'Satu user'], ['all', `Semua user${users.length ? ` (${users.length})` : ''}`]] as const).map(([val, lbl]) => (
+            <div style={{ display: 'flex', gap: 6 }}>
+              {([['one', 'Whitelist'], ['custom', 'Custom'], ['all', `Semua${users.length ? ` (${users.length})` : ''}`]] as const).map(([val, lbl]) => (
                 <button key={val} onClick={() => setTarget(val)} style={{
-                  flex: 1, padding: '10px', borderRadius: 11, cursor: 'pointer', fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit',
+                  flex: 1, padding: '9px 4px', borderRadius: 11, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
                   border: `1px solid ${target === val ? 'rgba(76,175,80,0.5)' : 'rgba(255,255,255,0.10)'}`,
                   background: target === val ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.04)',
                   color: target === val ? '#5cc763' : 'rgba(255,255,255,0.6)',
@@ -516,6 +524,17 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
               </div>
             )}
 
+            {/* Custom email (di luar whitelist) */}
+            {target === 'custom' && (
+              <div>
+                <span style={labelStyle}>Email tujuan (boleh lebih dari satu)</span>
+                <textarea value={customRaw} onChange={e => setCustomRaw(e.target.value)} placeholder="email1@contoh.com, email2@contoh.com" autoCapitalize="none" rows={3} style={{ ...inputStyle, resize: 'vertical', minHeight: 72, lineHeight: 1.5 }} />
+                <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', marginTop: 6, lineHeight: 1.5 }}>
+                  Pisahkan dengan koma, spasi, atau baris baru.{customEmails.length > 0 && <> <span style={{ color: '#5cc763', fontWeight: 600 }}>{customEmails.length} email valid.</span></>}
+                </p>
+              </div>
+            )}
+
             {target === 'all' && (
               <p style={{ fontSize: 12.5, color: '#ff9f0a', background: 'rgba(255,159,10,0.10)', border: '1px solid rgba(255,159,10,0.20)', borderRadius: 10, padding: '10px 12px', lineHeight: 1.5 }}>
                 Email akan dikirim ke <strong>{users.length} user whitelist</strong>. Pastikan isinya sudah benar.
@@ -548,7 +567,10 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
               background: canSend ? 'linear-gradient(135deg,#34c759,#2faa4d)' : 'rgba(255,255,255,0.10)',
               opacity: canSend ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
-              {sending ? 'Mengirim…' : target === 'all' ? `Kirim ke ${users.length} user` : 'Kirim Email'}
+              {sending ? 'Mengirim…'
+                : target === 'all' ? `Kirim ke ${users.length} user`
+                : target === 'custom' ? (customEmails.length ? `Kirim ke ${customEmails.length} email` : 'Kirim Email')
+                : 'Kirim Email'}
             </button>
           </div>
         </div>
