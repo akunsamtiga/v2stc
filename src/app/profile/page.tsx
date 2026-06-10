@@ -356,27 +356,49 @@ const LogoutAlert: React.FC<{ open: boolean; onCancel: () => void; onConfirm: ()
 // ─────────────────────────────────────────────
 // EMAIL COMPOSER (super-admin) — kirim email ke user / semua user whitelist
 // ─────────────────────────────────────────────
+type WLUser = { email: string; name?: string; is_active?: boolean };
+
 const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const [target, setTarget]   = useState<'one' | 'all'>('one');
-  const [email, setEmail]     = useState('');
+  const [users, setUsers]     = useState<WLUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [query, setQuery]     = useState('');
+  const [selected, setSelected] = useState<WLUser | null>(null);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [result, setResult]   = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
-    if (open) {
-      setResult(null);
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = prev; };
-    }
+    if (!open) return;
+    setResult(null);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    setLoadingUsers(true);
+    api.admin.listWhitelist()
+      .then((rows: any[]) => {
+        const mapped: WLUser[] = (rows ?? [])
+          .map((r: any) => ({ email: String(r.email ?? '').toLowerCase().trim(), name: (r.name ?? '').trim(), is_active: r.is_active ?? r.isActive }))
+          .filter((u: WLUser) => u.email.includes('@'));
+        setUsers(mapped);
+      })
+      .catch(() => setUsers([]))
+      .finally(() => setLoadingUsers(false));
+    return () => { document.body.style.overflow = prev; };
   }, [open]);
 
   if (!open) return null;
 
-  const canSend = !!subject.trim() && !!message.trim() &&
-    (target === 'all' || email.includes('@')) && !sending;
+  const q = query.trim().toLowerCase();
+  const filtered = (q
+    ? users.filter(u => u.email.includes(q) || (u.name ?? '').toLowerCase().includes(q))
+    : users
+  ).slice(0, 8);
+  const typedEmailOk = q.includes('@') && !users.some(u => u.email === q);
+
+  const recipientEmail = selected?.email ?? '';
+  const canSend = !!subject.trim() && !!message.trim() && !sending &&
+    (target === 'all' ? users.length > 0 : recipientEmail.includes('@'));
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -385,7 +407,7 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
     try {
       const res = await api.admin.sendEmail({
         target,
-        email: target === 'one' ? email.trim() : undefined,
+        email: target === 'one' ? recipientEmail : undefined,
         subject: subject.trim(),
         message: message.trim(),
       });
@@ -393,7 +415,7 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
         ok: res.failed === 0,
         text: `Terkirim ${res.sent}/${res.total}${res.failed ? `, gagal ${res.failed}` : ''}.`,
       });
-      if (res.failed === 0) { setSubject(''); setMessage(''); if (target === 'one') setEmail(''); }
+      if (res.failed === 0) { setSubject(''); setMessage(''); }
     } catch (e: any) {
       setResult({ ok: false, text: e?.message || 'Gagal mengirim email.' });
     } finally {
@@ -407,11 +429,17 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
     fontSize: 14, color: '#fff', fontFamily: 'inherit', outline: 'none', marginTop: 6,
   };
   const labelStyle: React.CSSProperties = { fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 600 };
+  const initial = (u: WLUser) => (u.name || u.email).charAt(0).toUpperCase();
+  const Avatar = ({ u, size = 30 }: { u: WLUser; size?: number }) => (
+    <div style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2faa4d,#34c759)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.42, fontWeight: 700, color: '#fff' }}>{initial(u)}</div>
+  );
+
+  const pickUser = (u: WLUser) => { setSelected(u); setQuery(''); };
 
   return (
     <div className="pf-root" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
       <div onClick={sending ? undefined : onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', animation: 'pf-bd-in 0.2s ease' }} />
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 420, animation: 'pf-pop 0.28s cubic-bezier(0.32,0.72,0,1)' }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 430, animation: 'pf-pop 0.28s cubic-bezier(0.32,0.72,0,1)' }}>
         <div style={{ background: 'rgba(12,12,24,0.98)', border: '1px solid rgba(76,175,80,0.18)', borderRadius: 22, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.60)' }}>
           <div style={{ padding: '20px 22px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#34c759,#30d158)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -419,17 +447,17 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: -0.3 }}>Kirim Email</p>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>ke user whitelist</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{target === 'all' ? `ke ${users.length} user whitelist` : selected ? `ke ${selected.name || selected.email}` : 'pilih penerima'}</p>
             </div>
             <button onClick={sending ? undefined : onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: sending ? 'default' : 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
 
-          <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '64vh', overflowY: 'auto' }}>
+          <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '66vh', overflowY: 'auto' }}>
             {/* Target toggle */}
             <div style={{ display: 'flex', gap: 8 }}>
-              {([['one', 'Satu user'], ['all', 'Semua user']] as const).map(([val, lbl]) => (
+              {([['one', 'Satu user'], ['all', `Semua user${users.length ? ` (${users.length})` : ''}`]] as const).map(([val, lbl]) => (
                 <button key={val} onClick={() => setTarget(val)} style={{
                   flex: 1, padding: '10px', borderRadius: 11, cursor: 'pointer', fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit',
                   border: `1px solid ${target === val ? 'rgba(76,175,80,0.5)' : 'rgba(255,255,255,0.10)'}`,
@@ -439,15 +467,58 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
               ))}
             </div>
 
+            {/* Recipient picker (one) */}
             {target === 'one' && (
               <div>
-                <span style={labelStyle}>Email tujuan</span>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@email.com" autoCapitalize="none" style={inputStyle} />
+                <span style={labelStyle}>Penerima</span>
+                {selected ? (
+                  <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'rgba(76,175,80,0.10)', border: '1px solid rgba(76,175,80,0.28)' }}>
+                    <Avatar u={selected} size={34} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {selected.name && <p style={{ fontSize: 14, color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.name}</p>}
+                      <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.email}</p>
+                    </div>
+                    <button onClick={() => setSelected(null)} style={{ background: 'rgba(255,255,255,0.10)', border: 'none', borderRadius: '50%', width: 26, height: 26, cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ position: 'relative', marginTop: 6 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                      <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Cari nama atau email…" autoCapitalize="none" style={{ ...inputStyle, marginTop: 0, paddingLeft: 38 }} />
+                    </div>
+                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 184, overflowY: 'auto' }}>
+                      {loadingUsers && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', padding: '8px 4px' }}>Memuat user…</p>}
+                      {!loadingUsers && filtered.map(u => (
+                        <button key={u.email} onClick={() => pickUser(u)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                          <Avatar u={u} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {u.name && <p style={{ fontSize: 13.5, color: '#fff', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>}
+                            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</p>
+                          </div>
+                          {u.is_active === false && <span style={{ fontSize: 10, color: '#ff9f0a', flexShrink: 0 }}>nonaktif</span>}
+                        </button>
+                      ))}
+                      {!loadingUsers && typedEmailOk && (
+                        <button onClick={() => pickUser({ email: q })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', borderRadius: 10, background: 'rgba(76,175,80,0.08)', border: '1px dashed rgba(76,175,80,0.3)', cursor: 'pointer', color: '#5cc763', fontSize: 13, fontFamily: 'inherit', width: '100%' }}>
+                          + Kirim ke “{q}”
+                        </button>
+                      )}
+                      {!loadingUsers && filtered.length === 0 && !typedEmailOk && (
+                        <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.35)', padding: '8px 4px' }}>{q ? 'User tidak ditemukan.' : 'Belum ada user.'}</p>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )}
+
             {target === 'all' && (
               <p style={{ fontSize: 12.5, color: '#ff9f0a', background: 'rgba(255,159,10,0.10)', border: '1px solid rgba(255,159,10,0.20)', borderRadius: 10, padding: '10px 12px', lineHeight: 1.5 }}>
-                Email akan dikirim ke <strong>semua user whitelist</strong>. Pastikan isinya sudah benar.
+                Email akan dikirim ke <strong>{users.length} user whitelist</strong>. Pastikan isinya sudah benar.
               </p>
             )}
 
@@ -477,7 +548,7 @@ const EmailComposer: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
               background: canSend ? 'linear-gradient(135deg,#34c759,#2faa4d)' : 'rgba(255,255,255,0.10)',
               opacity: canSend ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
-              {sending ? 'Mengirim…' : 'Kirim Email'}
+              {sending ? 'Mengirim…' : target === 'all' ? `Kirim ke ${users.length} user` : 'Kirim Email'}
             </button>
           </div>
         </div>
